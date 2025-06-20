@@ -83,16 +83,15 @@ end Polynomial
 ---- Instances in Mathlib ----
 
 -- Option 1: Have a type of all fields
-theorem mul_add_distrib₁
-    (F : Field) (a b c : R) :
+theorem mul_add_distrib₁ (F : Field) (a b c : R) :
     a * (b + c) = a * b + a * c :=
   sorry
 
 -- Problem: What is the type of `ℝ`?
 
 -- Option 2: Have a type of all field structures on `F`
-theorem mul_add_distrib₂
-    {F : Type} (ring_structure_on_R : Field F) (a b c : F) :
+theorem mul_add_distrib₂ {F : Type}
+    (ring_structure_on_R : Field F) (a b c : F) :
     a * (b + c) = a * b + a * c :=
   sorry
 
@@ -151,17 +150,24 @@ variable [IsFractionRing R F]
 
 #eval Real.instInhabited.default
 
+-- There is a danger to having instances with data: diamonds
+-- If there are two ways of producing your instance,
+-- and if these two ways produce different data,
+-- then you will start running into nasty errors.
+
+-- For example, in Filippo's talk, there are two ways to produce
+-- an instance of `TopologicalSpace (ℝ × ℝ)`.
+#synth MetricSpace (ℝ × ℝ)
+#synth TopologicalSpace (ℝ × ℝ)
+
+-- These turn out to be the same, but this requires a proof.
+-- So Lean can't automatically convert between the two.
+
 -- Forgetful inheritance: Rather than having an instance
 -- `MetricSpace → TopologicalSpace`, include the data of a
 -- topological space in the definition of a metric space
 #check MetricSpace
 #check PseudoMetricSpace -- includes topological space data
-
--- Without forgetful inheritance, we would get a diamond
-#synth MetricSpace (ℝ × ℝ)
-#synth TopologicalSpace (ℝ × ℝ)
-
--- Diamonds lead to very annoying errors
 
 namespace Structures -- Example from Filippo's talk
 
@@ -179,24 +185,14 @@ instance RealMetric : SpaceWithMetric ℝ where
   symm := abs_sub_comm
   triangle := abs_sub_le
 
-instance metricToTopology (X : Type*) (hX : SpaceWithMetric X) :
+export SpaceWithMetric (d)
+
+instance metricToTopology (X : Type*) [SpaceWithMetric X] :
     (TopologicalSpace X) where
-  IsOpen S := ∀ x ∈ S, ∃ ρ : ℝ, 0 < ρ ∧ {y | hX.d x y < ρ} ⊆ S
+  IsOpen S := ∀ x ∈ S, ∃ ρ : ℝ, 0 < ρ ∧ {y | d x y < ρ} ⊆ S
   isOpen_univ := sorry
   isOpen_inter := sorry
   isOpen_sUnion := sorry
-
-export SpaceWithMetric (d)
-
-instance TopOnMetric (X : Type*) [SpaceWithMetric X] : TopologicalSpace X := by
-  have hX : Structures.SpaceWithMetric X := by
-    fconstructor
-    · exact d
-    · exact SpaceWithMetric.dist_eq_zero
-    · exact SpaceWithMetric.dist_pos
-    · exact SpaceWithMetric.symm
-    · exact SpaceWithMetric.triangle
-  exact Structures.metricToTopology X hX
 
 instance MetricOnProd (X Y : Type*) [SpaceWithMetric X] [SpaceWithMetric Y] :
     SpaceWithMetric (X × Y) where
@@ -206,7 +202,7 @@ instance MetricOnProd (X Y : Type*) [SpaceWithMetric X] [SpaceWithMetric Y] :
   symm := sorry
   triangle := sorry
 
-instance ProdRealTop : TopologicalSpace (ℝ × ℝ) := TopOnMetric _
+instance ProdRealTop : TopologicalSpace (ℝ × ℝ) := metricToTopology _
 
 example : Continuous (fun n : ℝ × ℝ ↦ (⟨n.2, n.1⟩ : (ℝ × ℝ))) := by
   rw [continuous_prodMk]
@@ -221,20 +217,40 @@ end Structures
 #check Semiring.toModule
 #check AddCommGroup.toIntModule
 
--- Mathlib solves this issue by including extra data `nsmul` and `zsmul` ...
-#check Group
-#check Monoid
+-- Mathlib solves this issue by including extra data `nsmul` and `zsmul`
+#print Group
 
--- ... and overrides this data in the definition of `CommGroup Int`
+-- The definition of `CommGroup Int` overrides `nsmul` and `zsmul`
 #check Int.instAddCommGroup
 
-instance tada : Module ℤ ℤ := RingHom.toModule (RingHom.id ℤ)
+-- Likewise, `Field` includes extra data `qsmul`
+#print Field
 
-lemma lem1 (R : Type*) [CommRing R] (a b : R) : a * b = a • b := by
-  rw [smul_eq_mul]
+-- There are still lurking diamonds that haven't been fixed yet
+example (a b : ℕ+) : a • b = b • a := by
+  rw [smul_eq_mul, smul_eq_mul, mul_comm]
 
-lemma lem2 (A : Type*) [AddCommGroup A] (a : ℤ) (b : A) : a • b = (-a) • (-b) := by
-  rw [neg_smul_neg]
+-- We might want to define a
+instance (A : Type*) [AddCommSemigroup A] : SMul ℕ+ A where
+  smul n a := PNat.recOn n a (fun _ b ↦ b + a)
 
-example (a b : ℤ) : a • b = a * b := by
-  rw [lem2, ← lem1]
+@[simp]
+lemma PNat.one_smul (A : Type*) [AddCommSemigroup A] (a : A) :
+    (1 : ℕ+) • a = a := by
+  rfl
+
+@[simp]
+lemma PNat.succ_smul (A : Type*) [AddCommSemigroup A] (a : A) (n : ℕ+) :
+    (n + 1) • a = n • a + a :=
+  PNat.recOn_succ n a (fun _ b ↦ b + a)
+
+-- But this leads to a diamond
+example (a b : ℕ+) : a • b = b • a := by
+  rw [smul_eq_mul, smul_eq_mul, mul_comm]
+
+-- Often mathlib seperates data typeclasses from predicate typeclasses
+#check IsTopologicalGroup
+variable (G : Type*) [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
+
+#check OrderTopology
+variable (X : Type*) [LinearOrder X] [TopologicalSpace X] [OrderTopology X]
