@@ -80,13 +80,15 @@ end Polynomial
 
 ---------------------------------------------------------------------------------------------------
 
----- Instances in Lean & Mathlib ----
+---- Instances in Mathlib ----
 
 -- Option 1: Have a type of all fields
 theorem mul_add_distrib₁
     (F : Field) (a b c : R) :
     a * (b + c) = a * b + a * c :=
   sorry
+
+-- Problem: What is the type of `ℝ`?
 
 -- Option 2: Have a type of all field structures on `F`
 theorem mul_add_distrib₂
@@ -119,23 +121,120 @@ example (a b : ℝ) : a ^ 2 - b ^ 2 = (a - b) * (a + b) := by
 -- Use `instance` instead than `def` in the definition of `Real.Ring`
 -- Use `[Ring R]` instead of `(Ring R)` in theorem variables
 
--- In the algebraic heirarchy, `extends` is common
+-- The mathlib algebraic heirarchy is built with `extends`
 -- E.g., `Field` -> `CommRing` -> `Ring` -> ... -> `Distrib`
 #check Distrib
 
--- At the very bottom: `Mul`, `Add`, `One`, `Zero`, `LE` for notation
+-- At the very bottom: `Mul`, `Add`, `One`, `Zero`, `LE` give notation
 #check Mul
 #check One
 #check LE
 
 -- Some typeclasses have data, and some are just predicates
-#check Algebra -- used for field extensions
+#check Algebra -- data for field extension
+variable (K L : Type*) [Field K] [Field L] [Algebra K L]
 
--- Predicate typeclass for commutative diagram of rings/fields
-#check IsScalarTower
+#check IsScalarTower -- predicate for compatible field extensions
+variable (F : Type*) [Field F] [Algebra F K] [Algebra F L]
+variable [IsScalarTower F K L]
 
--- Predicate typeclasses for field of fractions
-#check IsFractionRing
+#check IsFractionRing -- predicate for field of fractions
+variable (R : Type*) [CommRing R] [Algebra R F]
+variable [IsFractionRing R F]
 
--- But sometimes typeclasses get a bit excessive!
+-- (sometimes this starts to feel a bit excessive!)
 #check Ideal.ramificationIdx_eq_of_isGalois
+
+-- Common design decision: data vs predicate
+#check Inhabited -- Data: Comes with a choice of a term
+#check Nonempty  -- Predicate: Existence of a term
+
+#eval Real.instInhabited.default
+
+-- Forgetful inheritance: Rather than having an instance
+-- `MetricSpace → TopologicalSpace`, include the data of a
+-- topological space in the definition of a metric space
+#check MetricSpace
+#check PseudoMetricSpace -- includes topological space data
+
+-- Without forgetful inheritance, we would get a diamond
+#synth MetricSpace (ℝ × ℝ)
+#synth TopologicalSpace (ℝ × ℝ)
+
+-- Diamonds lead to very annoying errors
+
+namespace Structures -- Example from Filippo's talk
+
+class SpaceWithMetric (X : Type*) where
+  d : X → X → ℝ
+  dist_eq_zero (x : X) : d x x = 0
+  dist_pos (x y : X) : x ≠ y → 0 < d x y
+  symm (x y : X) : d x y = d y x
+  triangle (x y z : X) : d x z ≤ d x y + d y z
+
+instance RealMetric : SpaceWithMetric ℝ where
+  d := fun x y ↦ |x - y|
+  dist_eq_zero _ := by rw [sub_self, abs_zero]
+  dist_pos _ _ h := abs_sub_pos.mpr h
+  symm := abs_sub_comm
+  triangle := abs_sub_le
+
+instance metricToTopology (X : Type*) (hX : SpaceWithMetric X) :
+    (TopologicalSpace X) where
+  IsOpen S := ∀ x ∈ S, ∃ ρ : ℝ, 0 < ρ ∧ {y | hX.d x y < ρ} ⊆ S
+  isOpen_univ := sorry
+  isOpen_inter := sorry
+  isOpen_sUnion := sorry
+
+export SpaceWithMetric (d)
+
+instance TopOnMetric (X : Type*) [SpaceWithMetric X] : TopologicalSpace X := by
+  have hX : Structures.SpaceWithMetric X := by
+    fconstructor
+    · exact d
+    · exact SpaceWithMetric.dist_eq_zero
+    · exact SpaceWithMetric.dist_pos
+    · exact SpaceWithMetric.symm
+    · exact SpaceWithMetric.triangle
+  exact Structures.metricToTopology X hX
+
+instance MetricOnProd (X Y : Type*) [SpaceWithMetric X] [SpaceWithMetric Y] :
+    SpaceWithMetric (X × Y) where
+  d p q := max (d p.1 q.1) (d p.2 q.2)
+  dist_eq_zero := sorry
+  dist_pos := sorry
+  symm := sorry
+  triangle := sorry
+
+instance ProdRealTop : TopologicalSpace (ℝ × ℝ) := TopOnMetric _
+
+example : Continuous (fun n : ℝ × ℝ ↦ (⟨n.2, n.1⟩ : (ℝ × ℝ))) := by
+  rw [continuous_prodMk]
+  apply And.intro
+  · apply continuous_snd
+  · apply continuous_fst
+
+end Structures
+
+-- There are two instances of `Module ℤ ℤ`, one coming from
+-- `Semiring.toModule` and another from `AddCommGroup.toIntModule`
+#check Semiring.toModule
+#check AddCommGroup.toIntModule
+
+-- Mathlib solves this issue by including extra data `nsmul` and `zsmul` ...
+#check Group
+#check Monoid
+
+-- ... and overrides this data in the definition of `CommGroup Int`
+#check Int.instAddCommGroup
+
+instance tada : Module ℤ ℤ := RingHom.toModule (RingHom.id ℤ)
+
+lemma lem1 (R : Type*) [CommRing R] (a b : R) : a * b = a • b := by
+  rw [smul_eq_mul]
+
+lemma lem2 (A : Type*) [AddCommGroup A] (a : ℤ) (b : A) : a • b = (-a) • (-b) := by
+  rw [neg_smul_neg]
+
+example (a b : ℤ) : a • b = a * b := by
+  rw [lem2, ← lem1]
