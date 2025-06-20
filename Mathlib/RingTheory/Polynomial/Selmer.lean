@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Thomas Browning
 -/
 import Mathlib.Analysis.Complex.Polynomial.UnitTrinomial
+import Mathlib.NumberTheory.RamificationInertia.Galois
 import Mathlib.RingTheory.Polynomial.GaussLemma
 import Mathlib.Tactic.LinearCombination
 
@@ -76,3 +77,65 @@ theorem X_pow_sub_X_sub_one_irreducible_rat (hn1 : n ≠ 1) : Irreducible (X ^ n
   · exact hp.symm ▸ (trinomial_monic zero_lt_one hn).isPrimitive
 
 end Polynomial
+
+---------------------------------------------------------------------------------------------------
+
+---- Instances in Lean & Mathlib ----
+
+-- Option 1: Have a type of all fields
+theorem mul_add_distrib₁
+    (F : Field) (a b c : R) :
+    a * (b + c) = a * b + a * c :=
+  sorry
+
+-- Option 2: Have a type of all field structures on `F`
+theorem mul_add_distrib₂
+    {F : Type} (ring_structure_on_R : Field F) (a b c : F) :
+    a * (b + c) = a * b + a * c :=
+  sorry
+
+example (a b : ℝ) : a ^ 2 - b ^ 2 = (a - b) * (a + b) := by
+  rw [mul_add_distrib₂ Real.field (a - b) a b] -- painful!
+  sorry
+
+-- Option 3: Let Lean fill in the default field structure
+theorem mul_add_distrib₃
+    {R : Type} [Field R] (a b c : R) :
+    a * (b + c) = a * b + a * c :=
+  sorry
+
+example (a b : ℝ) : a ^ 2 - b ^ 2 = (a - b) * (a + b) := by
+  rw [mul_add_distrib₃ (a - b) a b] -- no longer painful!
+  sorry
+
+-- But how did Lean know the default field structure on `ℝ`?
+#check Real.field -- is an `instance`
+
+-- And how did Lean know to track default field structures?
+#check Field -- is a `class`
+
+-- How to use instances:
+-- Use `class` instead of `structure` in the definition of `Ring`
+-- Use `instance` instead than `def` in the definition of `Real.Ring`
+-- Use `[Ring R]` instead of `(Ring R)` in theorem variables
+
+-- In the algebraic heirarchy, `extends` is common
+-- E.g., `Field` -> `CommRing` -> `Ring` -> ... -> `Distrib`
+#check Distrib
+
+-- At the very bottom: `Mul`, `Add`, `One`, `Zero`, `LE` for notation
+#check Mul
+#check One
+#check LE
+
+-- Some typeclasses have data, and some are just predicates
+#check Algebra -- used for field extensions
+
+-- Predicate typeclass for commutative diagram of rings/fields
+#check IsScalarTower
+
+-- Predicate typeclasses for field of fractions
+#check IsFractionRing
+
+-- But sometimes typeclasses get a bit excessive!
+#check Ideal.ramificationIdx_eq_of_isGalois
