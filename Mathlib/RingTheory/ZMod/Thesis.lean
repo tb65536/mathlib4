@@ -6,33 +6,52 @@ open scoped NNReal
 
 open scoped Pointwise
 
-example {X : Type} {S : Set X} : Nonempty S ↔ S.Nonempty := by exact Set.nonempty_coe_sort
+section cluster
 
-open Pointwise
+open Filter
 
-lemma MapClusterPt.eq_of_eventually
-    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] [T2Space X]
-    {f g : Y → X} {y : Y}
-    {ι : Type*} {F : Filter ι} {z : ι → Y}
-    (h : MapClusterPt y F z) (ha : ContinuousAt f y) (hb : ContinuousAt g y)
-    (hfg : f ∘ z =ᶠ[F] g ∘ z) : f y = g y := by
-  refine tendsto_nhds_unique_of_frequently_eq ha hb ?_
-  rw [Filter.eventuallyEq_iff_exists_mem] at hfg
-  obtain ⟨s, hs1, hs2⟩ := hfg
-  rw [mapClusterPt_def] at h
-  have key : z '' s ∈ F.map z := Filter.image_mem_map hs1
-  rw [clusterPt_iff_frequently] at h
-  rw [frequently_nhds_iff]
-  intro U hy hU
-  specialize h U (hU.mem_nhds hy)
-  rw [Filter.frequently_iff] at h
-  specialize h key
-  obtain ⟨T, hT1, hT2⟩ := h
-  use T
-  use hT2
-  obtain ⟨i, hi, rfl⟩ := hT1
-  apply hs2
-  exact hi
+variable {X Y ι : Type*} [TopologicalSpace X] [T2Space X] [TopologicalSpace Y] {y : Y}
+
+lemma ClusterPt.frequently' {F : Filter Y} (h : ClusterPt y F)
+    {p : Y → Prop} (hp : ∀ᶠ x in F, p x) :
+    ∃ᶠ x in nhds y, p x := by
+  rw [eventually_iff, ← le_principal_iff] at hp
+  exact clusterPt_principal_iff_frequently.mp (h.mono hp)
+
+lemma ClusterPt.apply_eq_of_eventually {F : Filter Y} (h : ClusterPt y F)
+    {f g : Y → X} (ha : ContinuousAt f y) (hb : ContinuousAt g y) (hfg : f =ᶠ[F] g) :
+    f y = g y :=
+  tendsto_nhds_unique_of_frequently_eq ha hb (h.frequently' hfg)
+
+lemma MapClusterPt.apply_eq_of_eventually {F : Filter ι} {z : ι → Y} (h : MapClusterPt y F z)
+    {f g : Y → X} (ha : ContinuousAt f y) (hb : ContinuousAt g y) (hfg : f ∘ z =ᶠ[F] g ∘ z) :
+    f y = g y :=
+  ClusterPt.apply_eq_of_eventually h ha hb hfg
+
+end cluster
+
+section content
+
+theorem MeasureTheory.addContent_biUnion_eq {α : Type*} {C : Set (Set α)} {m : AddContent C}
+    {ι : Type*} (hC : IsSetRing C) {s : ι → Set α} {S : Finset ι} (hs : ∀ n ∈ S, s n ∈ C)
+    (h : (S : Set ι).PairwiseDisjoint s) :
+    m (⋃ i ∈ S, s i) = ∑ i ∈ S, m (s i) := by
+  classical
+  have key := m.sUnion' (S.image s) ?_ ?_ ?_
+  · rw [Finset.coe_image, Set.sUnion_image] at key
+    exact key.trans (Finset.sum_image_of_disjoint m.empty' h)
+  · rwa [Finset.coe_image, Set.image_subset_iff]
+  · intro a ha b hb hab
+    change Disjoint a b
+    simp_rw [Finset.coe_image, Set.mem_image, Finset.mem_coe] at ha hb
+    obtain ⟨a, ha, rfl⟩ := ha
+    obtain ⟨b, hb, rfl⟩ := hb
+    simp_rw [Set.PairwiseDisjoint, Set.Pairwise, Finset.mem_coe] at h
+    exact h ha hb (ne_of_apply_ne s hab)
+  · rw [Finset.coe_image, Set.sUnion_image]
+    exact hC.biUnion_mem S hs
+
+end content
 
 theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     [SecondCountableTopology X] [MeasurableSpace X] [BorelSpace X]
@@ -52,6 +71,7 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
       (S : Set X) ∪ (T : Set X) = (U : Set X) → μ A U = μ A S + μ A T) :
     -- todo: add regularity condition
     ∃ μ : MeasureTheory.Measure X, μ ≠ 0 ∧ ∀ g : G, ∀ S : Set X, μ (g • S) = χ g * μ S := by
+  classical
   obtain ⟨S0, hS0C, hS0⟩ := hS0
   let σ : Finset C → Set X → NNReal :=
     fun A S ↦ Function.extend (↑) (μ A) (0 : Set X → NNReal) S
@@ -120,7 +140,7 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     infer_instance
   obtain ⟨μ, -, hμ⟩ := h.isCompact_univ.exists_mapClusterPt (f := Filter.atTop) (u := τ) (by simp)
   replace hμ0 : μ ∅ = 0 := by
-    apply hμ.eq_of_eventually
+    apply hμ.apply_eq_of_eventually
     · exact (continuousAt_apply ∅ μ).tendsto
     · exact continuousAt_const.tendsto
     · rw [Filter.eventuallyEq_iff_exists_mem]
@@ -129,7 +149,7 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
       intro A hA
       exact hτ0 A
   replace hμ1 : μ S0 = 1 := by
-    apply hμ.eq_of_eventually
+    apply hμ.apply_eq_of_eventually
     · exact (continuousAt_apply S0 μ).tendsto
     · exact continuousAt_const.tendsto
     · rw [Filter.eventuallyEq_iff_exists_mem]
@@ -140,13 +160,12 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
       exact hτ1 A hA
   replace hμ2 : ∀ g : G, ∀ S : Set X, S ∈ C → μ (g • S) = χ g * μ S := by
     intro g S hSC
-    apply hμ.eq_of_eventually
+    apply hμ.apply_eq_of_eventually
     · exact continuousAt_apply (g • S) μ
-    · refine ContinuousAt.comp' ?_ ?_
+    · apply ContinuousAt.comp'
       · exact (ENNReal.continuous_const_mul ENNReal.coe_ne_top).continuousAt
       · exact continuousAt_apply S μ
     · rw [Filter.eventuallyEq_iff_exists_mem]
-      classical
       use Set.Ici ({⟨S, hSC⟩, ⟨g • S, hC1 g S hSC⟩} : Finset C)
       use Filter.Ici_mem_atTop _
       intro A hA
@@ -155,11 +174,10 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
       exact hτ2 A g S hSC hA.1 hA.2
   replace hμ3 : ∀ {S T : Set X}, S ∈ C → T ∈ C → Disjoint S T → μ (S ∪ T) = μ S + μ T := by
     intro S T hSC hTC hST
-    apply hμ.eq_of_eventually
+    apply hμ.apply_eq_of_eventually
     · exact continuousAt_apply (S ∪ T) μ
     · exact ContinuousAt.add (continuousAt_apply S μ) (continuousAt_apply T μ)
     · rw [Filter.eventuallyEq_iff_exists_mem]
-      classical
       use Set.Ici ({⟨S, hSC⟩, ⟨T, hTC⟩, ⟨S ∪ T, hC2.union_mem hSC hTC⟩} : Finset C)
       use Filter.Ici_mem_atTop _
       intro A hA
@@ -170,8 +188,19 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
   have hm : m.IsSigmaSubadditive := by
     apply MeasureTheory.isSigmaSubadditive_of_addContent_iUnion_eq_tsum hC2
     intro f hf1 hf2 hf3
-    -- compact open trick
-    sorry
+    obtain ⟨t, ht⟩ := (hC3 (⋃ i, f i) hf2).elim_finite_subcover f
+      (fun i ↦ hC4 (f i) (hf1 i)) Set.Subset.rfl
+    replace ht := Set.Subset.antisymm ht (Set.iUnion₂_subset_iUnion (· ∈ t) f)
+    rw [ht]
+    rw [MeasureTheory.addContent_biUnion_eq hC2 (fun i _ ↦ hf1 i) (hf3.pairwiseDisjoint t)]
+    refine (tsum_eq_sum fun i hi ↦ ?_).symm
+    have key : Disjoint (f i) (⋃ i ∈ t, f i) :=
+      Set.disjoint_iUnion₂_right.mpr fun j hj ↦ hf3 (ne_of_mem_of_not_mem hj hi).symm
+    rw [← ht, Set.disjoint_iUnion_right] at key
+    specialize key i
+    rw [disjoint_self] at key
+    rw [key]
+    exact m.empty'
   let τ := MeasureTheory.AddContent.measure m hC2.isSetSemiring
     (BorelSpace.measurable_eq.trans hC5.symm).le hm
   have hτ1 : τ S0 = 1 := by
