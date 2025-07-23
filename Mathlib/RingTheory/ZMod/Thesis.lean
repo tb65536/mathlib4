@@ -10,6 +10,30 @@ example {X : Type} {S : Set X} : Nonempty S ↔ S.Nonempty := by exact Set.nonem
 
 open Pointwise
 
+lemma MapClusterPt.eq_of_eventually
+    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y] [T2Space X]
+    {f g : Y → X} {y : Y}
+    {ι : Type*} {F : Filter ι} {z : ι → Y}
+    (h : MapClusterPt y F z) (ha : ContinuousAt f y) (hb : ContinuousAt g y)
+    (hfg : f ∘ z =ᶠ[F] g ∘ z) : f y = g y := by
+  refine tendsto_nhds_unique_of_frequently_eq ha hb ?_
+  rw [Filter.eventuallyEq_iff_exists_mem] at hfg
+  obtain ⟨s, hs1, hs2⟩ := hfg
+  rw [mapClusterPt_def] at h
+  have key : z '' s ∈ F.map z := Filter.image_mem_map hs1
+  rw [clusterPt_iff_frequently] at h
+  rw [frequently_nhds_iff]
+  intro U hy hU
+  specialize h U (hU.mem_nhds hy)
+  rw [Filter.frequently_iff] at h
+  specialize h key
+  obtain ⟨T, hT1, hT2⟩ := h
+  use T
+  use hT2
+  obtain ⟨i, hi, rfl⟩ := hT1
+  apply hs2
+  exact hi
+
 theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     [SecondCountableTopology X] [MeasurableSpace X] [BorelSpace X]
     (χ : G → ℝ≥0)
@@ -96,15 +120,52 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     infer_instance
   obtain ⟨μ, -, hμ⟩ := h.isCompact_univ.exists_mapClusterPt (f := Filter.atTop) (u := τ) (by simp)
   replace hμ0 : μ ∅ = 0 := by
-    sorry
+    apply hμ.eq_of_eventually
+    · exact (continuousAt_apply ∅ μ).tendsto
+    · exact continuousAt_const.tendsto
+    · rw [Filter.eventuallyEq_iff_exists_mem]
+      use Set.univ
+      use Filter.univ_mem
+      intro A hA
+      exact hτ0 A
   replace hμ1 : μ S0 = 1 := by
-    rw [mapClusterPt_iff_frequently] at hμ
-    sorry
+    apply hμ.eq_of_eventually
+    · exact (continuousAt_apply S0 μ).tendsto
+    · exact continuousAt_const.tendsto
+    · rw [Filter.eventuallyEq_iff_exists_mem]
+      use Set.Ici {⟨S0, hS0C⟩}
+      use Filter.Ici_mem_atTop _
+      intro A hA
+      simp only [Set.mem_Ici, Finset.le_eq_subset, Finset.singleton_subset_iff] at hA
+      exact hτ1 A hA
   replace hμ2 : ∀ g : G, ∀ S : Set X, S ∈ C → μ (g • S) = χ g * μ S := by
-    intro g S hS
-    sorry
+    intro g S hSC
+    apply hμ.eq_of_eventually
+    · exact continuousAt_apply (g • S) μ
+    · refine ContinuousAt.comp' ?_ ?_
+      · exact (ENNReal.continuous_const_mul ENNReal.coe_ne_top).continuousAt
+      · exact continuousAt_apply S μ
+    · rw [Filter.eventuallyEq_iff_exists_mem]
+      classical
+      use Set.Ici ({⟨S, hSC⟩, ⟨g • S, hC1 g S hSC⟩} : Finset C)
+      use Filter.Ici_mem_atTop _
+      intro A hA
+      simp only [Set.mem_Ici, Finset.le_eq_subset, Finset.insert_subset_iff,
+        Finset.singleton_subset_iff] at hA
+      exact hτ2 A g S hSC hA.1 hA.2
   replace hμ3 : ∀ {S T : Set X}, S ∈ C → T ∈ C → Disjoint S T → μ (S ∪ T) = μ S + μ T := by
-    sorry
+    intro S T hSC hTC hST
+    apply hμ.eq_of_eventually
+    · exact continuousAt_apply (S ∪ T) μ
+    · exact ContinuousAt.add (continuousAt_apply S μ) (continuousAt_apply T μ)
+    · rw [Filter.eventuallyEq_iff_exists_mem]
+      classical
+      use Set.Ici ({⟨S, hSC⟩, ⟨T, hTC⟩, ⟨S ∪ T, hC2.union_mem hSC hTC⟩} : Finset C)
+      use Filter.Ici_mem_atTop _
+      intro A hA
+      simp only [Set.mem_Ici, Finset.le_eq_subset, Finset.insert_subset_iff,
+        Finset.singleton_subset_iff] at hA
+      exact hτ3 A S T hST hSC hTC hA.1 hA.2.1 hA.2.2
   let m := hC2.addContent_of_union μ hμ0 hμ3
   have hm : m.IsSigmaSubadditive := by
     apply MeasureTheory.isSigmaSubadditive_of_addContent_iUnion_eq_tsum hC2
@@ -120,5 +181,6 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     contrapose! hτ1
     simp [hτ1]
   have hτ2 : ∀ g : G, ∀ S : Set X, τ (g • S) = χ g * τ S := by
+    -- dig into definition of τ
     sorry
   exact ⟨τ, hτ1, hτ2⟩
