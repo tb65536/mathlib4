@@ -55,16 +55,16 @@ end content
 
 section content
 
+-- really break this up into two lemmas, one about smul and the other about scaling
 lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
     (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
-    (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generate wildly?
+    (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generalize wildly?
     (hG1 : ∀ g : G, ∀ S ∈ C, g • S ∈ C)
     (hG2 : ∀ g : G, ∀ S ∈ C, m (g • S) = χ g • m S) :
     ∀ g : G, ∀ S : Set α, m.measure hC hC_gen m_sigma_subadd (g • S) =
       χ g • m.measure hC hC_gen m_sigma_subadd S := by
   intro g hg
-
   sorry
 
 end content
@@ -73,23 +73,23 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     [SecondCountableTopology X] [MeasurableSpace X] [BorelSpace X]
     (χ : G → ℝ≥0)
     (C : Set (Set X))
-    (hS0 : ∃ S0 ∈ C, Nonempty S0) -- If no such S0 exists, then topology on X is trivial by hC5
     (hC1 : ∀ g : G, ∀ S ∈ C, g • S ∈ C)
     (hC2: MeasureTheory.IsSetRing C)
     (hC3 : ∀ S ∈ C, IsCompact S)
     (hC4 : ∀ S ∈ C, IsOpen S)
     (hC5 : MeasurableSpace.generateFrom C = borel X)
+    (S0 : Set X)
+    (hS0C : S0 ∈ C)
+    (hS0 : Nonempty S0)
     (μ : ∀ A : Finset C, A → NNReal)
-    (hμ1 : ∀ A : Finset C, ∀ S : A, Nonempty S → 0 < μ A S)
+    (hμ1 : ∀ A : Finset C, ∀ S : A, S = S0 → 0 < μ A S)
     (hμ2 : ∀ A : Finset C, ∀ g : G, ∀ S T : A, g • (S : Set X) = (T : Set X) →
       μ A T = χ g * μ A S)
     (hμ3 : ∀ A : Finset C, ∀ S T U : A, Disjoint (S : Set X) (T : Set X) →
       (S : Set X) ∪ (T : Set X) = (U : Set X) → μ A U = μ A S + μ A T) :
-    -- todo: add regularity condition
-    ∃ μ : MeasureTheory.Measure X, μ ≠ 0 ∧ (∀ S : Set X, IsCompact S → μ S < ⊤)
-      ∧ (∀ g : G, ∀ S : Set X, μ (g • S) = χ g * μ S) := by
+    -- finiteness on all compact sets will require transitivity
+    ∃ μ : MeasureTheory.Measure X, μ S0 = 1 ∧ (∀ g : G, ∀ S : Set X, μ (g • S) = χ g * μ S) := by
   classical
-  obtain ⟨S0, hS0C, hS0⟩ := hS0
   let σ : Finset C → Set X → NNReal :=
     fun A S ↦ Function.extend (↑) (μ A) (0 : Set X → NNReal) S
   let τ : Finset C → Set X → ENNReal :=
@@ -117,7 +117,7 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     have h : ∃ T0 : A, T0 = S0 := ⟨⟨⟨S0, hS0C⟩, hS0A⟩, rfl⟩
     obtain ⟨T0, rfl⟩ := h
     rw [hinj.extend_apply, ← ENNReal.coe_mul, inv_mul_cancel₀, ENNReal.coe_one]
-    exact (hμ1 A T0 hS0).ne'
+    exact (hμ1 A T0 rfl).ne'
   have hτ2 : ∀ A : Finset C, ∀ g : G, ∀ S : Set X, (hSC : S ∈ C) → ⟨S, hSC⟩ ∈ A →
       ⟨g • S, hC1 g S hSC⟩ ∈ A → τ A (g • S) = χ g * τ A S := by
     intro A g S hSC hSA hgSA
@@ -218,30 +218,10 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     rw [disjoint_self] at key
     rw [key]
     exact m.empty'
-  let τ := MeasureTheory.AddContent.measure m hC2.isSetSemiring
-    (BorelSpace.measurable_eq.trans hC5.symm).le hm
+  have hm' := (BorelSpace.measurable_eq.trans hC5.symm)
+  let τ := MeasureTheory.AddContent.measure m hC2.isSetSemiring hm'.le hm
   have hτ1 : τ S0 = 1 := by
-    rwa [MeasureTheory.AddContent.measure_eq m hC2.isSetSemiring
-      (BorelSpace.measurable_eq.trans hC5.symm) hm hS0C]
-  replace hτ1 : τ ≠ 0 := by
-    contrapose! hτ1
-    simp [hτ1]
-  have hτ2 : ∀ S : Set X, IsCompact S → τ S < ⊤ := by
-    -- cover by elements of C
-    sorry
-  have hτ3 : ∀ g : G, ∀ S : Set X, τ (g • S) = χ g * τ S :=
+    rwa [MeasureTheory.AddContent.measure_eq m hC2.isSetSemiring hm' hm hS0C]
+  have hτ2 : ∀ g : G, ∀ S : Set X, τ (g • S) = χ g * τ S :=
     MeasureTheory.AddContent.measure_smul m _ _ hm G χ hC1 hμ2
-    -- intro g S
-    -- dsimp only [τ]
-    -- dsimp only [τ, MeasureTheory.AddContent.measure,
-    --   MeasureTheory.OuterMeasure.trim,
-    --   MeasureTheory.Measure.trim,
-    --   MeasureTheory.OuterMeasure.toMeasure]
-    -- dsimp only [MeasureTheory.AddContent.measureCaratheodory,
-    --   MeasureTheory.inducedOuterMeasure,
-    --   MeasureTheory.OuterMeasure.ofFunction,
-    --   MeasureTheory.extend,
-    --   MeasureTheory.Measure.ofMeasurable]
-    -- change ⨅ _, ⨅ _, ∑' _, ⨅ _, ⨅ _, _ = _ * ⨅ _, ⨅ _, ∑' _, ⨅ _, ⨅ _, _
-    -- sorry
-  exact ⟨τ, hτ1, hτ2, hτ3⟩
+  exact ⟨τ, hτ1, hτ2⟩
