@@ -53,6 +53,22 @@ theorem MeasureTheory.addContent_biUnion_eq {α : Type*} {C : Set (Set α)} {m :
 
 end content
 
+section content
+
+lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+    (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
+    (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generate wildly?
+    (hG1 : ∀ g : G, ∀ S ∈ C, g • S ∈ C)
+    (hG2 : ∀ g : G, ∀ S ∈ C, m (g • S) = χ g • m S) :
+    ∀ g : G, ∀ S : Set α, m.measure hC hC_gen m_sigma_subadd (g • S) =
+      χ g • m.measure hC hC_gen m_sigma_subadd S := by
+  intro g hg
+
+  sorry
+
+end content
+
 theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     [SecondCountableTopology X] [MeasurableSpace X] [BorelSpace X]
     (χ : G → ℝ≥0)
@@ -70,7 +86,8 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
     (hμ3 : ∀ A : Finset C, ∀ S T U : A, Disjoint (S : Set X) (T : Set X) →
       (S : Set X) ∪ (T : Set X) = (U : Set X) → μ A U = μ A S + μ A T) :
     -- todo: add regularity condition
-    ∃ μ : MeasureTheory.Measure X, μ ≠ 0 ∧ ∀ g : G, ∀ S : Set X, μ (g • S) = χ g * μ S := by
+    ∃ μ : MeasureTheory.Measure X, μ ≠ 0 ∧ (∀ S : Set X, IsCompact S → μ S < ⊤)
+      ∧ (∀ g : G, ∀ S : Set X, μ (g • S) = χ g * μ S) := by
   classical
   obtain ⟨S0, hS0C, hS0⟩ := hS0
   let σ : Finset C → Set X → NNReal :=
@@ -209,7 +226,22 @@ theorem lem (G X : Type*) [Group G] [MulAction G X] [TopologicalSpace X]
   replace hτ1 : τ ≠ 0 := by
     contrapose! hτ1
     simp [hτ1]
-  have hτ2 : ∀ g : G, ∀ S : Set X, τ (g • S) = χ g * τ S := by
-    -- dig into definition of τ
+  have hτ2 : ∀ S : Set X, IsCompact S → τ S < ⊤ := by
+    -- cover by elements of C
     sorry
-  exact ⟨τ, hτ1, hτ2⟩
+  have hτ3 : ∀ g : G, ∀ S : Set X, τ (g • S) = χ g * τ S :=
+    MeasureTheory.AddContent.measure_smul m _ _ hm G χ hC1 hμ2
+    -- intro g S
+    -- dsimp only [τ]
+    -- dsimp only [τ, MeasureTheory.AddContent.measure,
+    --   MeasureTheory.OuterMeasure.trim,
+    --   MeasureTheory.Measure.trim,
+    --   MeasureTheory.OuterMeasure.toMeasure]
+    -- dsimp only [MeasureTheory.AddContent.measureCaratheodory,
+    --   MeasureTheory.inducedOuterMeasure,
+    --   MeasureTheory.OuterMeasure.ofFunction,
+    --   MeasureTheory.extend,
+    --   MeasureTheory.Measure.ofMeasurable]
+    -- change ⨅ _, ⨅ _, ∑' _, ⨅ _, ⨅ _, _ = _ * ⨅ _, ⨅ _, ∑' _, ⨅ _, ⨅ _, _
+    -- sorry
+  exact ⟨τ, hτ1, hτ2, hτ3⟩
