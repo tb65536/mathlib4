@@ -12,12 +12,6 @@ open Filter
 
 variable {X Y ι : Type*} [TopologicalSpace X] [T2Space X] [TopologicalSpace Y] {y : Y}
 
-lemma ClusterPt.frequently' {F : Filter Y} (h : ClusterPt y F)
-    {p : Y → Prop} (hp : ∀ᶠ x in F, p x) :
-    ∃ᶠ x in nhds y, p x := by
-  rw [eventually_iff, ← le_principal_iff] at hp
-  exact clusterPt_principal_iff_frequently.mp (h.mono hp)
-
 lemma ClusterPt.apply_eq_of_eventually {F : Filter Y} (h : ClusterPt y F)
     {f g : Y → X} (ha : ContinuousAt f y) (hb : ContinuousAt g y) (hfg : f =ᶠ[F] g) :
     f y = g y :=
