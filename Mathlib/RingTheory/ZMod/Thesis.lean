@@ -51,13 +51,14 @@ section smul1
 
 open scoped ENNReal
 
-instance {R : Type*} [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞] {α : Type*} (C : Set (Set α)) :
-    SMul R (MeasureTheory.AddContent C) :=
+instance {R : Type*} [DistribSMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞]
+    {α : Type*} (C : Set (Set α)) : SMul R (MeasureTheory.AddContent C) :=
   ⟨fun c m ↦
-    { toFun := fun s => c • m s
+    { toFun s := c • m s
       empty' := by rw [MeasureTheory.addContent_empty, ← smul_one_mul, mul_zero]
-      sUnion' := by
-        sorry }⟩
+      sUnion' I h1 h2 h3 := by
+        have := m.sUnion' I h1 h2 h3
+        convert Finset.smul_sum }⟩
 
 end smul1
 
@@ -69,20 +70,50 @@ def MeasureTheory.AddContent.smul {α : Type*} {C : Set (Set α)}
     (m : AddContent C) {G : Type*} [Group G] [MulAction G α] (g : G) :
     AddContent (g • C) :=
   { toFun := fun s ↦ m (g⁻¹ • s)
-    empty' := sorry
-    sUnion' := sorry }
+    empty' := by rw [Set.smul_set_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      rw [Set.subset_smul_set_iff] at h1
+      rw [Set.mem_smul_set_iff_inv_smul_mem] at h3
+      have := m.sUnion'
+      sorry }
 
--- really break this up into two lemmas, one about smul and the other about scaling
-lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+def MeasureTheory.AddContent.map {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : α → β) (hf : Function.Injective f) :
+    AddContent (sorry : Set (Set β)) :=
+  { toFun := fun s ↦ m (f ⁻¹' s)
+    empty' := by rw [Set.preimage_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      have := m.sUnion'
+      sorry }
+
+def MeasureTheory.AddContent.comap {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : β → α) (hf : Function.Surjective f) :
+    AddContent (sorry : Set (Set β)) :=
+  { toFun := fun s ↦ m (f '' s)
+    empty' := by rw [Set.image_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      have := m.sUnion'
+      sorry }
+
+lemma MeasureTheory.AddContent.measure_map {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
     (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
     (G : Type*) [Group G] [MulAction G α] (g : G) (χ : G → ENNReal) :
     (m.smul g).measure sorry sorry sorry =
-      χ g • m.measure hC hC_gen m_sigma_subadd := by
+      (m.measure hC hC_gen m_sigma_subadd).comap (fun x ↦ g⁻¹ • x) := by
   sorry
 
 -- really break this up into two lemmas, one about smul and the other about scaling
 lemma MeasureTheory.AddContent.measure_smul' {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+    (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
+    (G : Type*) [Group G] [MulAction G α] (g : G) (χ : G → ENNReal) :
+    (m.smul g).measure sorry sorry sorry =
+      (m.measure hC hC_gen m_sigma_subadd).comap (fun x ↦ g⁻¹ • x) := by
+  sorry
+
+-- really break this up into two lemmas, one about smul and the other about scaling
+lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
     (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
     (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generalize wildly?
