@@ -77,8 +77,8 @@ def MeasureTheory.AddContent.smul {α : Type*} {C : Set (Set α)}
       have := m.sUnion'
       sorry }
 
-def MeasureTheory.AddContent.map {α β : Type*} {C : Set (Set α)}
-    (m : AddContent C) (f : α → β) (hf : Function.Injective f) :
+def MeasureTheory.AddContent.mapSurjective {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : α → β) (hf : Function.Surjective f) :
     AddContent (sorry : Set (Set β)) :=
   { toFun := fun s ↦ m (f ⁻¹' s)
     empty' := by rw [Set.preimage_empty, addContent_empty]
@@ -86,8 +86,8 @@ def MeasureTheory.AddContent.map {α β : Type*} {C : Set (Set α)}
       have := m.sUnion'
       sorry }
 
-def MeasureTheory.AddContent.comap {α β : Type*} {C : Set (Set α)}
-    (m : AddContent C) (f : β → α) (hf : Function.Surjective f) :
+def MeasureTheory.AddContent.comapInjective {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : β → α) (hf : Function.Injective f) :
     AddContent (sorry : Set (Set β)) :=
   { toFun := fun s ↦ m (f '' s)
     empty' := by rw [Set.image_empty, addContent_empty]
@@ -95,12 +95,12 @@ def MeasureTheory.AddContent.comap {α β : Type*} {C : Set (Set α)}
       have := m.sUnion'
       sorry }
 
-lemma MeasureTheory.AddContent.measure_map {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
-    (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+lemma MeasureTheory.AddContent.measure_map {α β : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    [mβ : MeasurableSpace β] (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
-    (G : Type*) [Group G] [MulAction G α] (g : G) (χ : G → ENNReal) :
-    (m.smul g).measure sorry sorry sorry =
-      (m.measure hC hC_gen m_sigma_subadd).comap (fun x ↦ g⁻¹ • x) := by
+    (f : α → β) (hf : Function.Surjective f) :
+    (m.mapSurjective f hf).measure sorry sorry sorry =
+      (m.measure hC hC_gen m_sigma_subadd).map f := by
   sorry
 
 -- really break this up into two lemmas, one about smul and the other about scaling
