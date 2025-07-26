@@ -47,10 +47,42 @@ theorem MeasureTheory.addContent_biUnion_eq {α : Type*} {C : Set (Set α)} {m :
 
 end content
 
+section smul1
+
+open scoped ENNReal
+
+instance {R : Type*} [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞] {α : Type*} (C : Set (Set α)) :
+    SMul R (MeasureTheory.AddContent C) :=
+  ⟨fun c m ↦
+    { toFun := fun s => c • m s
+      empty' := by rw [MeasureTheory.addContent_empty, ← smul_one_mul, mul_zero]
+      sUnion' := by
+        sorry }⟩
+
+end smul1
+
 section content
+
+open scoped Pointwise
+
+def MeasureTheory.AddContent.smul {α : Type*} {C : Set (Set α)}
+    (m : AddContent C) {G : Type*} [Group G] [MulAction G α] (g : G) :
+    AddContent (g • C) :=
+  { toFun := fun s ↦ m (g⁻¹ • s)
+    empty' := sorry
+    sUnion' := sorry }
 
 -- really break this up into two lemmas, one about smul and the other about scaling
 lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+    (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
+    (G : Type*) [Group G] [MulAction G α] (g : G) (χ : G → ENNReal) :
+    (m.smul g).measure sorry sorry sorry =
+      χ g • m.measure hC hC_gen m_sigma_subadd := by
+  sorry
+
+-- really break this up into two lemmas, one about smul and the other about scaling
+lemma MeasureTheory.AddContent.measure_smul' {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
     (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
     (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generalize wildly?
