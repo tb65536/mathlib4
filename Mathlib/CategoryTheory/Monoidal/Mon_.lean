@@ -18,7 +18,7 @@ the category of lax monoidal functors from the unit monoidal category to `C`.  W
 
 -/
 
-universe v₁ v₂ v₃ u₁ u₂ u₃ u
+universe w v₁ v₂ v₃ u₁ u₂ u₃ u
 
 open Function CategoryTheory MonoidalCategory Functor.LaxMonoidal Functor.OplaxMonoidal
 
@@ -81,8 +81,7 @@ instance : IsMon_Hom (𝟙 M) where
 
 instance (f : M ⟶ N) (g : N ⟶ O) [IsMon_Hom f] [IsMon_Hom g] : IsMon_Hom (f ≫ g) where
 
-instance {M N : C} [Mon_Class M] [Mon_Class N] (f : M ≅ N) [IsMon_Hom f.hom] :
-   IsMon_Hom f.inv where
+instance {M N : C} [Mon_Class M] [Mon_Class N] (f : M ≅ N) [IsMon_Hom f.hom] : IsMon_Hom f.inv where
   one_hom := by simp [Iso.comp_inv_eq]
   mul_hom := by simp [Iso.comp_inv_eq]
 
@@ -204,22 +203,20 @@ instance {A B : Mon_ C} (f : A ⟶ B) [e : IsIso ((forget C).map f)] : IsIso f.h
 instance : (forget C).ReflectsIsomorphisms where
   reflects f e := ⟨⟨.mk' (inv f.hom), by aesop_cat⟩⟩
 
-/-- Construct an isomorphism of monoids by giving an isomorphism between the underlying objects
-and checking compatibility with unit and multiplication only in the forward direction.
--/
+/-- Construct an isomorphism of monoid objects by giving a monoid isomorphism between the underlying
+objects. -/
 @[simps]
-def mkIso' {M N : Mon_ C} (f : M.X ≅ N.X) [IsMon_Hom f.hom] : M ≅ N where
-  hom := Hom.mk f.hom
-  inv := Hom.mk f.inv
+def mkIso' {M N : C} [Mon_Class M] [Mon_Class N] (e : M ≅ N) [IsMon_Hom e.hom] : mk M ≅ mk N where
+  hom := Hom.mk e.hom
+  inv := Hom.mk e.inv
 
-/-- Construct an isomorphism of monoids by giving an isomorphism between the underlying objects
-and checking compatibility with unit and multiplication only in the forward direction.
--/
+/-- Construct an isomorphism of monoid objects by giving an isomorphism between the underlying
+objects and checking compatibility with unit and multiplication only in the forward direction. -/
 @[simps!]
-def mkIso {M N : Mon_ C} (f : M.X ≅ N.X) (one_f : η[M.X] ≫ f.hom = η[N.X] := by aesop_cat)
-    (mul_f : μ[M.X] ≫ f.hom = (f.hom ⊗ₘ f.hom) ≫ μ[N.X] := by aesop_cat) : M ≅ N :=
-  have : IsMon_Hom f.hom := ⟨one_f, mul_f⟩
-  mkIso' f
+abbrev mkIso {M N : Mon_ C} (e : M.X ≅ N.X) (one_f : η[M.X] ≫ e.hom = η[N.X] := by aesop_cat)
+    (mul_f : μ[M.X] ≫ e.hom = (e.hom ⊗ₘ e.hom) ≫ μ[N.X] := by aesop_cat) : M ≅ N :=
+  have : IsMon_Hom e.hom := ⟨one_f, mul_f⟩
+  mkIso' e
 
 @[simps]
 instance uniqueHomFromTrivial (A : Mon_ C) : Unique (trivial C ⟶ A) where
@@ -307,12 +304,12 @@ theorem comp_mapMon_mul (X : Mon_ C) :
 
 /-- The identity functor is also the identity on monoid objects. -/
 @[simps!]
-noncomputable def mapMonIdIso : mapMon (𝟭 C) ≅ 𝟭 (Mon_ C) :=
+def mapMonIdIso : mapMon (𝟭 C) ≅ 𝟭 (Mon_ C) :=
   NatIso.ofComponents fun X ↦ Mon_.mkIso (.refl _)
 
 /-- The composition functor is also the composition on monoid objects. -/
 @[simps!]
-noncomputable def mapMonCompIso : (F ⋙ G).mapMon ≅ F.mapMon ⋙ G.mapMon :=
+def mapMonCompIso : (F ⋙ G).mapMon ≅ F.mapMon ⋙ G.mapMon :=
   NatIso.ofComponents fun X ↦ Mon_.mkIso (.refl _)
 
 protected instance Faithful.mapMon [F.Faithful] : F.mapMon.Faithful where
@@ -320,12 +317,12 @@ protected instance Faithful.mapMon [F.Faithful] : F.mapMon.Faithful where
 
 /-- Natural transformations between functors lift to monoid objects. -/
 @[simps!]
-noncomputable def mapMonNatTrans (f : F ⟶ F') [NatTrans.IsMonoidal f] : F.mapMon ⟶ F'.mapMon where
+def mapMonNatTrans (f : F ⟶ F') [NatTrans.IsMonoidal f] : F.mapMon ⟶ F'.mapMon where
   app X := .mk' (f.app _)
 
 /-- Natural isomorphisms between functors lift to monoid objects. -/
 @[simps!]
-noncomputable def mapMonNatIso (e : F ≅ F') [NatTrans.IsMonoidal e.hom] : F.mapMon ≅ F'.mapMon :=
+def mapMonNatIso (e : F ≅ F') [NatTrans.IsMonoidal e.hom] : F.mapMon ≅ F'.mapMon :=
   NatIso.ofComponents fun X ↦ Mon_.mkIso (e.app _)
 
 end LaxMonoidal
@@ -354,6 +351,7 @@ instance FullyFaithful.isMon_Hom_preimage (hF : F.FullyFaithful) {X Y : C}
 
 /-- If `F : C ⥤ D` is a fully faithful monoidal functor, then `Mon(F) : Mon C ⥤ Mon D` is fully
 faithful too. -/
+@[simps]
 protected def FullyFaithful.mapMon (hF : F.FullyFaithful) : F.mapMon.FullyFaithful where
   preimage {X Y} f := .mk' <| hF.preimage f.hom
 
@@ -375,7 +373,7 @@ namespace Adjunction
 variable {F : C ⥤ D} {G : D ⥤ C} (a : F ⊣ G) [F.Monoidal] [G.LaxMonoidal] [a.IsMonoidal]
 
 /-- An adjunction of monoidal functors lifts to an adjunction of their lifts to monoid objects. -/
-@[simps] noncomputable def mapMon : F.mapMon ⊣ G.mapMon where
+@[simps] def mapMon : F.mapMon ⊣ G.mapMon where
   unit := mapMonIdIso.inv ≫ mapMonNatTrans a.unit ≫ mapMonCompIso.hom
   counit := mapMonCompIso.inv ≫ mapMonNatTrans a.counit ≫ mapMonIdIso.hom
 
@@ -385,7 +383,7 @@ namespace Equivalence
 
 /-- An equivalence of categories lifts to an equivalence of their monoid objects. -/
 @[simps]
-noncomputable def mapMon (e : C ≌ D) [e.functor.Monoidal] [e.inverse.Monoidal] [e.IsMonoidal] :
+def mapMon (e : C ≌ D) [e.functor.Monoidal] [e.inverse.Monoidal] [e.IsMonoidal] :
     Mon_ C ≌ Mon_ D where
   functor := e.functor.mapMon
   inverse := e.inverse.mapMon
@@ -401,14 +399,14 @@ namespace EquivLaxMonoidalFunctorPUnit
 variable (C) in
 /-- Implementation of `Mon_.equivLaxMonoidalFunctorPUnit`. -/
 @[simps]
-def laxMonoidalToMon : LaxMonoidalFunctor (Discrete PUnit.{u + 1}) C ⥤ Mon_ C where
+def laxMonoidalToMon : LaxMonoidalFunctor (Discrete PUnit.{w + 1}) C ⥤ Mon_ C where
   obj F := (F.mapMon : Mon_ _ ⥤ Mon_ C).obj (trivial (Discrete PUnit))
   map α := ((Functor.mapMonFunctor (Discrete PUnit) C).map α).app _
 
 /-- Implementation of `Mon_.equivLaxMonoidalFunctorPUnit`. -/
 @[simps!]
 def monToLaxMonoidalObj (A : Mon_ C) :
-    Discrete PUnit.{u + 1} ⥤ C := (Functor.const _).obj A.X
+    Discrete PUnit.{w + 1} ⥤ C := (Functor.const _).obj A.X
 
 instance (A : Mon_ C) : (monToLaxMonoidalObj A).LaxMonoidal where
   ε := η[A.X]
@@ -425,7 +423,7 @@ lemma monToLaxMonoidalObj_μ (A : Mon_ C) (X Y) :
 variable (C)
 /-- Implementation of `Mon_.equivLaxMonoidalFunctorPUnit`. -/
 @[simps]
-def monToLaxMonoidal : Mon_ C ⥤ LaxMonoidalFunctor (Discrete PUnit.{u + 1}) C where
+def monToLaxMonoidal : Mon_ C ⥤ LaxMonoidalFunctor (Discrete PUnit.{w + 1}) C where
   obj A := LaxMonoidalFunctor.of (monToLaxMonoidalObj A)
   map f :=
     { hom := { app _ := f.hom }
@@ -437,14 +435,14 @@ attribute [local aesop safe tactic (rule_sets := [CategoryTheory])]
 /-- Implementation of `Mon_.equivLaxMonoidalFunctorPUnit`. -/
 @[simps!]
 def unitIso :
-    𝟭 (LaxMonoidalFunctor (Discrete PUnit.{u + 1}) C) ≅ laxMonoidalToMon C ⋙ monToLaxMonoidal C :=
+    𝟭 (LaxMonoidalFunctor (Discrete PUnit.{w + 1}) C) ≅ laxMonoidalToMon C ⋙ monToLaxMonoidal C :=
   NatIso.ofComponents
     (fun F ↦ LaxMonoidalFunctor.isoOfComponents (fun _ ↦ F.mapIso (eqToIso (by ext))))
 
 /-- Auxiliary definition for `counitIso`. -/
 @[simps!]
 def counitIsoAux (F : Mon_ C) :
-    ((monToLaxMonoidal C ⋙ laxMonoidalToMon C).obj F).X ≅ ((𝟭 (Mon_ C)).obj F).X :=
+    ((monToLaxMonoidal.{w} C ⋙ laxMonoidalToMon C).obj F).X ≅ ((𝟭 (Mon_ C)).obj F).X :=
   Iso.refl _
 
 @[simp]
@@ -462,10 +460,10 @@ theorem counitIsoAux_IsMon_Hom (F : Mon_ C) :
 
 /-- Implementation of `Mon_.equivLaxMonoidalFunctorPUnit`. -/
 @[simps!]
-def counitIso : monToLaxMonoidal C ⋙ laxMonoidalToMon C ≅ 𝟭 (Mon_ C) :=
-  NatIso.ofComponents (fun F ↦
-    letI : IsMon_Hom (counitIsoAux C F).hom := counitIsoAux_IsMon_Hom C F
-    mkIso' (counitIsoAux C F))
+def counitIso : monToLaxMonoidal.{w} C ⋙ laxMonoidalToMon C ≅ 𝟭 (Mon_ C) :=
+  NatIso.ofComponents fun F ↦
+    letI : IsMon_Hom (counitIsoAux.{w} C F).hom := counitIsoAux_IsMon_Hom C F
+    mkIso (counitIsoAux.{w} C F)
 
 end EquivLaxMonoidalFunctorPUnit
 
@@ -477,7 +475,7 @@ attribute [local simp] eqToIso_map
 Monoid objects in `C` are "just" lax monoidal functors from the trivial monoidal category to `C`.
 -/
 @[simps]
-def equivLaxMonoidalFunctorPUnit : LaxMonoidalFunctor (Discrete PUnit.{u + 1}) C ≌ Mon_ C where
+def equivLaxMonoidalFunctorPUnit : LaxMonoidalFunctor (Discrete PUnit.{w + 1}) C ≌ Mon_ C where
   functor := laxMonoidalToMon C
   inverse := monToLaxMonoidal C
   unitIso := unitIso C
@@ -821,6 +819,9 @@ instance : SymmetricCategory (Mon_ C) where
   symmetry X Y := by
     ext
     simp
+
+@[simp] lemma braiding_hom_hom (M N : Mon_ C) : (β_ M N).hom.hom = (β_ M.X N.X).hom := rfl
+@[simp] lemma braiding_inv_hom (M N : Mon_ C) : (β_ M N).inv.hom = (β_ M.X N.X).inv := rfl
 
 end Mon_
 
