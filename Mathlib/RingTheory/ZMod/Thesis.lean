@@ -24,29 +24,6 @@ lemma MapClusterPt.apply_eq_of_eventually {F : Filter ι} {z : ι → Y} (h : Ma
 
 end cluster
 
-section content
-
-theorem MeasureTheory.addContent_biUnion_eq {α : Type*} {C : Set (Set α)} {m : AddContent C}
-    {ι : Type*} (hC : IsSetRing C) {s : ι → Set α} {S : Finset ι} (hs : ∀ n ∈ S, s n ∈ C)
-    (h : (S : Set ι).PairwiseDisjoint s) :
-    m (⋃ i ∈ S, s i) = ∑ i ∈ S, m (s i) := by
-  classical
-  have key := m.sUnion' (S.image s) ?_ ?_ ?_
-  · rw [Finset.coe_image, Set.sUnion_image] at key
-    exact key.trans (Finset.sum_image_of_disjoint m.empty' h)
-  · rwa [Finset.coe_image, Set.image_subset_iff]
-  · intro a ha b hb hab
-    change Disjoint a b
-    simp_rw [Finset.coe_image, Set.mem_image, Finset.mem_coe] at ha hb
-    obtain ⟨a, ha, rfl⟩ := ha
-    obtain ⟨b, hb, rfl⟩ := hb
-    simp_rw [Set.PairwiseDisjoint, Set.Pairwise, Finset.mem_coe] at h
-    exact h ha hb (ne_of_apply_ne s hab)
-  · rw [Finset.coe_image, Set.sUnion_image]
-    exact hC.biUnion_mem S hs
-
-end content
-
 section smul1
 
 open scoped ENNReal
@@ -116,12 +93,23 @@ lemma MeasureTheory.AddContent.measure_smul' {α : Type*} {C : Set (Set α)} [m�
 lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
     (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
     (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
-    (G : Type*) [Group G] [MulAction G α] (χ : G → ℝ≥0) -- generalize wildly?
+    (G : Type*) [Group G] [MulAction G α] (χ : G → ENNReal)
     (hG1 : ∀ g : G, ∀ S ∈ C, g • S ∈ C)
     (hG2 : ∀ g : G, ∀ S ∈ C, m (g • S) = χ g • m S) :
     ∀ g : G, ∀ S : Set α, m.measure hC hC_gen m_sigma_subadd (g • S) =
       χ g • m.measure hC hC_gen m_sigma_subadd S := by
-  intro g hg
+  intro g S
+  -- simp_rw [AddContent.measure, Measure.trim, OuterMeasure.toMeasure,
+  --   Measure.ofMeasurable]
+  -- change inducedOuterMeasure _ ?_ ?_ _ = _ • inducedOuterMeasure _ ?_ ?_ _
+  -- simp_rw [inducedOuterMeasure]
+  change OuterMeasure.ofFunction _ (?_) (MulAction.toPerm g '' S) = (χ g • OuterMeasure.ofFunction _ (?_)) S
+  rw [OuterMeasure.smul_ofFunction]
+  rw [← OuterMeasure.comap_apply]
+  rw [OuterMeasure.comap_ofFunction]
+  congr 2
+  ext S
+  simp [extend]
   sorry
 
 end content
