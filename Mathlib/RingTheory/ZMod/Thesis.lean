@@ -12,12 +12,6 @@ open Filter
 
 variable {X Y ι : Type*} [TopologicalSpace X] [T2Space X] [TopologicalSpace Y] {y : Y}
 
-lemma ClusterPt.frequently' {F : Filter Y} (h : ClusterPt y F)
-    {p : Y → Prop} (hp : ∀ᶠ x in F, p x) :
-    ∃ᶠ x in nhds y, p x := by
-  rw [eventually_iff, ← le_principal_iff] at hp
-  exact clusterPt_principal_iff_frequently.mp (h.mono hp)
-
 lemma ClusterPt.apply_eq_of_eventually {F : Filter Y} (h : ClusterPt y F)
     {f g : Y → X} (ha : ContinuousAt f y) (hb : ContinuousAt g y) (hfg : f =ᶠ[F] g) :
     f y = g y :=
@@ -53,7 +47,70 @@ theorem MeasureTheory.addContent_biUnion_eq {α : Type*} {C : Set (Set α)} {m :
 
 end content
 
+section smul1
+
+open scoped ENNReal
+
+instance {R : Type*} [DistribSMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞]
+    {α : Type*} (C : Set (Set α)) : SMul R (MeasureTheory.AddContent C) :=
+  ⟨fun c m ↦
+    { toFun s := c • m s
+      empty' := by rw [MeasureTheory.addContent_empty, ← smul_one_mul, mul_zero]
+      sUnion' I h1 h2 h3 := by
+        have := m.sUnion' I h1 h2 h3
+        convert Finset.smul_sum }⟩
+
+end smul1
+
 section content
+
+open scoped Pointwise
+
+def MeasureTheory.AddContent.smul {α : Type*} {C : Set (Set α)}
+    (m : AddContent C) {G : Type*} [Group G] [MulAction G α] (g : G) :
+    AddContent (g • C) :=
+  { toFun := fun s ↦ m (g⁻¹ • s)
+    empty' := by rw [Set.smul_set_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      rw [Set.subset_smul_set_iff] at h1
+      rw [Set.mem_smul_set_iff_inv_smul_mem] at h3
+      have := m.sUnion'
+      sorry }
+
+def MeasureTheory.AddContent.mapSurjective {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : α → β) (hf : Function.Surjective f) :
+    AddContent (sorry : Set (Set β)) :=
+  { toFun := fun s ↦ m (f ⁻¹' s)
+    empty' := by rw [Set.preimage_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      have := m.sUnion'
+      sorry }
+
+def MeasureTheory.AddContent.comapInjective {α β : Type*} {C : Set (Set α)}
+    (m : AddContent C) (f : β → α) (hf : Function.Injective f) :
+    AddContent (sorry : Set (Set β)) :=
+  { toFun := fun s ↦ m (f '' s)
+    empty' := by rw [Set.image_empty, addContent_empty]
+    sUnion' I h1 h2 h3 := by
+      have := m.sUnion'
+      sorry }
+
+lemma MeasureTheory.AddContent.measure_map {α β : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    [mβ : MeasurableSpace β] (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+    (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
+    (f : α → β) (hf : Function.Surjective f) :
+    (m.mapSurjective f hf).measure sorry sorry sorry =
+      (m.measure hC hC_gen m_sigma_subadd).map f := by
+  sorry
+
+-- really break this up into two lemmas, one about smul and the other about scaling
+lemma MeasureTheory.AddContent.measure_smul' {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
+    (m : MeasureTheory.AddContent C) (hC : MeasureTheory.IsSetSemiring C)
+    (hC_gen : mα ≤ MeasurableSpace.generateFrom C) (m_sigma_subadd : m.IsSigmaSubadditive)
+    (G : Type*) [Group G] [MulAction G α] (g : G) (χ : G → ENNReal) :
+    (m.smul g).measure sorry sorry sorry =
+      (m.measure hC hC_gen m_sigma_subadd).comap (fun x ↦ g⁻¹ • x) := by
+  sorry
 
 -- really break this up into two lemmas, one about smul and the other about scaling
 lemma MeasureTheory.AddContent.measure_smul {α : Type*} {C : Set (Set α)} [mα : MeasurableSpace α]
