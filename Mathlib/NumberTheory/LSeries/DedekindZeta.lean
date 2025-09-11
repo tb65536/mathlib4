@@ -43,14 +43,41 @@ open scoped Real
 def dedekindZeta (s : ℂ) : ℂ :=
   LSeries (fun n ↦ Nat.card {I : Ideal (𝓞 K) // absNorm I = n}) s
 
-def dedekindZetaPartial (c : ClassGroup (𝓞 K)) (s : ℂ) : ℂ :=
-  LSeries (fun n ↦ Nat.card {I : (Ideal (𝓞 K))⁰ // absNorm I.1 = n ∧ ClassGroup.mk0 I = c}) s
+variable {K}
 
-def heckeTheta (I : Ideal (𝓞 K)) (t : ℝ) : ℝ := tsum (fun a : I ↦ 0)
+def preim (C : ClassGroup (𝓞 K)) : Set (Ideal (𝓞 K))⁰ := ClassGroup.mk0 ⁻¹' {C}
+
+def dedekindZetaPartial (C : ClassGroup (𝓞 K)) (s : ℂ) : ℂ :=
+  LSeries (fun n ↦ Nat.card {I ∈ preim C | absNorm I.1 = n}) s
+
+theorem dedekindZetaPartial_eq_of_inv {C : ClassGroup (𝓞 K)} {I : (Ideal (𝓞 K))⁰}
+    (h : ClassGroup.mk0 I = C⁻¹) : dedekindZetaPartial C = 0 := sorry
+
+private def theta (I : Ideal (𝓞 K)) (t : ℝ) : ℝ := tsum (fun a : I ↦ 0)
+
+private def f (I : (Ideal (𝓞 K))⁰) (t : ℝ) : ℂ :=
+  (torsionOrder K : ℝ)⁻¹ * 0 -- theta integral, p. 460
+
+private def g (C : ClassGroup (𝓞 K)) (y : ℝ) : ℂ :=
+  tsum (fun I : preim C ↦ Real.exp (- Real.pi * Norm I * y / (d I) ^ (1 / n))) -- needs inner product p.459
+
+def heckeThetaPartialFEPair {C : ClassGroup (𝓞 K)} {I : (Ideal (𝓞 K))⁰}
+    (h : ClassGroup.mk0 I = C⁻¹) : WeakFEPair ℂ where
+  f := f I
+  g := g C
+  hf_int := sorry
+  hg_int := sorry
+  k := 1 / 2
+  hk := one_half_pos
+  ε := 1
+  hε := one_ne_zero
+  f₀ := sorry
+  hf_top r := sorry
+  g₀ := sorry
+  hg_top r := sorry
+  h_feq x hx := sorry
 
 end NumberField
-
-#exit
 
 namespace HurwitzZeta
 
