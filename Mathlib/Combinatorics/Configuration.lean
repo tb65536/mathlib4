@@ -519,4 +519,14 @@ noncomputable instance [DecidableEq K] : ProjectivePlane (ℙ K (Fin 3 → K)) (
 
 end ofField
 
+def Colinear (S : Set P) : Prop := ∃ l : L, ∀ p ∈ S, p ∈ l
+
+def Concurrent (S : Set L) : Prop := ∃ p : P, ∀ l ∈ S, p ∈ l
+
+class Desarguesian : Prop where
+  desarguesian : False
+
+class Pappian : Prop where
+  pappian : False
+
 end Configuration
