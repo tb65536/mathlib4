@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Xavier Roblot
 -/
 import Mathlib.Algebra.BigOperators.Ring.Nat
+import Mathlib.NumberTheory.LSeries.AbstractFuncEq
 import Mathlib.NumberTheory.LSeries.SumCoeff
 import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
@@ -25,6 +26,37 @@ In this file, we define and prove results about the Dedekind zeta function of a 
 
 Generalize the construction of the Dedekind zeta function.
 -/
+
+namespace NumberField
+
+open NumberField.Units
+
+variable (K : Type*) [Field K] [NumberField K]
+
+noncomputable def dedekindFEPair : WeakFEPair ℂ where
+  f := sorry -- R → ℂ
+  g := sorry -- ℝ → ℂ
+  k := 1 / 2 -- weight, exponent in functional equation (ℝ)
+  ε := 1 -- root number (ℂ)
+  f₀ := 2 ^ (Module.finrank ℚ K - 1) * regulator K / torsionOrder K -- constant term at ∞ (E)
+  g₀ := sorry -- constant term at ∞ (E)
+  hf_int := sorry -- proof of integrability on (0,∞)
+  hg_int := sorry -- proof of integrability on (0,∞)
+  hk := by positivity -- 0 < k
+  hε := one_ne_zero -- ε ≠ 0
+  h_feq := sorry -- f (1 / x) = (ε * ↑(x ^ k)) • g x
+  hf_top := sorry -- decay at ∞
+  hg_top := sorry -- decay at ∞
+
+-- f - f₀ has mellin transform Λ (see `hasMellin`)
+-- functional_equation for Λ is `P.Λ (P.k - s) = P.ε • P.symm.Λ s`
+/- So just define the WeakFEPair, define completed Dedekind zeta function as Mellin transform,
+  define Dedekind zeta function from that, and only afterwards prove the L-series formula? -/
+
+-- Our f is Neukirch's f_F, but takes ideal as a parameter
+
+
+end NumberField
 
 variable (K : Type*) [Field K] [NumberField K]
 

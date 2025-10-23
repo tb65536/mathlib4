@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Thomas Browning
 -/
 import Mathlib.Analysis.SpecialFunctions.Complex.Circle
+import Mathlib.MeasureTheory.Group.Integral
 import Mathlib.Topology.Algebra.Group.CompactOpen
 
 /-!
@@ -108,5 +109,38 @@ def mapHom [LocallyCompactSpace G] :
   map_one' := map_one
   map_mul' := map_mul
   continuous_toFun := continuous_of_continuous_uncurry _ continuous_comp
+
+def doubleDual : A →ₜ* PontryaginDual (PontryaginDual A) where
+  toFun a :=
+  { toFun f := f a
+    map_one' := rfl
+    map_mul' f g := rfl
+    continuous_toFun := sorry }
+  map_one' := by simp only [_root_.map_one]; rfl
+  map_mul' f g := by simp only [_root_.map_mul]; rfl
+  continuous_toFun := sorry
+
+-- theorem bijective_doubleDual
+
+section Fourier
+
+open ComplexConjugate MeasureTheory MeasureTheory.Measure
+
+variable {A B C G H} {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E] [MeasurableSpace H]
+  [MeasurableSpace (PontryaginDual H)]
+
+/-- The Fourier transform on a locally compact group. -/
+def fourier {μ : Measure H} [IsHaarMeasure μ] (f : H → E) (g : PontryaginDual H) : E :=
+  ∫ h : H, conj (g h : ℂ) • f h ∂μ
+
+def dualMeasure (μ : Measure H) [IsHaarMeasure μ] : Measure (PontryaginDual H) := sorry
+
+/-- The Fourier transform on a locally compact group. -/
+def fourierInv {μ : Measure H} [IsHaarMeasure μ] (f : PontryaginDual H → E) (h : H) : E :=
+  ∫ (g : PontryaginDual H), (g h : ℂ) • f g ∂(dualMeasure μ)
+
+-- Define dual measure and Fourier inversion theorem
+
+end Fourier
 
 end PontryaginDual
