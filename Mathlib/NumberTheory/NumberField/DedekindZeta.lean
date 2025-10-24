@@ -6,6 +6,8 @@ Authors: Xavier Roblot
 import Mathlib.Algebra.BigOperators.Ring.Nat
 import Mathlib.NumberTheory.LSeries.AbstractFuncEq
 import Mathlib.NumberTheory.LSeries.SumCoeff
+import Mathlib.NumberTheory.NumberField.CanonicalEmbedding.NormEqOne
+import Mathlib.NumberTheory.NumberField.Discriminant.Different
 import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 /-!
@@ -27,15 +29,30 @@ In this file, we define and prove results about the Dedekind zeta function of a 
 Generalize the construction of the Dedekind zeta function.
 -/
 
-namespace NumberField
+namespace NumberField.Dedekind
 
-open NumberField.Units
+open NumberField.Units mixedEmbedding mixedEmbedding.fundamentalCone dirichletUnitTheorem
 
-variable (K : Type*) [Field K] [NumberField K]
+open scoped nonZeroDivisors
 
-noncomputable def dedekindFEPair : WeakFEPair ℂ where
-  f := sorry -- R → ℂ
-  g := sorry -- ℝ → ℂ
+variable {K : Type*} [Field K] [NumberField K]
+
+-- or perhaps just plug in a lattice? and then dual lattice w.r.t. trace form gives function eq'n.
+noncomputable def theta (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) (t : ℝ) : ℂ := sorry
+
+-- takes in fundamental domain (e.g., `logMap '' normEqOne K`)
+noncomputable def f (F : Set (logSpace K)) (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) (t : ℝ) : ℂ :=
+  (∫ x in F, theta a sorry) / torsionOrder K
+
+noncomputable def invIdeal (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) : (FractionalIdeal (𝓞 K)⁰ K)ˣ :=
+  (a * Units.mk0 (differentIdeal ℤ (𝓞 K) : FractionalIdeal (𝓞 K)⁰ K)
+    (by simp [differentIdeal_ne_bot]))⁻¹
+
+#check differentIdeal ℤ (𝓞 K)
+
+noncomputable def dedekindFEPair (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) : WeakFEPair ℂ where
+  f := f (logMap '' normEqOne K) a -- R → ℂ
+  g := f (- logMap '' normEqOne K) (invIdeal a) -- ℝ → ℂ
   k := 1 / 2 -- weight, exponent in functional equation (ℝ)
   ε := 1 -- root number (ℂ)
   f₀ := 2 ^ (Module.finrank ℚ K - 1) * regulator K / torsionOrder K -- constant term at ∞ (E)
@@ -53,10 +70,7 @@ noncomputable def dedekindFEPair : WeakFEPair ℂ where
 /- So just define the WeakFEPair, define completed Dedekind zeta function as Mellin transform,
   define Dedekind zeta function from that, and only afterwards prove the L-series formula? -/
 
--- Our f is Neukirch's f_F, but takes ideal as a parameter
-
-
-end NumberField
+end NumberField.Dedekind
 
 variable (K : Type*) [Field K] [NumberField K]
 
