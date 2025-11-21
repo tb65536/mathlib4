@@ -322,11 +322,11 @@ theorem eq_prod_roots_of_splits {p : K[X]} {i : K →+* L} (hsplit : Splits (p.m
   apply C_leadingCoeff_mul_prod_multiset_X_sub_C
   rw [natDegree_map]; exact (natDegree_eq_card_roots hsplit).symm
 
-theorem eq_prod_roots_of_splits_id {p : K[X]} (hsplit : Splits (p.map (RingHom.id K))) :
-    p = C p.leadingCoeff * (p.roots.map fun a => X - C a).prod := by
-  simpa using eq_prod_roots_of_splits hsplit
+theorem eq_prod_roots_of_splits_id {p : K[X]} (hsplit : Splits p) :
+    p = C p.leadingCoeff * (p.roots.map fun a => X - C a).prod :=
+  hsplit.eq_prod_roots
 
-theorem Splits.dvd_of_roots_le_roots {p q : K[X]} (hp : (p.map (RingHom.id _)).Splits) (hp0 : p ≠ 0)
+theorem Splits.dvd_of_roots_le_roots {p q : K[X]} (hp : p.Splits) (hp0 : p ≠ 0)
     (hq : p.roots ≤ q.roots) : p ∣ q := by
   rw [eq_prod_roots_of_splits_id hp, C_mul_dvd (leadingCoeff_ne_zero.2 hp0)]
   exact dvd_trans
@@ -334,7 +334,7 @@ theorem Splits.dvd_of_roots_le_roots {p q : K[X]} (hp : (p.map (RingHom.id _)).S
     (prod_multiset_X_sub_C_dvd _)
 
 theorem Splits.dvd_iff_roots_le_roots {p q : K[X]}
-    (hp : (p.map (RingHom.id _)).Splits) (hp0 : p ≠ 0) (hq0 : q ≠ 0) :
+    (hp : p.Splits) (hp0 : p ≠ 0) (hq0 : q ≠ 0) :
     p ∣ q ↔ p.roots ≤ q.roots :=
   ⟨Polynomial.roots.le_of_dvd hq0, hp.dvd_of_roots_le_roots hp0⟩
 
@@ -351,7 +351,7 @@ theorem eval_eq_prod_roots_sub_of_splits_id {p : K[X]}
   rw [Algebra.algebraMap_self, map_id]
 
 theorem eq_prod_roots_of_monic_of_splits_id {p : K[X]} (m : Monic p)
-    (hsplit : Splits (p.map (RingHom.id K))) : p = (p.roots.map fun a => X - C a).prod := by
+    (hsplit : Splits p) : p = (p.roots.map fun a => X - C a).prod := by
   convert eq_prod_roots_of_splits_id hsplit
   simp [m]
 
@@ -373,7 +373,7 @@ theorem eq_X_sub_C_of_splits_of_single_root {x : K} {h : K[X]} (h_splits : Split
 
 variable (R) in
 theorem mem_lift_of_splits_of_roots_mem_range [Algebra R K] {f : K[X]}
-    (hs : (f.map (RingHom.id K)).Splits) (hm : f.Monic)
+    (hs : f.Splits) (hm : f.Monic)
     (hr : ∀ a ∈ f.roots, a ∈ (algebraMap R K).range) : f ∈ Polynomial.lifts (algebraMap R K) := by
   rw [eq_prod_roots_of_monic_of_splits_id hm hs, lifts_iff_liftsRing]
   refine Subring.multiset_prod_mem _ _ fun P hP => ?_
@@ -481,13 +481,12 @@ theorem aeval_root_derivative_of_splits [Algebra K L] [DecidableEq L] {P : K[X]}
     (hP : (P.map (algebraMap K L)).Splits) {r : L} (hr : r ∈ P.aroots L) :
     aeval r (Polynomial.derivative P) = (((P.aroots L).erase r).map fun a => r - a).prod := by
   replace hmo := hmo.map (algebraMap K L)
-  replace hP := (splits_id_iff_splits (algebraMap K L)).2 hP
   rw [aeval_def, ← eval_map, ← derivative_map]
   nth_rw 1 [eq_prod_roots_of_monic_of_splits_id hmo hP]
   rw [eval_multiset_prod_X_sub_C_derivative hr]
 
 theorem eval_derivative_eq_eval_mul_sum_of_splits {p : K[X]} {x : K}
-    (h : (p.map (.id K)).Splits) (hx : p.eval x ≠ 0) :
+    (h : p.Splits) (hx : p.eval x ≠ 0) :
     p.derivative.eval x = p.eval x * (p.roots.map fun z ↦ 1 / (x - z)).sum := by
   classical
   suffices p.roots.map (fun z ↦ p.leadingCoeff * ((p.roots.erase z).map (fun w ↦ x - w) ).prod) =
