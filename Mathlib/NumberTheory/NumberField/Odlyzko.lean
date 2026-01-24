@@ -6,7 +6,7 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.Algebra.BigOperators.Ring.Nat
-public import Mathlib.Analysis.Meromorphic.Basic
+public import Mathlib.Analysis.Meromorphic.Complex
 public import Mathlib.Analysis.PSeriesComplex
 public import Mathlib.NumberTheory.Harmonic.GammaDeriv
 public import Mathlib.NumberTheory.LSeries.HurwitzZeta
@@ -21,18 +21,19 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 namespace Complex -- gamma function
 
-open scoped Filter
-open scoped Topology
-
+-- PRed
 theorem differentiableAt_Gamma_one : DifferentiableAt ℂ Gamma 1 :=
   differentiableAt_Gamma 1 (by norm_cast; simp)
 
+-- PRed
 theorem continuousAt_Gamma (s : ℂ) (hs : ∀ (m : ℕ), s ≠ -↑m) : ContinuousAt Gamma s :=
   (differentiableAt_Gamma s hs).continuousAt
 
+-- PRed
 theorem continuousAt_Gamma_one : ContinuousAt Gamma 1 :=
   differentiableAt_Gamma_one.continuousAt
 
+-- PRed
 theorem not_continuousAt_Gamma_zero : ¬ ContinuousAt Gamma 0 := by
   intro h0
   have h1 : ContinuousAt (fun s ↦ Gamma (s + 1)) 0 := by
@@ -45,9 +46,11 @@ theorem not_continuousAt_Gamma_zero : ¬ ContinuousAt Gamma 0 := by
     sub_eq_zero.mpr (Gamma_add_one s hs)
   simpa using tendsto_nhdsWithin_congr h3 (h1.sub (h2.mul h0))
 
+-- PRed
 theorem not_differentiableAt_Gamma_zero : ¬ DifferentiableAt ℂ Gamma 0 :=
   mt DifferentiableAt.continuousAt not_continuousAt_Gamma_zero
 
+-- PRed
 theorem not_continuousAt_Gamma_neg_nat (n : ℕ) : ¬ ContinuousAt Gamma (-n) := by
   induction n
   case zero =>
@@ -64,9 +67,11 @@ theorem not_continuousAt_Gamma_neg_nat (n : ℕ) : ¬ ContinuousAt Gamma (-n) :=
     exact ((continuousAt_id.mul ih).continuousWithinAt.congr Gamma_add_one
       (Gamma_add_one (-(n + 1)) h0)).continuousAt (compl_singleton_mem_nhds h0)
 
+-- PRed
 theorem not_differentiableAt_Gamma_neg_nat (n : ℕ) : ¬ DifferentiableAt ℂ Gamma (-n) :=
   mt DifferentiableAt.continuousAt (not_continuousAt_Gamma_neg_nat n)
 
+-- PRed
 theorem deriv_Gamma_add_one (s : ℂ) (hs : s ≠ 0) :
     deriv Gamma (s + 1) = Gamma s + s * deriv Gamma s := by
   by_cases! h : ∃ m : ℕ, s = -m
@@ -82,6 +87,27 @@ theorem deriv_Gamma_add_one (s : ℂ) (hs : s ≠ 0) :
     refine HasDerivWithinAt.congr ?_ Gamma_add_one (Gamma_add_one s hs)
     simpa using HasDerivWithinAt.mul (hasDerivWithinAt_id s {0}ᶜ)
       (differentiableAt_Gamma s h).hasDerivAt.hasDerivWithinAt
+
+theorem meromorphic_Gamma : Meromorphic Gamma :=
+  meromorphicOn_univ.mp MeromorphicOn.Gamma
+
+end Complex
+
+section Complex -- logDeriv
+
+protected theorem meromorphicOn.logDeriv
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
+    [CompleteSpace 𝕜]
+    (f : 𝕜 → 𝕜) (s : Set 𝕜)
+    (h : MeromorphicOn f s) : MeromorphicOn (logDeriv f) s :=
+  h.deriv.div h
+
+protected theorem Meromorphic.logDeriv
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
+    [CompleteSpace 𝕜]
+    (f : 𝕜 → 𝕜)
+    (h : Meromorphic f) : Meromorphic (logDeriv f) :=
+  h.deriv.div h
 
 end Complex
 
@@ -102,6 +128,9 @@ theorem digamma_apply_add_one (s : ℂ) (hs : ∀ m : ℕ, s ≠ - m) :
   have hs0 : s ≠ 0 := by simpa using hs 0
   rw [digamma_def, logDeriv_apply, logDeriv_apply, deriv_Gamma_add_one s hs0, Gamma_add_one s hs0,
     add_div, div_mul_cancel_right₀ (Gamma_ne_zero hs), mul_div_mul_left _ _ hs0, add_comm]
+
+theorem meromorphic_digamma : Meromorphic digamma :=
+  meromorphic_Gamma.logDeriv
 
 end Complex
 
@@ -128,9 +157,13 @@ theorem dedekindZeta_apply {s : ℂ} (hs : 1 < s.re) :
     dedekindZeta K s = LSeries (fun n ↦ Nat.card {I : Ideal (𝓞 K) // I.absNorm = n}) s :=
   sorry
 
+-- need logDeriv_dedekindZeta
+
 end dedekindZeta
 
 section completedDedekindZeta
+
+open Real
 
 def completedDedekindZeta (K : Type*) [Field K] [NumberField K] : ℂ → ℂ :=
   sorry
@@ -147,23 +180,43 @@ theorem completedDedekindZeta_one_sub (s : ℂ) :
   sorry
 
 theorem completedDedekindZeta_eq_mul {s : ℂ} (hs : s ≠ 0) (hs' : s ≠ 1) :
-    completedDedekindZeta K s = s.Gammaℝ ^ nrRealPlaces K * s.Gammaℂ ^ nrComplexPlaces K *
-      |discr K| ^ (s / 2) * dedekindZeta K s :=
+    completedDedekindZeta K s = |discr K| ^ (s / 2) * s.Gammaℝ ^ nrRealPlaces K *
+      s.Gammaℂ ^ nrComplexPlaces K * dedekindZeta K s :=
   sorry
 
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
 theorem two_mul_logDeriv_completedDedekindZeta {s : ℂ} (hs : 1 < s.re) :
-    2 * logDeriv (completedDedekindZeta K) s =
-      Real.log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma)
-        + Module.finrank ℚ K * (s.digamma - Real.pi.log) + 2 * logDeriv (dedekindZeta K) s := by
-  -- use `logDeriv_mul`
+    2 * logDeriv (completedDedekindZeta K) s = nrComplexPlaces K * log 2 +
+      log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma + log 2) +
+        Module.finrank ℚ K * (s.digamma - log (2 * π)) + logDeriv (dedekindZeta K) s := by
   sorry
-
-
 
 end completedDedekindZeta
 
+section nontrivialZeros
 
+def DedekindZeta.nontrivialZeros : Set ℂ :=
+  {s : ℂ | s.re ∈ Set.Icc 0 1 ∧ dedekindZeta K s = 0}
+
+end nontrivialZeros
+
+section Odlyzko
+
+open Real Complex
+
+theorem tada (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
+    HasSum (fun s : DedekindZeta.nontrivialZeros K ↦ Φ s)
+    (2 * Φ 0 +
+      (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t)) := by
+  sorry
+
+-- actually, define type of nontrivial zeros and phrase in terms of `HasSum`?
+theorem contourIntegral_eq (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
+    (2 * π)⁻¹ * ∫ t : ℝ, logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) =
+      - Φ 0 - Φ 1 + 0 := by
+  sorry
+
+end Odlyzko
 
 
 
