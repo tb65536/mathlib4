@@ -19,6 +19,24 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 @[expose] public section
 
+section Complex -- logDeriv
+
+protected theorem meromorphicOn.logDeriv
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
+    [CompleteSpace 𝕜]
+    (f : 𝕜 → 𝕜) (s : Set 𝕜)
+    (h : MeromorphicOn f s) : MeromorphicOn (logDeriv f) s :=
+  h.deriv.div h
+
+protected theorem Meromorphic.logDeriv
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
+    [CompleteSpace 𝕜]
+    (f : 𝕜 → 𝕜)
+    (h : Meromorphic f) : Meromorphic (logDeriv f) :=
+  h.deriv.div h
+
+end Complex
+
 namespace Complex -- gamma function
 
 -- PRed
@@ -88,26 +106,9 @@ theorem deriv_Gamma_add_one (s : ℂ) (hs : s ≠ 0) :
     simpa using HasDerivWithinAt.mul (hasDerivWithinAt_id s {0}ᶜ)
       (differentiableAt_Gamma s h).hasDerivAt.hasDerivWithinAt
 
+-- PRed
 theorem meromorphic_Gamma : Meromorphic Gamma :=
   meromorphicOn_univ.mp MeromorphicOn.Gamma
-
-end Complex
-
-section Complex -- logDeriv
-
-protected theorem meromorphicOn.logDeriv
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-    [CompleteSpace 𝕜]
-    (f : 𝕜 → 𝕜) (s : Set 𝕜)
-    (h : MeromorphicOn f s) : MeromorphicOn (logDeriv f) s :=
-  h.deriv.div h
-
-protected theorem Meromorphic.logDeriv
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-    [CompleteSpace 𝕜]
-    (f : 𝕜 → 𝕜)
-    (h : Meromorphic f) : Meromorphic (logDeriv f) :=
-  h.deriv.div h
 
 end Complex
 
