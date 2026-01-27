@@ -157,13 +157,83 @@ instance instIsMulTorsionFree
     dsimp at *
     norm_cast at this
 
-def Ideal.connectedComponentOfZero (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
-    [CompactSpace R] [T2Space R] : Ideal R where
+open Pointwise in
+def Ideal.connectedComponentOfZero
+    (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] : Ideal R where
   __ := AddSubgroup.connectedComponentOfZero R
   smul_mem' := by
-    intro c x hx
-    have key := continuous_const_smul c (T := R)
-    sorry
+    intro c x h
+    let f : R → R := fun y ↦ c * y
+    have key : Continuous f := continuous_mul_left c
+    suffices f '' connectedComponent (0 : R) ⊆ connectedComponent (0 : R) from this ⟨x, h, rfl⟩
+    apply IsConnected.subset_connectedComponent
+    · exact isConnected_connectedComponent.image _ key.continuousOn
+    · exact ⟨0, mem_connectedComponent, mul_zero c⟩
+
+instance (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] :
+    (Ideal.connectedComponentOfZero R).IsTwoSided where
+  mul_mem_of_left := by
+    intro x c h
+    let f : R → R := fun y ↦ y * c
+    have key : Continuous f := continuous_mul_right c
+    suffices f '' connectedComponent (0 : R) ⊆ connectedComponent (0 : R) from this ⟨x, h, rfl⟩
+    apply IsConnected.subset_connectedComponent
+    · exact isConnected_connectedComponent.image _ key.continuousOn
+    · exact ⟨0, mem_connectedComponent, zero_mul c⟩
+
+-- this might not even need abelian?
+@[to_additive]
+noncomputable def Group.rootable
+    (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [CompactSpace A] [ConnectedSpace A] : RootableBy A ℕ := by
+  apply rootableByOfPowLeftSurj
+  intro n hn0
+
+  -- quotient is compact, connected, abelian, exponent n, which should imply trivial
+
+  -- might require the existence of a nontrivial character on the compact abelian quotient
+  -- image of the character is a connected, exponent n subgroup of torus, hence trivial
+
+  -- in general true for torsion groups by the same argument or by Baire category theorem
+
+  sorry
+
+@[to_additive]
+theorem ContinuousMonoidHom.mul_apply {A B : Type*} [Monoid A] [CommMonoid B]
+    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
+    (f g : ContinuousMonoidHom A B) (a : A) : (f * g) a = f a * g a := by
+  rfl
+
+@[to_additive]
+theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
+    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
+    (f : ContinuousMonoidHom A B) (n : ℕ) (a : A) : (f ^ n) a = (f a) ^ n := by
+  induction n
+  case zero => simp
+  case succ n ih =>
+    simp [pow_succ, ContinuousMonoidHom.mul_apply, ih]
+
+@[to_additive]
+theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [CompactSpace A] [ConnectedSpace A] (K : Subgroup (ContinuousMonoidHom A A))
+    (hK : IsCompact (K : Set (ContinuousMonoidHom A A))) :
+    K = ⊥ := by
+  have A_rootable : RootableBy A ℕ := Group.rootable A
+  have : IsMulTorsionFree (ContinuousMonoidHom A A) := by
+    constructor
+    intro n hn0 χ χ' h
+    rw [DFunLike.ext_iff] at h ⊢
+    intro x
+    specialize h (RootableBy.root x n)
+    simp only [ContinuousMonoidHom.pow_apply, ← map_pow, A_rootable.root_cancel x hn0] at h
+    exact h
+  -- K is compact
+  -- but K cannot be discrete (else finite, hence trivial by torsion-free)
+  -- pick n * f → 0 in topology of uniform convergence
+  -- so n * f eventually inside U
+  -- but image of f is divisible group, so image of f is inside U
+  -- but this holds for any nbhd, so image is 0
+  sorry
 
 instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
@@ -181,54 +251,30 @@ instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
   have : CompactSpace C₀ := isCompact_iff_compactSpace.mp C₀_isCompact
   have C₀_isConnected : IsConnected (C₀ : Set R) := isConnected_connectedComponent
   have : ConnectedSpace C₀ := isConnected_iff_connectedSpace.mp C₀_isConnected
-  let E := AddMonoid.End C₀ -- rather than looking at endomorphisms of C₀, actually look at endomorphisms of some quotient
-  let Φ : R →+* E :=
+  have : Ideal.IsTwoSided C₀ := inferInstance
+
+  let E := ContinuousAddMonoidHom C₀ C₀
+  let f : ContinuousAddMonoidHom R E := -- technically also a ring hom, but not needed here
   { toFun := fun r ↦ { toFun := fun c ↦ r • c
                        map_zero' := by simp
-                       map_add' := by simp [smul_add] }
-    map_one' := by apply DFunLike.ext; intros; apply one_smul
-    map_mul' := by intros; apply DFunLike.ext; intros; apply mul_smul
+                       map_add' := by simp [smul_add]
+                       continuous_toFun := by fun_prop }
     map_zero' := by apply DFunLike.ext; intros; apply zero_smul
-    map_add' := by intros; apply DFunLike.ext; intros; apply add_smul }
+    map_add' := by intros; apply DFunLike.ext; intros; apply add_smul
+    continuous_toFun := by
+      -- should be doable
+      sorry }
 
-  have C₀_divisible : DivisibleBy C₀ ℕ := by
-    apply divisibleByOfSMulRightSurj
-    intro n hn0
-    -- quotient is compact, connected, abelian, exponent n, which should imply trivial
-    -- might require the existence of a nontrivial character on the compact abelian quotient
-    -- image of the character is a connected, exponent n subgroup of torus, hence trivial
-    sorry
-  have : IsAddTorsionFree E := by
-    constructor
-    intro n hn0 χ χ' h
-    rw [DFunLike.ext_iff] at h ⊢
-    intro x
-    rw [← C₀_divisible.div_cancel x hn0, map_nsmul, map_nsmul, ← Pi.smul_apply, ← Pi.smul_apply]
-    apply h
-  let : TopologicalSpace E := ⊥
-  have : DiscreteTopology E := ⟨rfl⟩ -- maybe not true if C₀ is infinite product of circles?
-  have Φ_continuous : Continuous Φ := by
-    sorry -- (i.e., was the discrete topology the right choice?, should follow from compactness of C₀?)
-  let K := AddMonoidHom.range Φ.toAddMonoidHom
-  have K_isCompact : IsCompact (K : Set E) := isCompact_range Φ_continuous
-  have K_compactSpace : CompactSpace K := isCompact_iff_compactSpace.mp K_isCompact
-  have K_discrete : DiscreteTopology K := inferInstance
-  have K_finite : Finite K := inferInstance
-  have K_torsion : AddMonoid.IsTorsion K := is_add_torsion_of_finite
-  have K_torsionFree : IsAddTorsionFree K := inferInstance
-  have K_subsingleton : Subsingleton K := by
-    contrapose! K_torsionFree
-    exact not_isAddTorsionFree_of_isTorsion K_torsion
-  have K_eq_bot : K = ⊥ := AddSubgroup.eq_bot_of_subsingleton K
-  -- this last bit can probably be done more cleanly...
-  have : Φ 1 = 0 := by
-    rw [← AddSubgroup.mem_bot, ← K_eq_bot]
+  have key := AddCommGroup.foo f.range (isCompact_range f.continuous)
+  replace key : f 1 = 0 := by
+    rw [← AddSubgroup.mem_bot, ← key]
     exact ⟨1, rfl⟩
   rw [eq_bot_iff]
   intro c hc
-  replace this : Φ 1 ⟨c, hc⟩ = (0 : E) ⟨c, hc⟩ := by rw [this]
+  replace key : f 1 ⟨c, hc⟩ = (0 : E) ⟨c, hc⟩ := by rw [key]
   rw [Ideal.mem_bot]
-  rw [map_one] at this
-  exact Subtype.ext_iff.mp this
+  rw [Subtype.ext_iff] at key
+  change 1 • c = 0 at key
+  rwa [one_smul] at key
 
-end
+end CompactHausdorff
