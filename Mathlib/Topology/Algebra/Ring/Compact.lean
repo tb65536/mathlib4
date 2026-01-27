@@ -5,6 +5,8 @@ Authors: Andrew Yang
 -/
 module
 
+public import Mathlib.Algebra.Category.Grp.Injective
+public import Mathlib.GroupTheory.Divisible
 public import Mathlib.RingTheory.DedekindDomain.Factorization
 public import Mathlib.RingTheory.DiscreteValuationRing.Basic
 public import Mathlib.RingTheory.HopkinsLevitzki
@@ -15,7 +17,9 @@ public import Mathlib.Topology.Algebra.Field
 public import Mathlib.Topology.Algebra.Module.Basic
 public import Mathlib.Topology.Algebra.Module.Compact
 public import Mathlib.Topology.Algebra.OpenSubgroup
+public import Mathlib.Topology.Algebra.PontryaginDual
 public import Mathlib.Topology.Algebra.Ring.Ideal
+public import Mathlib.Topology.Instances.AddCircle.Defs
 
 /-!
 
@@ -142,3 +146,89 @@ lemma IsDiscreteValuationRing.isOpen_iff
   IsDedekindDomain.isOpen_iff (not_isField R)
 
 end IsDedekindDomain
+
+section CompactHausdorff
+
+@[to_additive] -- todo: to_additivize `instIsMulTorsionFree` in `Algebra/Group/Subgroup/Basic`.
+instance instIsMulTorsionFree
+    {G : Type*} [Group G] (H : Subgroup G) [IsMulTorsionFree G] : IsMulTorsionFree H where
+  pow_left_injective n hn a b := by
+    have := pow_left_injective hn (M := G) (a₁ := a) (a₂ := b)
+    dsimp at *
+    norm_cast at this
+
+def Ideal.connectedComponentOfZero (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
+    [CompactSpace R] [T2Space R] : Ideal R where
+  __ := AddSubgroup.connectedComponentOfZero R
+  smul_mem' := by
+    intro c x hx
+    have key := continuous_const_smul c (T := R)
+    sorry
+
+instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
+    [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
+  let C₀ : Ideal R := Ideal.connectedComponentOfZero R
+  suffices C₀ = ⊥ by
+    replace this : connectedComponent (0 : R) = {0} := SetLike.ext'_iff.mp this
+    rw [totallyDisconnectedSpace_iff_connectedComponent_subsingleton]
+    intro x
+    have key := (continuous_add_left (-x)).image_connectedComponent_subset x
+    rw [neg_add_cancel, this, Set.image_subset_iff] at key
+    -- this can probably be done more cleanly...
+    exact Set.subsingleton_of_forall_eq x (by simpa using key)
+  have C₀_isClosed : IsClosed (C₀ : Set R) := isClosed_connectedComponent
+  have C₀_isCompact : IsCompact (C₀ : Set R) := C₀_isClosed.isCompact
+  have : CompactSpace C₀ := isCompact_iff_compactSpace.mp C₀_isCompact
+  have C₀_isConnected : IsConnected (C₀ : Set R) := isConnected_connectedComponent
+  have : ConnectedSpace C₀ := isConnected_iff_connectedSpace.mp C₀_isConnected
+  let E := AddMonoid.End C₀ -- rather than looking at endomorphisms of C₀, actually look at endomorphisms of some quotient
+  let Φ : R →+* E :=
+  { toFun := fun r ↦ { toFun := fun c ↦ r • c
+                       map_zero' := by simp
+                       map_add' := by simp [smul_add] }
+    map_one' := by apply DFunLike.ext; intros; apply one_smul
+    map_mul' := by intros; apply DFunLike.ext; intros; apply mul_smul
+    map_zero' := by apply DFunLike.ext; intros; apply zero_smul
+    map_add' := by intros; apply DFunLike.ext; intros; apply add_smul }
+
+  have C₀_divisible : DivisibleBy C₀ ℕ := by
+    apply divisibleByOfSMulRightSurj
+    intro n hn0
+    -- quotient is compact, connected, abelian, exponent n, which should imply trivial
+    -- might require the existence of a nontrivial character on the compact abelian quotient
+    -- image of the character is a connected, exponent n subgroup of torus, hence trivial
+    sorry
+  have : IsAddTorsionFree E := by
+    constructor
+    intro n hn0 χ χ' h
+    rw [DFunLike.ext_iff] at h ⊢
+    intro x
+    rw [← C₀_divisible.div_cancel x hn0, map_nsmul, map_nsmul, ← Pi.smul_apply, ← Pi.smul_apply]
+    apply h
+  let : TopologicalSpace E := ⊥
+  have : DiscreteTopology E := ⟨rfl⟩ -- maybe not true if C₀ is infinite product of circles?
+  have Φ_continuous : Continuous Φ := by
+    sorry -- (i.e., was the discrete topology the right choice?, should follow from compactness of C₀?)
+  let K := AddMonoidHom.range Φ.toAddMonoidHom
+  have K_isCompact : IsCompact (K : Set E) := isCompact_range Φ_continuous
+  have K_compactSpace : CompactSpace K := isCompact_iff_compactSpace.mp K_isCompact
+  have K_discrete : DiscreteTopology K := inferInstance
+  have K_finite : Finite K := inferInstance
+  have K_torsion : AddMonoid.IsTorsion K := is_add_torsion_of_finite
+  have K_torsionFree : IsAddTorsionFree K := inferInstance
+  have K_subsingleton : Subsingleton K := by
+    contrapose! K_torsionFree
+    exact not_isAddTorsionFree_of_isTorsion K_torsion
+  have K_eq_bot : K = ⊥ := AddSubgroup.eq_bot_of_subsingleton K
+  -- this last bit can probably be done more cleanly...
+  have : Φ 1 = 0 := by
+    rw [← AddSubgroup.mem_bot, ← K_eq_bot]
+    exact ⟨1, rfl⟩
+  rw [eq_bot_iff]
+  intro c hc
+  replace this : Φ 1 ⟨c, hc⟩ = (0 : E) ⟨c, hc⟩ := by rw [this]
+  rw [Ideal.mem_bot]
+  rw [map_one] at this
+  exact Subtype.ext_iff.mp this
+
+end
