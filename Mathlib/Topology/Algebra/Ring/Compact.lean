@@ -252,19 +252,16 @@ instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
   have C₀_isConnected : IsConnected (C₀ : Set R) := isConnected_connectedComponent
   have : ConnectedSpace C₀ := isConnected_iff_connectedSpace.mp C₀_isConnected
   have : Ideal.IsTwoSided C₀ := inferInstance
-
   let E := ContinuousAddMonoidHom C₀ C₀
   let f : ContinuousAddMonoidHom R E := -- technically also a ring hom, but not needed here
-  { toFun := fun r ↦ { toFun := fun c ↦ r • c
-                       map_zero' := by simp
-                       map_add' := by simp [smul_add]
-                       continuous_toFun := by fun_prop }
+  { toFun r :=
+    { toFun := fun c ↦ r • c
+      map_zero' := by simp
+      map_add' := by simp [smul_add]
+      continuous_toFun := by fun_prop }
     map_zero' := by apply DFunLike.ext; intros; apply zero_smul
     map_add' := by intros; apply DFunLike.ext; intros; apply add_smul
-    continuous_toFun := by
-      -- should be doable
-      sorry }
-
+    continuous_toFun := ContinuousAddMonoidHom.continuous_of_continuous_uncurry _ continuous_smul }
   have key := AddCommGroup.foo f.range (isCompact_range f.continuous)
   replace key : f 1 = 0 := by
     rw [← AddSubgroup.mem_bot, ← key]
