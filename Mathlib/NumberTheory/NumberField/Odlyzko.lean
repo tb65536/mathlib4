@@ -19,99 +19,6 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 @[expose] public section
 
-section Complex -- logDeriv
-
-protected theorem meromorphicOn.logDeriv
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-    [CompleteSpace 𝕜]
-    (f : 𝕜 → 𝕜) (s : Set 𝕜)
-    (h : MeromorphicOn f s) : MeromorphicOn (logDeriv f) s :=
-  h.deriv.div h
-
-protected theorem Meromorphic.logDeriv
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-    [CompleteSpace 𝕜]
-    (f : 𝕜 → 𝕜)
-    (h : Meromorphic f) : Meromorphic (logDeriv f) :=
-  h.deriv.div h
-
-end Complex
-
-namespace Complex -- gamma function
-
--- PRed
-theorem differentiableAt_Gamma_one : DifferentiableAt ℂ Gamma 1 :=
-  differentiableAt_Gamma 1 (by norm_cast; simp)
-
--- PRed
-theorem continuousAt_Gamma (s : ℂ) (hs : ∀ (m : ℕ), s ≠ -↑m) : ContinuousAt Gamma s :=
-  (differentiableAt_Gamma s hs).continuousAt
-
--- PRed
-theorem continuousAt_Gamma_one : ContinuousAt Gamma 1 :=
-  differentiableAt_Gamma_one.continuousAt
-
--- PRed
-theorem not_continuousAt_Gamma_zero : ¬ ContinuousAt Gamma 0 := by
-  intro h0
-  have h1 : ContinuousAt (fun s ↦ Gamma (s + 1)) 0 := by
-    refine ContinuousAt.comp' ?_ (continuous_add_right 1).continuousAt
-    rw [zero_add]
-    exact continuousAt_Gamma_one
-  have h2 : ContinuousAt id (0 : ℂ) := continuousAt_id
-  rw [continuousAt_iff_punctured_nhds] at h0 h1 h2
-  have h3 (s : ℂ) (hs : s ∈ ({0}ᶜ : Set ℂ)): Gamma (s + 1) - s * Gamma s = 0 :=
-    sub_eq_zero.mpr (Gamma_add_one s hs)
-  simpa using tendsto_nhdsWithin_congr h3 (h1.sub (h2.mul h0))
-
--- PRed
-theorem not_differentiableAt_Gamma_zero : ¬ DifferentiableAt ℂ Gamma 0 :=
-  mt DifferentiableAt.continuousAt not_continuousAt_Gamma_zero
-
--- PRed
-theorem not_continuousAt_Gamma_neg_nat (n : ℕ) : ¬ ContinuousAt Gamma (-n) := by
-  induction n
-  case zero =>
-    rw [Nat.cast_zero, neg_zero]
-    exact not_continuousAt_Gamma_zero
-  case succ n ih =>
-    contrapose! ih
-    rw [Nat.cast_add, Nat.cast_one] at ih
-    suffices ContinuousAt (fun s ↦ Gamma (s - 1 + 1)) (-n) by simpa using this
-    suffices ContinuousAt (fun s ↦ Gamma (s + 1)) (-n - 1) from
-      this.comp' (f := fun s ↦ s - 1) (by fun_prop)
-    rw [← neg_add']
-    have h0 : -(n + 1) ≠ (0 : ℂ) := neg_ne_zero.mpr n.cast_add_one_ne_zero
-    exact ((continuousAt_id.mul ih).continuousWithinAt.congr Gamma_add_one
-      (Gamma_add_one (-(n + 1)) h0)).continuousAt (compl_singleton_mem_nhds h0)
-
--- PRed
-theorem not_differentiableAt_Gamma_neg_nat (n : ℕ) : ¬ DifferentiableAt ℂ Gamma (-n) :=
-  mt DifferentiableAt.continuousAt (not_continuousAt_Gamma_neg_nat n)
-
--- PRed
-theorem deriv_Gamma_add_one (s : ℂ) (hs : s ≠ 0) :
-    deriv Gamma (s + 1) = Gamma s + s * deriv Gamma s := by
-  by_cases! h : ∃ m : ℕ, s = -m
-  · obtain ⟨m, rfl⟩ := h
-    rw [← sub_neg_eq_add, ← neg_sub', ← Nat.cast_one, ← Nat.cast_sub,
-      deriv_zero_of_not_differentiableAt (not_differentiableAt_Gamma_neg_nat m),
-      deriv_zero_of_not_differentiableAt (not_differentiableAt_Gamma_neg_nat (m - 1)),
-      Gamma_neg_nat_eq_zero, zero_add, mul_zero]
-    rwa [neg_ne_zero, Nat.cast_ne_zero, ← Nat.one_le_iff_ne_zero] at hs
-  · suffices HasDerivWithinAt (fun s ↦ Gamma (s + 1)) (Gamma s + s * deriv Gamma s) {0}ᶜ s by
-      rw [← deriv_comp_add_const]
-      exact (this.hasDerivAt (compl_singleton_mem_nhds hs)).deriv
-    refine HasDerivWithinAt.congr ?_ Gamma_add_one (Gamma_add_one s hs)
-    simpa using HasDerivWithinAt.mul (hasDerivWithinAt_id s {0}ᶜ)
-      (differentiableAt_Gamma s h).hasDerivAt.hasDerivWithinAt
-
--- PRed
-theorem meromorphic_Gamma : Meromorphic Gamma :=
-  meromorphicOn_univ.mp MeromorphicOn.Gamma
-
-end Complex
-
 namespace Complex -- digamma function
 
 noncomputable def digamma : ℂ → ℂ := logDeriv Gamma
@@ -131,7 +38,7 @@ theorem digamma_apply_add_one (s : ℂ) (hs : ∀ m : ℕ, s ≠ - m) :
     add_div, div_mul_cancel_right₀ (Gamma_ne_zero hs), mul_div_mul_left _ _ hs0, add_comm]
 
 theorem meromorphic_digamma : Meromorphic digamma :=
-  meromorphic_Gamma.logDeriv
+  Meromorphic.Gamma.logDeriv
 
 end Complex
 
