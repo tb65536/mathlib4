@@ -172,7 +172,7 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
--- this might not even need abelian?
+-- does this need abelian or compact?
 @[to_additive]
 noncomputable def Group.rootable
     (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
@@ -181,6 +181,8 @@ noncomputable def Group.rootable
   intro n hn0
 
   -- quotient is compact, connected, abelian, exponent n, which should imply trivial
+
+  -- enough to show that every Hausdorff topological vector space over F_p is totally disconnected
 
   -- might require the existence of a nontrivial character on the compact abelian quotient
   -- image of the character is a connected, exponent n subgroup of torus, hence trivial
