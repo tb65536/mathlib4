@@ -227,8 +227,13 @@ theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologi
     specialize h (RootableBy.root x n)
     simp only [ContinuousMonoidHom.pow_apply, ← map_pow, A_rootable.root_cancel x hn0] at h
     exact h
-  -- K is compact
-  -- but K cannot be discrete (else finite, hence trivial by torsion-free)
+  suffices Subsingleton K from K.eq_bot_of_subsingleton
+  suffices DiscreteTopology K by
+    have : CompactSpace K := isCompact_iff_compactSpace.mp hK
+    have hK' : Monoid.IsTorsion K := isTorsion_of_finite
+    contrapose! hK'
+    exact not_isTorsion_of_isMulTorsionFree
+  -- assume not
   -- pick n * f → 0 in topology of uniform convergence
   -- so n * f eventually inside U
   -- but image of f is divisible group, so image of f is inside U
@@ -251,9 +256,7 @@ instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
   have : CompactSpace C₀ := isCompact_iff_compactSpace.mp C₀_isCompact
   have C₀_isConnected : IsConnected (C₀ : Set R) := isConnected_connectedComponent
   have : ConnectedSpace C₀ := isConnected_iff_connectedSpace.mp C₀_isConnected
-  have : Ideal.IsTwoSided C₀ := inferInstance
-  let E := ContinuousAddMonoidHom C₀ C₀
-  let f : ContinuousAddMonoidHom R E := -- technically also a ring hom, but not needed here
+  let f : ContinuousAddMonoidHom R (ContinuousAddMonoidHom C₀ C₀) :=
   { toFun r :=
     { toFun := fun c ↦ r • c
       map_zero' := by simp
@@ -263,15 +266,10 @@ instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     map_add' := by intros; apply DFunLike.ext; intros; apply add_smul
     continuous_toFun := ContinuousAddMonoidHom.continuous_of_continuous_uncurry _ continuous_smul }
   have key := AddCommGroup.foo f.range (isCompact_range f.continuous)
-  replace key : f 1 = 0 := by
-    rw [← AddSubgroup.mem_bot, ← key]
-    exact ⟨1, rfl⟩
-  rw [eq_bot_iff]
-  intro c hc
-  replace key : f 1 ⟨c, hc⟩ = (0 : E) ⟨c, hc⟩ := by rw [key]
-  rw [Ideal.mem_bot]
-  rw [Subtype.ext_iff] at key
-  change 1 • c = 0 at key
+  refine eq_bot_iff.mpr fun c hc ↦ ?_
+  replace key : f.toAddMonoidHom 1 ⟨c, hc⟩ = (0 : ContinuousAddMonoidHom C₀ C₀) ⟨c, hc⟩ := by
+    rw [AddMonoidHom.range_eq_bot_iff.mp key, AddMonoidHom.zero_apply]
+  replace key : (1 : R) • c = 0 := Subtype.ext_iff.mp key
   rwa [one_smul] at key
 
 end CompactHausdorff
