@@ -185,7 +185,7 @@ instance (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] :
 @[to_additive]
 noncomputable def Group.rootable
     (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] [ConnectedSpace A] : RootableBy A ℕ := by
+    [CompactSpace A] [ConnectedSpace A] [T2Space A] : RootableBy A ℕ := by
   apply rootableByOfPowLeftSurj
   intro n hn0
 
@@ -213,32 +213,106 @@ theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
   case succ n ih =>
     simp [pow_succ, ContinuousMonoidHom.mul_apply, ih]
 
-@[to_additive]
+-- annoying, can't use to_additive due to natural number sequence stuff...
+open Pointwise in
 theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] [ConnectedSpace A] (K : Subgroup (ContinuousMonoidHom A A))
+    [CompactSpace A] [ConnectedSpace A] [T2Space A] (K : Subgroup (ContinuousMonoidHom A A))
     (hK : IsCompact (K : Set (ContinuousMonoidHom A A))) :
     K = ⊥ := by
   have A_rootable : RootableBy A ℕ := Group.rootable A
-  have : IsMulTorsionFree (ContinuousMonoidHom A A) := by
-    constructor
-    intro n hn0 χ χ' h
-    rw [DFunLike.ext_iff] at h ⊢
-    intro x
-    specialize h (RootableBy.root x n)
-    simp only [ContinuousMonoidHom.pow_apply, ← map_pow, A_rootable.root_cancel x hn0] at h
-    exact h
-  suffices Subsingleton K from K.eq_bot_of_subsingleton
-  suffices DiscreteTopology K by
-    have : CompactSpace K := isCompact_iff_compactSpace.mp hK
-    have hK' : Monoid.IsTorsion K := isTorsion_of_finite
-    contrapose! hK'
-    exact not_isTorsion_of_isMulTorsionFree
-  -- assume not
-  -- pick n * f → 0 in topology of uniform convergence
-  -- so n * f eventually inside U
-  -- but image of f is divisible group, so image of f is inside U
-  -- but this holds for any nbhd, so image is 0
-  sorry
+  rw [eq_bot_iff]
+  intro f hf
+  ext a
+  rw [ContinuousMonoidHom.one_toFun]
+  by_contra! ha
+  let U : Set A := {f a}ᶜ
+  have hU : IsOpen U := isOpen_compl_singleton
+  have hU1 : 1 ∈ U := ha.symm
+  let W : Set (A →ₜ* A) := {f | Set.MapsTo f Set.univ U}
+  have hW : IsOpen W :=
+    (ContinuousMonoidHom.isInducing_toContinuousMap A A).continuous.isOpen_preimage _
+      (ContinuousMap.isOpen_setOf_mapsTo isCompact_univ hU)
+  have hW1 : 1 ∈ W := by simpa [W]
+  replace hW1 : W ∈ nhds 1 := hW.mem_nhds hW1
+  obtain ⟨S, hS1, -, hS, hSW⟩ := exists_closed_nhds_one_inv_eq_mul_subset hW1
+  let g : ℕ → (A →ₜ* A) := fun n ↦ f ^ n
+  let F : Filter (A →ₜ* A) := Filter.map g Filter.atTop
+  have hF : F ≤ Filter.principal (K : Set (A →ₜ* A)) := by
+    rw [Filter.le_principal_iff, Filter.mem_map]
+    suffices g ⁻¹' K = Set.univ by
+      rw [this]
+      exact Filter.univ_mem
+    rw [Set.eq_univ_iff_forall]
+    exact Subgroup.pow_mem K hf
+  obtain ⟨q, hqK, hqF⟩ := hK hF
+  rw [clusterPt_iff_frequently] at hqF
+  specialize hqF (q • S) (smul_mem_nhds_self.mpr hS1)
+  rw [Filter.frequently_map] at hqF
+  have hq := Filter.Frequently.forall_exists_of_atTop hqF
+  obtain ⟨j, -, hj⟩ := hq 0
+  obtain ⟨k, hjk : j < k, hk⟩ := hq (j + 1)
+  have key : g k * (g j)⁻¹ ∈ W := by
+    have key := Set.div_mem_div hk hj
+    rw [Set.smul_div_smul_comm, div_self', one_smul, div_eq_mul_inv, div_eq_mul_inv, hS] at key
+    exact hSW key
+  rw [← pow_sub _ hjk.le, Set.mem_setOf_eq, Set.mapsTo_univ_iff, ← Set.range_subset_iff] at key
+  change (f ^ (k - j)).range ≤ U at key
+  suffices f.range ≤ (f ^ (k - j)).range by
+    exact (Set.Subset.trans this key) ⟨a, rfl⟩ rfl
+  rintro - ⟨b, rfl⟩
+  use RootableBy.root b (k - j)
+  simp [ContinuousMonoidHom.pow_apply,
+    ← map_pow, RootableBy.root_cancel b (Nat.sub_ne_zero_of_lt hjk)]
+
+open Pointwise in
+theorem AddCommGroup.foo {A : Type*} [AddCommGroup A] [TopologicalSpace A] [IsTopologicalAddGroup A]
+    [CompactSpace A] [ConnectedSpace A] [T2Space A] (K : AddSubgroup (ContinuousAddMonoidHom A A))
+    (hK : IsCompact (K : Set (ContinuousAddMonoidHom A A))) :
+    K = ⊥ := by
+  have A_divisible : DivisibleBy A ℕ := AddGroup.divisible A
+  rw [eq_bot_iff]
+  intro f hf
+  ext a
+  rw [ContinuousAddMonoidHom.zero_toFun]
+  by_contra! ha
+  let U : Set A := {f a}ᶜ
+  have hU : IsOpen U := isOpen_compl_singleton
+  have hU1 : 0 ∈ U := ha.symm
+  let W : Set (A →ₜ+ A) := {f | Set.MapsTo f Set.univ U}
+  have hW : IsOpen W :=
+    (ContinuousAddMonoidHom.isInducing_toContinuousMap A A).continuous.isOpen_preimage _
+      (ContinuousMap.isOpen_setOf_mapsTo isCompact_univ hU)
+  have hW1 : 0 ∈ W := by simpa [W]
+  replace hW1 : W ∈ nhds 0 := hW.mem_nhds hW1
+  obtain ⟨S, hS1, -, hS, hSW⟩ := exists_closed_nhds_zero_neg_eq_add_subset hW1
+  let g : ℕ → (A →ₜ+ A) := fun n ↦ n • f
+  let F : Filter (A →ₜ+ A) := Filter.map g Filter.atTop
+  have hF : F ≤ Filter.principal (K : Set (A →ₜ+ A)) := by
+    rw [Filter.le_principal_iff, Filter.mem_map]
+    suffices g ⁻¹' K = Set.univ by
+      rw [this]
+      exact Filter.univ_mem
+    rw [Set.eq_univ_iff_forall]
+    exact AddSubgroup.nsmul_mem K hf
+  obtain ⟨q, hqK, hqF⟩ := hK hF
+  rw [clusterPt_iff_frequently] at hqF
+  specialize hqF (q +ᵥ S) (vadd_mem_nhds_self.mpr hS1)
+  rw [Filter.frequently_map] at hqF
+  have hq := Filter.Frequently.forall_exists_of_atTop hqF
+  obtain ⟨j, -, hj⟩ := hq 0
+  obtain ⟨k, hjk : j < k, hk⟩ := hq (j + 1)
+  have key : g k + - g j ∈ W := by
+    have key := Set.sub_mem_sub hk hj
+    rw [Set.vadd_sub_vadd_comm, sub_self, zero_vadd, sub_eq_add_neg, sub_eq_add_neg, hS] at key
+    exact hSW key
+  rw [← sub_nsmul _ hjk.le, Set.mem_setOf_eq, Set.mapsTo_univ_iff, ← Set.range_subset_iff] at key
+  change ((k - j) • f).range ≤ U at key
+  suffices f.range ≤ ((k - j) • f).range by
+    exact (Set.Subset.trans this key) ⟨a, rfl⟩ rfl
+  rintro - ⟨b, rfl⟩
+  use DivisibleBy.div b (k - j)
+  simp [ContinuousAddMonoidHom.nsmul_apply,
+    ← map_nsmul, DivisibleBy.div_cancel b (Nat.sub_ne_zero_of_lt hjk)]
 
 instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
