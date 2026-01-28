@@ -150,6 +150,7 @@ end IsDedekindDomain
 
 section CompactHausdorff
 
+-- PRed
 @[to_additive] -- todo: to_additivize `instIsMulTorsionFree` in `Algebra/Group/Subgroup/Basic`.
 instance instIsMulTorsionFree
     {G : Type*} [Group G] (H : Subgroup G) [IsMulTorsionFree G] : IsMulTorsionFree H where
@@ -171,17 +172,6 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
-instance (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] :
-    (Ideal.connectedComponentOfZero R).IsTwoSided where
-  mul_mem_of_left := by
-    intro x c h
-    let f : R → R := fun y ↦ y * c
-    have key : Continuous f := continuous_mul_right c
-    suffices f '' connectedComponent (0 : R) ⊆ connectedComponent (0 : R) from this ⟨x, h, rfl⟩
-    apply IsConnected.subset_connectedComponent
-    · exact isConnected_connectedComponent.image _ key.continuousOn
-    · exact ⟨0, mem_connectedComponent, zero_mul c⟩
-
 -- this might not even need abelian?
 @[to_additive]
 noncomputable def Group.rootable
@@ -199,12 +189,14 @@ noncomputable def Group.rootable
 
   sorry
 
+-- PRed
 @[to_additive]
 theorem ContinuousMonoidHom.mul_apply {A B : Type*} [Monoid A] [CommMonoid B]
     [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
     (f g : ContinuousMonoidHom A B) (a : A) : (f * g) a = f a * g a := by
   rfl
 
+-- PRed
 @[to_additive]
 theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
     [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
