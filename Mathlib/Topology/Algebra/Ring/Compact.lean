@@ -13,6 +13,7 @@ public import Mathlib.RingTheory.HopkinsLevitzki
 public import Mathlib.RingTheory.IntegralDomain
 public import Mathlib.RingTheory.LocalRing.Quotient
 public import Mathlib.Topology.Algebra.Group.ClosedSubgroup
+public import Mathlib.Topology.Algebra.Group.SubmonoidClosure
 public import Mathlib.Topology.Algebra.Field
 public import Mathlib.Topology.Algebra.Module.Basic
 public import Mathlib.Topology.Algebra.Module.Compact
@@ -214,50 +215,6 @@ theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
     rw [pow_succ, pow_succ, ContinuousMonoidHom.mul_apply, ih]
 
 open Pointwise in
-theorem CommGroup.bar {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] (f : A) (U : Set A) (hU : U ∈ nhds 1) : ∃ n > 0, f ^ n ∈ U := by
-  obtain ⟨V, hV1, -, hV, hVU⟩ := exists_closed_nhds_one_inv_eq_mul_subset hU
-  let g : ℕ → A := fun n ↦ f ^ n
-  let F : Filter A := Filter.map g Filter.atTop
-  have hF : F ≤ Filter.principal Set.univ := by
-    simp
-  obtain ⟨q, hqK, hqF⟩ := isCompact_univ hF
-  rw [clusterPt_iff_frequently] at hqF
-  specialize hqF (q • V) (smul_mem_nhds_self.mpr hV1)
-  rw [Filter.frequently_map] at hqF
-  have hq := Filter.Frequently.forall_exists_of_atTop hqF
-  obtain ⟨j, -, hj⟩ := hq 0
-  obtain ⟨k, hjk : j < k, hk⟩ := hq (j + 1)
-  have key : g k * (g j)⁻¹ ∈ U := by
-    have key := Set.div_mem_div hk hj
-    rw [Set.smul_div_smul_comm, div_self', one_smul, div_eq_mul_inv, div_eq_mul_inv, hV] at key
-    exact hVU key
-  rw [← pow_sub _ hjk.le] at key
-  exact ⟨k - j, Nat.sub_pos_of_lt hjk, key⟩
-
-open Pointwise in
-theorem AddCommGroup.bar {A : Type*} [AddCommGroup A] [TopologicalSpace A] [IsTopologicalAddGroup A]
-    [CompactSpace A] (f : A) (U : Set A) (hU : U ∈ nhds 0) : ∃ n > 0, n • f ∈ U := by
-  obtain ⟨V, hV0, -, hV, hVU⟩ := exists_closed_nhds_zero_neg_eq_add_subset hU
-  let g : ℕ → A := fun n ↦ n • f
-  let F : Filter A := Filter.map g Filter.atTop
-  have hF : F ≤ Filter.principal Set.univ := by
-    simp
-  obtain ⟨q, hqK, hqF⟩ := isCompact_univ hF
-  rw [clusterPt_iff_frequently] at hqF
-  specialize hqF (q +ᵥ V) (vadd_mem_nhds_self.mpr hV0)
-  rw [Filter.frequently_map] at hqF
-  have hq := Filter.Frequently.forall_exists_of_atTop hqF
-  obtain ⟨j, -, hj⟩ := hq 0
-  obtain ⟨k, hjk : j < k, hk⟩ := hq (j + 1)
-  have key : g k + - g j ∈ U := by
-    have key := Set.sub_mem_sub hk hj
-    rw [Set.vadd_sub_vadd_comm, sub_self, zero_vadd, sub_eq_add_neg, sub_eq_add_neg, hV] at key
-    exact hVU key
-  rw [← sub_nsmul _ hjk.le] at key
-  exact ⟨k - j, Nat.sub_pos_of_lt hjk, key⟩
-
-open Pointwise in
 @[to_additive]
 theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
     [CompactSpace A] [ConnectedSpace A] [T2Space A] (K : Subgroup (ContinuousMonoidHom A A))
@@ -279,17 +236,18 @@ theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologi
   have hW1 : 1 ∈ W := by simpa [W]
   replace hW1 : W ∈ nhds 1 := hW.mem_nhds hW1
   have : CompactSpace K := isCompact_iff_compactSpace.mp hK
-  obtain ⟨n, hn0, hnf⟩ := CommGroup.bar ⟨f, hf⟩ (Subtype.val ⁻¹' W)
-    (continuousAt_subtype_val.preimage_mem_nhds (by simpa))
-  rw [Set.mem_preimage, Subgroup.coe_pow, Subtype.coe_mk] at hnf
-  rw [Set.mem_setOf_eq, Set.mapsTo_univ_iff, ← Set.range_subset_iff] at hnf
+  obtain ⟨n, hn0, hnf⟩ :=
+    (mapClusterPt_iff_frequently.mp (mapClusterPt_one_atTop_pow ⟨f, hf⟩) (Subtype.val ⁻¹' W)
+    (continuousAt_subtype_val.preimage_mem_nhds (by exact hW1))).forall_exists_of_atTop 1
+  replace hn0 : n ≠ 0 := by grind
+  rw [Set.mem_preimage, Subgroup.coe_pow, Subtype.coe_mk,
+    Set.mem_setOf_eq, Set.mapsTo_univ_iff, ← Set.range_subset_iff] at hnf
   change (f ^ n).range ≤ U at hnf
   suffices f.range ≤ (f ^ n).range by
     exact (Set.Subset.trans this hnf) ⟨a, rfl⟩ rfl
   rintro - ⟨b, rfl⟩
   use RootableBy.root b n
-  simp [ContinuousMonoidHom.pow_apply,
-    ← map_pow, RootableBy.root_cancel b hn0.ne']
+  simp [ContinuousMonoidHom.pow_apply, ← map_pow, RootableBy.root_cancel b hn0]
 
 instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
