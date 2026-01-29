@@ -78,30 +78,25 @@ theorem logDeriv_Gammaℝ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -2 * n) :
     logDeriv Gammaℝ s = (digamma (s / 2) - Real.log π) / 2 := by
   replace hs : ∀ n : ℕ, s / 2 ≠ -n := by grind
   change logDeriv (fun s ↦ π ^ (-s / 2) * (Gamma ∘ (· / 2)) s) s = _
-  rw [logDeriv_mul, logDeriv_const_cpow, ← ofReal_log, Pi.smul_apply, smul_eq_mul,
-    deriv_div_const, deriv_neg, neg_div, mul_neg, mul_one_div, neg_add_eq_sub, logDeriv_comp,
-    deriv_div_const, deriv_id'', mul_one_div, ← sub_div, digamma_def]
-  · fun_prop (disch := assumption)
+  rw [logDeriv_mul, logDeriv_const_cpow, logDeriv_comp, digamma_def, ofReal_log]
   · simp
+    ring
+  any_goals fun_prop (disch := simp [hs])
   · positivity
-  · fun_prop
-  · simp
+  · simp -- floris's student will make this and the next `positivity`
   · exact Gamma_ne_zero hs
-  · fun_prop (disch := simp)
-  · fun_prop (disch := assumption)
 
 theorem logDeriv_Gammaℂ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -n) :
     logDeriv Gammaℂ s = digamma s - (2 * π).log := by
   change logDeriv (fun s ↦ 2 * (2 * Real.pi) ^ (-s) * Gamma s) s = _
-  rw [logDeriv_mul, logDeriv_const_mul, logDeriv_const_cpow, ← ofReal_ofNat, ← ofReal_mul,
-    ← ofReal_log, Pi.smul_apply, smul_eq_mul, deriv_neg, mul_neg_one, neg_add_eq_sub, digamma_def]
+  rw [logDeriv_mul, logDeriv_const_mul, logDeriv_const_cpow, digamma_def, ofReal_log]
+  · simp
+    ring
+  any_goals fun_prop (disch := simp [hs])
   · positivity
-  · fun_prop
   · simp
   · simp
   · exact Gamma_ne_zero hs
-  · fun_prop (disch := simp)
-  · fun_prop (disch := assumption)
 
 end Complex
 
@@ -194,12 +189,12 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
 theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     2 * logDeriv (completedDedekindZeta K) s =
       log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma + log 2) +
-        Module.finrank ℚ K * (s.digamma - log (2 * π)) + logDeriv (dedekindZeta K) s := by
-  rw [logDeriv_completedDedekindZeta K s hs, ← InfinitePlace.card_add_two_mul_card_eq_rank]
-  rw [mul_add, mul_add, mul_add]
-  simp only [log_mul two_ne_zero pi_ne_zero]
-
-  simp [mul_add]
+        Module.finrank ℚ K * (s.digamma - log (2 * π)) + 2 * logDeriv (dedekindZeta K) s := by
+  rw [logDeriv_completedDedekindZeta K s hs, ← InfinitePlace.card_add_two_mul_card_eq_rank,
+    mul_add, mul_add, mul_add, mul_div_cancel₀ _ two_ne_zero, ← mul_assoc, mul_comm 2, mul_assoc,
+    mul_div_cancel₀ _ two_ne_zero]
+  simp only [log_mul two_ne_zero pi_ne_zero, Complex.ofReal_add, log_abs]
+  grind
 
 end completedDedekindZeta
 
