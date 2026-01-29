@@ -51,7 +51,7 @@ This generality has several advantages
   `smul` to multiply the functions, that would be an asymmetric definition.
 
 ## Main Definitions
-* `MeasureTheory.convolution f g L μ x = (f ⋆[L, μ] g) x = ∫ t, L (f t) (g (x - t)) ∂μ`
+* `MeasureTheory.convolution f g L μ x = (f ⋆[L, μ] g) x = ∫ t, L (f (x - t)) (g t) ∂μ`
   is the convolution of `f` and `g` w.r.t. the continuous bilinear map `L` and measure `μ`.
 * `MeasureTheory.ConvolutionExistsAt f g x L μ` states that the convolution `(f ⋆[L, μ] g) x`
   is well-defined (i.e. the integral exists).
@@ -116,39 +116,39 @@ section NoMeasurability
 
 variable [AddGroup G] [TopologicalSpace G]
 
-theorem convolution_integrand_bound_right_of_le_of_subset {C : ℝ} (hC : ∀ i, ‖g i‖ ≤ C) {x t : G}
-    {s u : Set G} (hx : x ∈ s) (hu : -tsupport g + s ⊆ u) :
-    ‖L (f t) (g (x - t))‖ ≤ u.indicator (fun t => ‖L‖ * ‖f t‖ * C) t := by
+theorem convolution_integrand_bound_right_of_le_of_subset {C : ℝ} (hC : ∀ i, ‖f i‖ ≤ C) {x t : G}
+    {s u : Set G} (hx : x ∈ s) (hu : -tsupport f + s ⊆ u) :
+    ‖L (f (x - t)) (g t)‖ ≤ u.indicator (fun t => ‖L‖ * C * ‖g t‖) t := by
   -- Porting note: had to add `f := _`
-  refine le_indicator (f := fun t ↦ ‖L (f t) (g (x - t))‖) (fun t _ => ?_) (fun t ht => ?_) t
+  refine le_indicator (f := fun t ↦ ‖L (f (x - t)) (g t)‖) (fun t _ => ?_) (fun t ht => ?_) t
   · apply_rules [L.le_of_opNorm₂_le_of_le, le_rfl]
-  · have : x - t ∉ support g := by
+  · have : x - t ∉ support f := by
       refine mt (fun hxt => hu ?_) ht
       refine ⟨_, Set.neg_mem_neg.mpr (subset_closure hxt), _, hx, ?_⟩
       simp only [neg_sub, sub_add_cancel]
-    simp only [notMem_support.mp this, (L _).map_zero, norm_zero, le_rfl]
+    simp [notMem_support.mp this]
 
 theorem _root_.HasCompactSupport.convolution_integrand_bound_right_of_subset
-    (hcg : HasCompactSupport g) (hg : Continuous g)
-    {x t : G} {s u : Set G} (hx : x ∈ s) (hu : -tsupport g + s ⊆ u) :
-    ‖L (f t) (g (x - t))‖ ≤ u.indicator (fun t => ‖L‖ * ‖f t‖ * ⨆ i, ‖g i‖) t := by
+    (hcf : HasCompactSupport f) (hf : Continuous f)
+    {x t : G} {s u : Set G} (hx : x ∈ s) (hu : -tsupport f + s ⊆ u) :
+    ‖L (f (x - t)) (g t)‖ ≤ u.indicator (fun t => ‖L‖ * (⨆ i, ‖f i‖) * ‖g t‖) t := by
   refine convolution_integrand_bound_right_of_le_of_subset _ (fun i => ?_) hx hu
-  exact le_ciSup (hg.norm.bddAbove_range_of_hasCompactSupport hcg.norm) _
+  exact le_ciSup (hf.norm.bddAbove_range_of_hasCompactSupport hcf.norm) _
 
-theorem _root_.HasCompactSupport.convolution_integrand_bound_right (hcg : HasCompactSupport g)
-    (hg : Continuous g) {x t : G} {s : Set G} (hx : x ∈ s) :
-    ‖L (f t) (g (x - t))‖ ≤ (-tsupport g + s).indicator (fun t => ‖L‖ * ‖f t‖ * ⨆ i, ‖g i‖) t :=
-  hcg.convolution_integrand_bound_right_of_subset L hg hx Subset.rfl
-
-theorem _root_.Continuous.convolution_integrand_fst [ContinuousSub G] (hg : Continuous g) (t : G) :
-    Continuous fun x => L (f t) (g (x - t)) :=
-  L.continuous₂.comp₂ continuous_const <| hg.comp <| continuous_id.sub continuous_const
-
-theorem _root_.HasCompactSupport.convolution_integrand_bound_left (hcf : HasCompactSupport f)
+theorem _root_.HasCompactSupport.convolution_integrand_bound_right (hcf : HasCompactSupport f)
     (hf : Continuous f) {x t : G} {s : Set G} (hx : x ∈ s) :
-    ‖L (f (x - t)) (g t)‖ ≤
-      (-tsupport f + s).indicator (fun t => (‖L‖ * ⨆ i, ‖f i‖) * ‖g t‖) t := by
-  convert hcf.convolution_integrand_bound_right L.flip hf hx using 1
+    ‖L (f (x - t)) (g t)‖ ≤ (-tsupport f + s).indicator (fun t => ‖L‖ * (⨆ i, ‖f i‖) * ‖g t‖) t :=
+  hcf.convolution_integrand_bound_right_of_subset L hf hx Subset.rfl
+
+theorem _root_.Continuous.convolution_integrand_fst [ContinuousSub G] (hf : Continuous f) (t : G) :
+    Continuous fun x => L (f (x - t)) (g t) := by
+  fun_prop
+
+theorem _root_.HasCompactSupport.convolution_integrand_bound_left (hcg : HasCompactSupport g)
+    (hg : Continuous g) {x t : G} {s : Set G} (hx : x ∈ s) :
+    ‖L (f t) (g (x - t))‖ ≤
+      (-tsupport g + s).indicator (fun t => ‖L‖ * ‖f t‖ * ⨆ i, ‖g i‖) t := by
+  convert hcg.convolution_integrand_bound_right L.flip hg hx using 1
   simp_rw [L.opNorm_flip, mul_right_comm]
 
 end NoMeasurability
@@ -156,13 +156,13 @@ end NoMeasurability
 section Measurability
 variable [MeasurableSpace G] {μ ν : Measure G}
 
-/-- The convolution of `f` and `g` exists at `x` when the function `t ↦ L (f t) (g (x - t))` is
+/-- The convolution of `f` and `g` exists at `x` when the function `t ↦ L (f (x - t)) (g t)` is
 integrable. There are various conditions on `f` and `g` to prove this. -/
 def ConvolutionExistsAt [Sub G] (f : G → E) (g : G → E') (x : G) (L : E →L[𝕜] E' →L[𝕜] F)
     (μ : Measure G := by volume_tac) : Prop :=
-  Integrable (fun t => L (f t) (g (x - t))) μ
+  Integrable (fun t => L (f (x - t)) (g t)) μ
 
-/-- The convolution of `f` and `g` exists when the function `t ↦ L (f t) (g (x - t))` is integrable
+/-- The convolution of `f` and `g` exists when the function `t ↦ L (f (x - t)) (g t)` is integrable
 for all `x : G`. There are various conditions on `f` and `g` to prove this. -/
 def ConvolutionExists [Sub G] (f : G → E) (g : G → E') (L : E →L[𝕜] E' →L[𝕜] F)
     (μ : Measure G := by volume_tac) : Prop :=
@@ -172,7 +172,7 @@ section ConvolutionExists
 
 variable {L} in
 theorem ConvolutionExistsAt.integrable [Sub G] {x : G} (h : ConvolutionExistsAt f g x L μ) :
-    Integrable (fun t => L (f t) (g (x - t))) μ :=
+    Integrable (fun t => L (f (x - t)) (g t)) μ :=
   h
 
 section Group
@@ -180,56 +180,56 @@ section Group
 variable [AddGroup G]
 
 theorem AEStronglyMeasurable.convolution_integrand' [MeasurableAdd₂ G]
-    [MeasurableNeg G] (hf : AEStronglyMeasurable f ν)
-    (hg : AEStronglyMeasurable g <| map (fun p : G × G => p.1 - p.2) (μ.prod ν)) :
-    AEStronglyMeasurable (fun p : G × G => L (f p.2) (g (p.1 - p.2))) (μ.prod ν) :=
-  L.aestronglyMeasurable_comp₂ hf.comp_snd <| hg.comp_measurable measurable_sub
+    [MeasurableNeg G] (hf : AEStronglyMeasurable f <| map (fun p : G × G => p.1 - p.2) (μ.prod ν))
+    (hg : AEStronglyMeasurable g ν) :
+    AEStronglyMeasurable (fun p : G × G => L (f (p.1 - p.2)) (g p.2)) (μ.prod ν) :=
+  L.aestronglyMeasurable_comp₂ (hf.comp_measurable measurable_sub) hg.comp_snd
 
 section
 
 variable [MeasurableAdd G] [MeasurableNeg G]
 
 theorem AEStronglyMeasurable.convolution_integrand_snd'
-    (hf : AEStronglyMeasurable f μ) {x : G}
-    (hg : AEStronglyMeasurable g <| map (fun t => x - t) μ) :
-    AEStronglyMeasurable (fun t => L (f t) (g (x - t))) μ :=
-  L.aestronglyMeasurable_comp₂ hf <| hg.comp_measurable <| measurable_id.const_sub x
+    {x : G} (hf : AEStronglyMeasurable f <| map (fun t => x - t) μ)
+    (hg : AEStronglyMeasurable g μ) :
+    AEStronglyMeasurable (fun t => L (f (x - t)) (g t)) μ :=
+  L.aestronglyMeasurable_comp₂ (hf.comp_measurable (measurable_const_sub x)) hg
 
 theorem AEStronglyMeasurable.convolution_integrand_swap_snd' {x : G}
-    (hf : AEStronglyMeasurable f <| map (fun t => x - t) μ) (hg : AEStronglyMeasurable g μ) :
-    AEStronglyMeasurable (fun t => L (f (x - t)) (g t)) μ :=
-  L.aestronglyMeasurable_comp₂ (hf.comp_measurable <| measurable_id.const_sub x) hg
+    (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g <| map (fun t => x - t) μ) :
+    AEStronglyMeasurable (fun t => L (f t) (g (x - t))) μ :=
+  L.aestronglyMeasurable_comp₂ hf (hg.comp_measurable (measurable_const_sub x))
 
 /-- A sufficient condition to prove that `f ⋆[L, μ] g` exists.
 We assume that `f` is integrable on a set `s` and `g` is bounded and ae strongly measurable
 on `x₀ - s` (note that both properties hold if `g` is continuous with compact support). -/
 theorem _root_.BddAbove.convolutionExistsAt' {x₀ : G} {s : Set G}
-    (hbg : BddAbove ((fun i => ‖g i‖) '' ((fun t => -t + x₀) ⁻¹' s))) (hs : MeasurableSet s)
-    (h2s : (support fun t => L (f t) (g (x₀ - t))) ⊆ s) (hf : IntegrableOn f s μ)
-    (hmg : AEStronglyMeasurable g <| map (fun t => x₀ - t) (μ.restrict s)) :
+    (hbg : BddAbove ((fun i => ‖f i‖) '' ((fun t => -t + x₀) ⁻¹' s))) (hs : MeasurableSet s)
+    (h2s : (support fun t => L (f (x₀ - t)) (g t)) ⊆ s) (hg : IntegrableOn g s μ)
+    (hmf : AEStronglyMeasurable f <| map (fun t => x₀ - t) (μ.restrict s)) :
     ConvolutionExistsAt f g x₀ L μ := by
   rw [ConvolutionExistsAt]
   rw [← integrableOn_iff_integrable_of_support_subset h2s]
   set s' := (fun t => -t + x₀) ⁻¹' s
   have : ∀ᵐ t : G ∂μ.restrict s,
-      ‖L (f t) (g (x₀ - t))‖ ≤ s.indicator (fun t => ‖L‖ * ‖f t‖ * ⨆ i : s', ‖g i‖) t := by
+      ‖L (f (x₀ - t)) (g t)‖ ≤ s.indicator (fun t => ‖L‖ * (⨆ i : s', ‖f i‖) * ‖g t‖) t := by
     filter_upwards
     refine le_indicator (fun t ht => ?_) fun t ht => ?_
     · apply_rules [L.le_of_opNorm₂_le_of_le, le_rfl]
       refine (le_ciSup_set hbg <| mem_preimage.mpr ?_)
       rwa [neg_sub, sub_add_cancel]
-    · have : t ∉ support fun t => L (f t) (g (x₀ - t)) := mt (fun h => h2s h) ht
+    · have : t ∉ support fun t => L (f (x₀ - t)) (g t) := mt (fun h => h2s h) ht
       rw [notMem_support.mp this, norm_zero]
   refine Integrable.mono' ?_ ?_ this
-  · rw [integrable_indicator_iff hs]; exact ((hf.norm.const_mul _).mul_const _).integrableOn
-  · exact hf.aestronglyMeasurable.convolution_integrand_snd' L hmg
+  · rw [integrable_indicator_iff hs]; exact (hg.norm.const_mul _).integrableOn
+  · exact hmf.convolution_integrand_snd' L hg.aestronglyMeasurable
 
 /-- If `‖f‖ *[μ] ‖g‖` exists, then `f *[L, μ] g` exists. -/
 theorem ConvolutionExistsAt.of_norm' {x₀ : G}
     (h : ConvolutionExistsAt (fun x => ‖f x‖) (fun x => ‖g x‖) x₀ (mul ℝ ℝ) μ)
-    (hmf : AEStronglyMeasurable f μ) (hmg : AEStronglyMeasurable g <| map (fun t => x₀ - t) μ) :
+    (hmf : AEStronglyMeasurable f <| map (fun t => x₀ - t) μ) (hmg : AEStronglyMeasurable g μ) :
     ConvolutionExistsAt f g x₀ L μ := by
-  refine (h.const_mul ‖L‖).mono'
+  apply (h.const_mul ‖L‖).mono'
     (hmf.convolution_integrand_snd' L hmg) (Eventually.of_forall fun x => ?_)
   rw [mul_apply', ← mul_assoc]
   apply L.le_opNorm₂
@@ -238,29 +238,26 @@ end
 
 section Left
 
-variable [MeasurableAdd₂ G] [MeasurableNeg G] [SFinite μ] [IsAddRightInvariant μ]
+variable [MeasurableAdd₂ G] [MeasurableNeg G] [SFinite μ] [IsAddLeftInvariant μ]
 
 theorem AEStronglyMeasurable.convolution_integrand_snd (hf : AEStronglyMeasurable f μ)
     (hg : AEStronglyMeasurable g μ) (x : G) :
-    AEStronglyMeasurable (fun t => L (f t) (g (x - t))) μ :=
-  hf.convolution_integrand_snd' L <|
-    hg.mono_ac <| (quasiMeasurePreserving_sub_left_of_right_invariant μ x).absolutelyContinuous
+    AEStronglyMeasurable (fun t => L (f (x - t)) (g t)) μ :=
+  convolution_integrand_snd' L
+    (hf.mono_ac <| (quasiMeasurePreserving_sub_left μ x).absolutelyContinuous) hg
 
 theorem AEStronglyMeasurable.convolution_integrand_swap_snd
     (hf : AEStronglyMeasurable f μ) (hg : AEStronglyMeasurable g μ) (x : G) :
-    AEStronglyMeasurable (fun t => L (f (x - t)) (g t)) μ :=
-  (hf.mono_ac
-        (quasiMeasurePreserving_sub_left_of_right_invariant μ
-            x).absolutelyContinuous).convolution_integrand_swap_snd'
-    L hg
+    AEStronglyMeasurable (fun t => L (f t) (g (x - t))) μ :=
+  hf.convolution_integrand_swap_snd' L
+    (hg.mono_ac (quasiMeasurePreserving_sub_left μ x).absolutelyContinuous)
 
 /-- If `‖f‖ *[μ] ‖g‖` exists, then `f *[L, μ] g` exists. -/
 theorem ConvolutionExistsAt.of_norm {x₀ : G}
     (h : ConvolutionExistsAt (fun x => ‖f x‖) (fun x => ‖g x‖) x₀ (mul ℝ ℝ) μ)
     (hmf : AEStronglyMeasurable f μ) (hmg : AEStronglyMeasurable g μ) :
     ConvolutionExistsAt f g x₀ L μ :=
-  h.of_norm' L hmf <|
-    hmg.mono_ac (quasiMeasurePreserving_sub_left_of_right_invariant μ x₀).absolutelyContinuous
+  h.of_norm' L (hmf.mono_ac (quasiMeasurePreserving_sub_left μ x₀).absolutelyContinuous) hmg
 
 end Left
 
@@ -268,30 +265,35 @@ section Right
 
 variable [MeasurableAdd₂ G] [MeasurableNeg G] [SFinite μ] [IsAddRightInvariant μ] [SFinite ν]
 
-theorem AEStronglyMeasurable.convolution_integrand (hf : AEStronglyMeasurable f ν)
-    (hg : AEStronglyMeasurable g μ) :
-    AEStronglyMeasurable (fun p : G × G => L (f p.2) (g (p.1 - p.2))) (μ.prod ν) :=
-  hf.convolution_integrand' L <|
-    hg.mono_ac (quasiMeasurePreserving_sub_of_right_invariant μ ν).absolutelyContinuous
+theorem AEStronglyMeasurable.convolution_integrand (hf : AEStronglyMeasurable f μ)
+    (hg : AEStronglyMeasurable g ν) :
+    AEStronglyMeasurable (fun p : G × G => L (f (p.1 - p.2)) (g p.2)) (μ.prod ν) :=
+  convolution_integrand' L
+    (hf.mono_ac (quasiMeasurePreserving_sub_of_right_invariant μ ν).absolutelyContinuous) hg
 
-theorem Integrable.convolution_integrand (hf : Integrable f ν) (hg : Integrable g μ) :
-    Integrable (fun p : G × G => L (f p.2) (g (p.1 - p.2))) (μ.prod ν) := by
-  have h_meas : AEStronglyMeasurable (fun p : G × G => L (f p.2) (g (p.1 - p.2))) (μ.prod ν) :=
+theorem Integrable.convolution_integrand (hf : Integrable f μ) (hg : Integrable g ν) :
+    Integrable (fun p : G × G => L (f (p.1 - p.2)) (g p.2)) (μ.prod ν) := by
+  have h_meas : AEStronglyMeasurable (fun p : G × G => L (f (p.1 - p.2)) (g p.2)) (μ.prod ν) :=
     hf.aestronglyMeasurable.convolution_integrand L hg.aestronglyMeasurable
-  have h2_meas : AEStronglyMeasurable (fun y : G => ∫ x : G, ‖L (f y) (g (x - y))‖ ∂μ) ν :=
+  have h2_meas : AEStronglyMeasurable (fun y : G => ∫ x : G, ‖L (f (x - y)) (g y)‖ ∂μ) ν :=
     h_meas.prod_swap.norm.integral_prod_right'
   simp_rw [integrable_prod_iff' h_meas]
-  refine ⟨Eventually.of_forall fun t => (L (f t)).integrable_comp (hg.comp_sub_right t), ?_⟩
+  refine ⟨Eventually.of_forall fun t => ?_, ?_⟩
+  · have := hf.comp_sub_right t
+    -- needs a swap?
+    sorry
+  -- refine ⟨Eventually.of_forall fun t => (L (f t)).integrable_comp (hg.comp_sub_right t), ?_⟩
   refine Integrable.mono' ?_ h2_meas
-      (Eventually.of_forall fun t => (?_ : _ ≤ ‖L‖ * ‖f t‖ * ∫ x, ‖g (x - t)‖ ∂μ))
-  · simp only [integral_sub_right_eq_self (‖g ·‖)]
-    exact (hf.norm.const_mul _).mul_const _
-  · simp_rw [← integral_const_mul]
+      (Eventually.of_forall fun t => (?_ : _ ≤ ‖L‖ * (∫ x, ‖f (x - t)‖ ∂μ) * ‖g t‖))
+  · simp only [integral_sub_right_eq_self (‖f ·‖)]
+    exact hg.norm.const_mul _
+  · simp_rw [← integral_const_mul, ← integral_mul_const]
     rw [Real.norm_of_nonneg (by positivity)]
-    exact integral_mono_of_nonneg (Eventually.of_forall fun t => norm_nonneg _)
-      ((hg.comp_sub_right t).norm.const_mul _) (Eventually.of_forall fun t => L.le_opNorm₂ _ _)
+    apply integral_mono_of_nonneg (Eventually.of_forall fun t => norm_nonneg _)
+      (((hf.comp_sub_right t).norm.const_mul _).mul_const _)
+        (Eventually.of_forall fun t => L.le_opNorm₂ _ _)
 
-theorem Integrable.ae_convolution_exists (hf : Integrable f ν) (hg : Integrable g μ) :
+theorem Integrable.ae_convolution_exists (hf : Integrable f μ) (hg : Integrable g ν) :
     ∀ᵐ x ∂μ, ConvolutionExistsAt f g x L ν :=
   ((integrable_prod_iff <|
           hf.aestronglyMeasurable.convolution_integrand L hg.aestronglyMeasurable).mp <|
@@ -302,39 +304,39 @@ end Right
 variable [TopologicalSpace G] [IsTopologicalAddGroup G] [BorelSpace G]
 
 theorem _root_.HasCompactSupport.convolutionExistsAt {x₀ : G}
-    (h : HasCompactSupport fun t => L (f t) (g (x₀ - t))) (hf : LocallyIntegrable f μ)
-    (hg : Continuous g) : ConvolutionExistsAt f g x₀ L μ := by
+    (h : HasCompactSupport fun t => L (f (x₀ - t)) (g t)) (hg : LocallyIntegrable g μ)
+    (hf : Continuous f) : ConvolutionExistsAt f g x₀ L μ := by
   let u := (Homeomorph.neg G).trans (Homeomorph.addRight x₀)
   let v := (Homeomorph.neg G).trans (Homeomorph.addLeft x₀)
-  apply ((u.isCompact_preimage.mpr h).bddAbove_image hg.norm.continuousOn).convolutionExistsAt' L
-    isClosed_closure.measurableSet subset_closure (hf.integrableOn_isCompact h)
-  have A : AEStronglyMeasurable (g ∘ v)
-      (μ.restrict (tsupport fun t : G => L (f t) (g (x₀ - t)))) := by
+  apply ((u.isCompact_preimage.mpr h).bddAbove_image hf.norm.continuousOn).convolutionExistsAt' L
+    isClosed_closure.measurableSet subset_closure (hg.integrableOn_isCompact h)
+  have A : AEStronglyMeasurable (f ∘ v)
+      (μ.restrict (tsupport fun t : G => L (f (x₀ - t)) (g t))) := by
     apply (hg.comp v.continuous).continuousOn.aestronglyMeasurable_of_isCompact h
     exact (isClosed_tsupport _).measurableSet
   convert ((v.continuous.measurable.measurePreserving
-      (μ.restrict (tsupport fun t => L (f t) (g (x₀ - t))))).aestronglyMeasurable_comp_iff
+      (μ.restrict (tsupport fun t => L (f (x₀ - t)) (g t)))).aestronglyMeasurable_comp_iff
     v.measurableEmbedding).1 A
   ext x
   simp only [v, Homeomorph.neg, sub_eq_add_neg, val_toAddUnits_apply, Homeomorph.trans_apply,
     Equiv.neg_apply, Homeomorph.homeomorph_mk_coe, Homeomorph.coe_addLeft]
 
-theorem _root_.HasCompactSupport.convolutionExists_right (hcg : HasCompactSupport g)
-    (hf : LocallyIntegrable f μ) (hg : Continuous g) : ConvolutionExists f g L μ := by
+theorem _root_.HasCompactSupport.convolutionExists_right (hcf : HasCompactSupport f)
+    (hg : LocallyIntegrable g μ) (hf : Continuous f) : ConvolutionExists f g L μ := by
   intro x₀
-  refine HasCompactSupport.convolutionExistsAt L ?_ hf hg
-  refine (hcg.comp_homeomorph (Homeomorph.subLeft x₀)).mono ?_
-  refine fun t => mt fun ht : g (x₀ - t) = 0 => ?_
-  simp_rw [ht, (L _).map_zero]
+  refine HasCompactSupport.convolutionExistsAt L ?_ hg hf
+  refine (hcf.comp_homeomorph (Homeomorph.subLeft x₀)).mono ?_
+  refine fun t => mt fun ht : f (x₀ - t) = 0 => ?_
+  simp [ht]
 
 theorem _root_.HasCompactSupport.convolutionExists_left_of_continuous_right
-    (hcf : HasCompactSupport f) (hf : LocallyIntegrable f μ) (hg : Continuous g) :
+    (hcg : HasCompactSupport g) (hg : LocallyIntegrable g μ) (hf : Continuous f) :
     ConvolutionExists f g L μ := by
   intro x₀
-  refine HasCompactSupport.convolutionExistsAt L ?_ hf hg
-  refine hcf.mono ?_
-  refine fun t => mt fun ht : f t = 0 => ?_
-  simp_rw [ht, L.map_zero₂]
+  refine HasCompactSupport.convolutionExistsAt L ?_ hg hf
+  refine hcg.mono ?_
+  refine fun t => mt fun ht : g t = 0 => ?_
+  simp [ht]
 
 end Group
 
@@ -354,13 +356,13 @@ integrable on the support of the integrand, and that both functions are strongly
 This is a variant of `BddAbove.convolutionExistsAt'` in an abelian group with a left-invariant
 measure. This allows us to state the boundedness and measurability of `g` in a more natural way. -/
 theorem _root_.BddAbove.convolutionExistsAt [MeasurableAdd₂ G] [SFinite μ] {x₀ : G} {s : Set G}
-    (hbg : BddAbove ((fun i => ‖g i‖) '' ((fun t => x₀ - t) ⁻¹' s))) (hs : MeasurableSet s)
-    (h2s : (support fun t => L (f t) (g (x₀ - t))) ⊆ s) (hf : IntegrableOn f s μ)
-    (hmg : AEStronglyMeasurable g μ) : ConvolutionExistsAt f g x₀ L μ := by
-  refine BddAbove.convolutionExistsAt' L ?_ hs h2s hf ?_
-  · simp_rw [← sub_eq_neg_add, hbg]
-  · have : AEStronglyMeasurable g (map (fun t : G => x₀ - t) μ) :=
-      hmg.mono_ac (quasiMeasurePreserving_sub_left_of_right_invariant μ x₀).absolutelyContinuous
+    (hbf : BddAbove ((fun i => ‖f i‖) '' ((fun t => x₀ - t) ⁻¹' s))) (hs : MeasurableSet s)
+    (h2s : (support fun t => L (f (x₀ - t)) (g t)) ⊆ s) (hg : IntegrableOn g s μ)
+    (hmf : AEStronglyMeasurable f μ) : ConvolutionExistsAt f g x₀ L μ := by
+  refine BddAbove.convolutionExistsAt' L ?_ hs h2s hg ?_
+  · simp_rw [← sub_eq_neg_add, hbf]
+  · have : AEStronglyMeasurable f (map (fun t : G => x₀ - t) μ) :=
+      hmf.mono_ac (quasiMeasurePreserving_sub_left_of_right_invariant μ x₀).absolutelyContinuous
     apply this.mono_measure
     exact map_mono restrict_le_self (measurable_const.sub measurable_id')
 
@@ -368,16 +370,16 @@ variable {L} [MeasurableAdd G] [IsNegInvariant μ]
 
 theorem convolutionExistsAt_flip :
     ConvolutionExistsAt g f x L.flip μ ↔ ConvolutionExistsAt f g x L μ := by
-  simp_rw [ConvolutionExistsAt, ← integrable_comp_sub_left (fun t => L (f t) (g (x - t))) x,
+  simp_rw [ConvolutionExistsAt, ← integrable_comp_sub_left (fun t => L (f (x - t)) (g t)) x,
     sub_sub_cancel, flip_apply]
 
 theorem ConvolutionExistsAt.integrable_swap (h : ConvolutionExistsAt f g x L μ) :
-    Integrable (fun t => L (f (x - t)) (g t)) μ := by
+    Integrable (fun t => L (f t) (g (x - t))) μ := by
   convert h.comp_sub_left x
   simp_rw [sub_sub_self]
 
 theorem convolutionExistsAt_iff_integrable_swap :
-    ConvolutionExistsAt f g x L μ ↔ Integrable (fun t => L (f (x - t)) (g t)) μ :=
+    ConvolutionExistsAt f g x L μ ↔ Integrable (fun t => L (f t) (g (x - t))) μ :=
   convolutionExistsAt_flip.symm
 
 end MeasurableGroup
@@ -386,14 +388,14 @@ variable [TopologicalSpace G] [IsTopologicalAddGroup G] [BorelSpace G]
 variable [IsAddLeftInvariant μ] [IsNegInvariant μ]
 
 theorem _root_.HasCompactSupport.convolutionExists_left
-    (hcf : HasCompactSupport f) (hf : Continuous f)
-    (hg : LocallyIntegrable g μ) : ConvolutionExists f g L μ := fun x₀ =>
-  convolutionExistsAt_flip.mp <| hcf.convolutionExists_right L.flip hg hf x₀
+    (hcg : HasCompactSupport g) (hg : Continuous g)
+    (hf : LocallyIntegrable f μ) : ConvolutionExists f g L μ := fun x₀ =>
+  convolutionExistsAt_flip.mp <| hcg.convolutionExists_right L.flip hf hg x₀
 
 theorem _root_.HasCompactSupport.convolutionExists_right_of_continuous_left
-    (hcg : HasCompactSupport g) (hf : Continuous f) (hg : LocallyIntegrable g μ) :
+    (hcf : HasCompactSupport f) (hg : Continuous g) (hf : LocallyIntegrable f μ) :
     ConvolutionExists f g L μ := fun x₀ =>
-  convolutionExistsAt_flip.mp <| hcg.convolutionExists_left_of_continuous_right L.flip hg hf x₀
+  convolutionExistsAt_flip.mp <| hcf.convolutionExists_left_of_continuous_right L.flip hf hg x₀
 
 end CommGroup
 
@@ -405,7 +407,7 @@ variable [NormedSpace ℝ F]
 measure `μ`. It is defined to be `(f ⋆[L, μ] g) x = ∫ t, L (f t) (g (x - t)) ∂μ`. -/
 noncomputable def convolution [Sub G] (f : G → E) (g : G → E') (L : E →L[𝕜] E' →L[𝕜] F)
     (μ : Measure G := by volume_tac) : G → F := fun x =>
-  ∫ t, L (f t) (g (x - t)) ∂μ
+  ∫ t, L (f (x - t)) (g t) ∂μ
 
 /-- The convolution of two functions with respect to a bilinear operation `L` and a measure `μ`. -/
 scoped[Convolution] notation:67 f " ⋆[" L:67 ", " μ:67 "] " g:66 => convolution f g L μ
@@ -421,18 +423,18 @@ scoped[Convolution]
 
 open scoped Convolution
 
-theorem convolution_def [Sub G] : (f ⋆[L, μ] g) x = ∫ t, L (f t) (g (x - t)) ∂μ :=
+theorem convolution_def [Sub G] : (f ⋆[L, μ] g) x = ∫ t, L (f (x - t)) (g t) ∂μ :=
   rfl
 
 /-- The definition of convolution where the bilinear operator is scalar multiplication.
 Note: it often helps the elaborator to give the type of the convolution explicitly. -/
 theorem convolution_lsmul [Sub G] {f : G → 𝕜} {g : G → F} :
-    (f ⋆[lsmul 𝕜 𝕜, μ] g : G → F) x = ∫ t, f t • g (x - t) ∂μ :=
+    (f ⋆[lsmul 𝕜 𝕜, μ] g : G → F) x = ∫ t, f (x - t) • g t ∂μ :=
   rfl
 
 /-- The definition of convolution where the bilinear operator is multiplication. -/
 theorem convolution_mul [Sub G] [NormedSpace ℝ 𝕜] {f : G → 𝕜} {g : G → 𝕜} :
-    (f ⋆[mul 𝕜 𝕜, μ] g) x = ∫ t, f t * g (x - t) ∂μ :=
+    (f ⋆[mul 𝕜 𝕜, μ] g) x = ∫ t, f (x - t) * g t ∂μ :=
   rfl
 
 section Group
@@ -490,7 +492,7 @@ theorem convolution_mono_right_of_nonneg {f g g' : G → ℝ}
   · exact convolution_mono_right H hfg' hf hg
   have : (f ⋆[lsmul ℝ ℝ, μ] g) x = 0 := integral_undef H
   rw [this]
-  exact integral_nonneg fun y => mul_nonneg (hf y) (hg' (x - y))
+  exact integral_nonneg fun y => mul_nonneg (hf (x - y)) (hg' y)
 
 variable (L)
 
@@ -615,7 +617,7 @@ theorem _root_.BddAbove.continuous_convolution_right_of_integrable
     (hbg : BddAbove (range fun x => ‖g x‖)) (hf : Integrable f μ) (hg : Continuous g) :
     Continuous (f ⋆[L, μ] g) := by
   refine continuous_iff_continuousAt.mpr fun x₀ => ?_
-  have : ∀ᶠ x in 𝓝 x₀, ∀ᵐ t : G ∂μ, ‖L (f t) (g (x - t))‖ ≤ ‖L‖ * ‖f t‖ * ⨆ i, ‖g i‖ := by
+  have : ∀ᶠ x in 𝓝 x₀, ∀ᵐ t : G ∂μ, ‖L (f (x - t)) (g t)‖ ≤ ‖L‖ * (⨆ i, ‖f i‖) * ‖g t‖ := by
     filter_upwards with x; filter_upwards with t
     apply_rules [L.le_of_opNorm₂_le_of_le, le_rfl, le_ciSup hbg (x - t)]
   refine continuousAt_of_dominated ?_ this ?_ ?_
@@ -649,17 +651,17 @@ theorem convolution_flip : g ⋆[L.flip, μ] f = f ⋆[L, μ] g := by
   simp_rw [sub_sub_self, flip_apply]
 
 /-- The symmetric definition of convolution. -/
-theorem convolution_eq_swap : (f ⋆[L, μ] g) x = ∫ t, L (f (x - t)) (g t) ∂μ := by
+theorem convolution_eq_swap : (f ⋆[L, μ] g) x = ∫ t, L (f t) (g (x - t)) ∂μ := by
   rw [← convolution_flip]; rfl
 
 /-- The symmetric definition of convolution where the bilinear operator is scalar multiplication. -/
 theorem convolution_lsmul_swap {f : G → 𝕜} {g : G → F} :
-    (f ⋆[lsmul 𝕜 𝕜, μ] g : G → F) x = ∫ t, f (x - t) • g t ∂μ :=
+    (f ⋆[lsmul 𝕜 𝕜, μ] g : G → F) x = ∫ t, f t • g (x - t) ∂μ :=
   convolution_eq_swap _
 
 /-- The symmetric definition of convolution where the bilinear operator is multiplication. -/
 theorem convolution_mul_swap [NormedSpace ℝ 𝕜] {f : G → 𝕜} {g : G → 𝕜} :
-    (f ⋆[mul 𝕜 𝕜, μ] g) x = ∫ t, f (x - t) * g t ∂μ :=
+    (f ⋆[mul 𝕜 𝕜, μ] g) x = ∫ t, f t * g (x - t) ∂μ :=
   convolution_eq_swap _
 
 /-- The convolution of two even functions is also even. -/
