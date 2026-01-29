@@ -161,12 +161,7 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
   rw [Complex.logDeriv_congr_apply hU heq s (by grind)]
   rw [logDeriv_mul, logDeriv_mul, logDeriv_mul, Complex.logDeriv_const_cpow,
     ← Nat.cast_natAbs, ← Complex.natCast_log, Nat.cast_natAbs, Int.cast_abs, log_abs,
-    Pi.smul_apply, deriv_div_const, deriv_id'', one_div]
-  simp only [Nat.cast_natAbs, Int.cast_abs, log_abs, Pi.smul_apply, deriv_div_const, deriv_id'',
-    one_div, smul_eq_mul, mul_zero, sub_zero, add_left_inj]
-  simp? [-Nat.cast_natAbs]
-  simp only [-Nat.cast_natAbs, Int.cast_abs, Int.cast_eq, Pi.smul_apply, deriv_div_const, deriv_id'',
-    one_div, smul_eq_mul, mul_zero, sub_zero, add_left_inj]
+    Pi.smul_apply, deriv_div_const, deriv_id'', one_div, smul_eq_mul, ← div_eq_mul_inv]
   sorry
 
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
