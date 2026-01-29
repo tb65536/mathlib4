@@ -94,6 +94,9 @@ theorem logDeriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : �
   · apply div_eq_of_eq_mul (cpow_ne_zero_iff.mpr (Or.inl hc))
     simp [mul_assoc, mul_comm]
 
+theorem cpow_ne_zero' {x y : ℂ} (hx : x ≠ 0) : x ^ y ≠ 0 :=
+  cpow_ne_zero_iff.mpr (Or.inl hx)
+
 end Complex
 
 namespace NumberField -- dedekind zeta function
@@ -159,13 +162,31 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     intro s hs
     apply completedDedekindZeta_eq_mul <;> grind
   rw [Complex.logDeriv_congr_apply hU heq s (by grind)]
-  rw [logDeriv_mul, logDeriv_mul, logDeriv_mul, Complex.logDeriv_const_cpow,
-    ← Nat.cast_natAbs, ← Complex.natCast_log, Nat.cast_natAbs, Int.cast_abs, log_abs,
-    Pi.smul_apply, deriv_div_const, deriv_id'', one_div, smul_eq_mul, ← div_eq_mul_inv]
+  have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by sorry
+  have h2 : s.Gammaℝ ≠ 0 := by sorry
+  have h3 : s.Gammaℂ ≠ 0 := by sorry
+  have h4 : dedekindZeta K s ≠ 0 := sorry
+  have h5 : ((|discr K| : ℤ) : ℂ) ^ (s / 2) ≠ 0 := Complex.cpow_ne_zero' h1
+  have h6 : s.Gammaℝ ^ nrRealPlaces K ≠ 0 := pow_ne_zero _ h2
+  have h7 : s.Gammaℂ ^ nrComplexPlaces K ≠ 0 := pow_ne_zero _ h3
+  have h12 : Differentiable ℂ (fun s : ℂ ↦ s / 2) := by fun_prop
+  have h8 : DifferentiableAt ℂ (fun s : ℂ ↦ ((|discr K| : ℤ) : ℂ) ^ (s / 2)) s := sorry
+  have h13 : DifferentiableAt ℂ Complex.Gammaℝ s := sorry
+  have h9 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℝ ^ nrRealPlaces K) s := sorry
+  have h14 : DifferentiableAt ℂ Complex.Gammaℂ s := sorry
+  have h10 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℂ ^ nrComplexPlaces K) s := sorry
+  have h11 : DifferentiableAt ℂ (dedekindZeta K) s := sorry -- ((h8.mul h9).mul h10)
+  rw [logDeriv_mul s (by exact mul_ne_zero (mul_ne_zero h5 h6) h7) h4
+    (by exact (h8.mul h9).mul h10) h11]
+  rw [logDeriv_mul s (by exact mul_ne_zero h5 h6) h7 (by exact h8.mul h9) h10]
+  rw [logDeriv_mul s h5 h6 h8 h9]
+  rw [Complex.logDeriv_const_cpow h12, logDeriv_fun_pow h13, logDeriv_fun_pow h14]
+  simp [← div_eq_mul_inv]
+  -- need logDeriv of Gammaℝ and Gammaℂ
   sorry
 
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
-theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
+theorem two_mul_logDeriv_completedDedekindZeta' (s : ℂ) (hs : 1 < s.re) :
     2 * logDeriv (completedDedekindZeta K) s = nrComplexPlaces K * log 2 +
       log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma + log 2) +
         Module.finrank ℚ K * (s.digamma - log (2 * π)) + logDeriv (dedekindZeta K) s := by
