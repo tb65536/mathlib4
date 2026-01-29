@@ -98,6 +98,18 @@ theorem logDeriv_Gammaℂ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -n) :
   · simp
   · exact Gamma_ne_zero hs
 
+theorem Gammaℂ_ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : s.Gammaℂ ≠ 0 := by
+  simp [Gammaℂ, Gamma_ne_zero_of_re_pos hs]
+
+#check Gamma_ne_zero
+
+-- ought to be differentiableOn
+@[fun_prop]
+theorem differentiableAt_Gammaℝ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -2 * n) :
+    DifferentiableAt ℂ Gammaℝ s := by
+  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by grind
+  apply DifferentiableAt.mul <;> fun_prop (disch := simp [hs])
+
 end Complex
 
 namespace NumberField -- dedekind zeta function
@@ -161,7 +173,7 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
   rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s (by grind)]
   have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by simp [discr_ne_zero]
   have h2 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
-  have h3 : s.Gammaℂ ≠ 0 := sorry
+  have h3 : s.Gammaℂ ≠ 0 := Complex.Gammaℂ_ne_zero_of_re_pos (one_pos.trans hs)
   have h4 : dedekindZeta K s ≠ 0 := sorry
   have h5 : ((|discr K| : ℤ) : ℂ) ^ (s / 2) ≠ 0 := Complex.cpow_ne_zero' h1
   have h6 : s.Gammaℝ ^ nrRealPlaces K ≠ 0 := pow_ne_zero _ h2
@@ -227,3 +239,27 @@ end Odlyzko
 
 
 end NumberField
+
+section
+
+noncomputable def MeasureTheory.mul_convolution
+    {𝕜 G E E' F : Type*}
+    [NormedAddCommGroup E] [NormedAddCommGroup E'] [NormedAddCommGroup F]
+    [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] [NormedSpace 𝕜 E'] [NormedSpace 𝕜 F]
+    [MeasurableSpace G] [NormedSpace ℝ F] [Inv G] [Mul G] (f : G → E) (g : G → E')
+    (L : E →L[𝕜] E' →L[𝕜] F) (μ : Measure G := by volume_tac) :
+    G → F :=
+  fun x ↦ ∫ (t : G), (L (f t)) (g (t⁻¹ * x)) ∂μ
+
+noncomputable def MeasureTheory.add_convolution
+    {𝕜 G E E' F : Type*}
+    [NormedAddCommGroup E] [NormedAddCommGroup E'] [NormedAddCommGroup F]
+    [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] [NormedSpace 𝕜 E'] [NormedSpace 𝕜 F]
+    [MeasurableSpace G] [NormedSpace ℝ F] [Neg G] [Add G] (f : G → E) (g : G → E')
+    (L : E →L[𝕜] E' →L[𝕜] F) (μ : Measure G := by volume_tac) :
+    G → F :=
+  fun x ↦ ∫ (t : G), (L (f t)) (g (- t + x)) ∂μ
+
+attribute [to_additive existing] MeasureTheory.mul_convolution
+
+end
