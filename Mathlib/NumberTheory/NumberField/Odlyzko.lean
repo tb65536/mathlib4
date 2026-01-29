@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.BigOperators.Ring.Nat
 public import Mathlib.Analysis.Meromorphic.Complex
 public import Mathlib.Analysis.PSeriesComplex
+public import Mathlib.Analysis.SpecialFunctions.Gamma.Digamma
 public import Mathlib.NumberTheory.Harmonic.GammaDeriv
 public import Mathlib.NumberTheory.LSeries.HurwitzZeta
 public import Mathlib.NumberTheory.LSeries.SumCoeff
@@ -18,34 +19,6 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 -/
 
 @[expose] public section
-
-namespace Complex -- digamma function, all PRed
-
-noncomputable def digamma : ℂ → ℂ := logDeriv Gamma
-
-theorem digamma_def : digamma = logDeriv Gamma := rfl
-
-theorem digamma_zero : digamma 0 = 0 :=
-  logDeriv_eq_zero_of_not_differentiableAt Gamma 0 not_differentiableAt_Gamma_zero
-
-theorem digamma_one : digamma 1 = - Real.eulerMascheroniConstant := by
-  rw [digamma_def, logDeriv_apply, (hasDerivAt_Gamma_one).deriv, Gamma_one, div_one]
-
-theorem digamma_one_half : digamma (1 / 2) = - 2 * log 2 - Real.eulerMascheroniConstant := by
-  rw [digamma_def, logDeriv_apply, (hasDerivAt_Gamma_one_half).deriv, add_comm, Gamma_one_half_eq,
-    neg_mul, ← mul_neg, neg_add',  Real.sqrt_eq_rpow, ofReal_cpow Real.pi_nonneg]
-  simp
-
-theorem digamma_apply_add_one (s : ℂ) (hs : ∀ m : ℕ, s ≠ - m) :
-    digamma (s + 1) = digamma s + s⁻¹ := by
-  have hs0 : s ≠ 0 := by simpa using hs 0
-  rw [digamma_def, logDeriv_apply, logDeriv_apply, deriv_Gamma_add_one s hs0, Gamma_add_one s hs0,
-    add_div, div_mul_cancel_right₀ (Gamma_ne_zero hs), mul_div_mul_left _ _ hs0, add_comm]
-
-theorem meromorphic_digamma : Meromorphic digamma :=
-  Meromorphic.Gamma.logDeriv
-
-end Complex
 
 section temp
 
