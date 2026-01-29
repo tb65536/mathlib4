@@ -156,15 +156,10 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
         nrComplexPlaces K * (0) + logDeriv (dedekindZeta K) s := by
   let U : Set ℂ := {s | 1 < s.re}
   have hU : IsOpen U := isOpen_lt continuous_const Complex.continuous_re
-  have heq : U.EqOn (completedDedekindZeta K) (fun s ↦
-    |discr K| ^ (s / 2) * s.Gammaℝ ^ nrRealPlaces K *
-      s.Gammaℂ ^ nrComplexPlaces K * dedekindZeta K s) := by
-    intro s hs
-    apply completedDedekindZeta_eq_mul <;> grind
-  rw [Complex.logDeriv_congr_apply hU heq s (by grind)]
+  rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s (by grind)]
   have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by sorry
-  have h2 : s.Gammaℝ ≠ 0 := by sorry
-  have h3 : s.Gammaℂ ≠ 0 := by sorry
+  have h2 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
+  have h3 : s.Gammaℂ ≠ 0 := sorry
   have h4 : dedekindZeta K s ≠ 0 := sorry
   have h5 : ((|discr K| : ℤ) : ℂ) ^ (s / 2) ≠ 0 := Complex.cpow_ne_zero' h1
   have h6 : s.Gammaℝ ^ nrRealPlaces K ≠ 0 := pow_ne_zero _ h2
