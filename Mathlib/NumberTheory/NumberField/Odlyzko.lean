@@ -19,7 +19,7 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 @[expose] public section
 
-namespace Complex -- digamma function
+namespace Complex -- digamma function, all PRed
 
 noncomputable def digamma : ℂ → ℂ := logDeriv Gamma
 
@@ -44,6 +44,21 @@ theorem digamma_apply_add_one (s : ℂ) (hs : ∀ m : ℕ, s ≠ - m) :
 
 theorem meromorphic_digamma : Meromorphic digamma :=
   Meromorphic.Gamma.logDeriv
+
+end Complex
+
+namespace Complex -- logDeriv
+
+theorem logDeriv_congr_apply {𝕜 𝕜' : Type*} [NontriviallyNormedField 𝕜] [NontriviallyNormedField 𝕜']
+    [NormedAlgebra 𝕜 𝕜'] {f g : 𝕜 → 𝕜'} {s : Set 𝕜} (hs : IsOpen s) (h : s.EqOn f g)
+    (x : 𝕜) (hx : x ∈ s) :
+    logDeriv f x = logDeriv g x := by
+  simp_rw [logDeriv_apply, ← derivWithin_of_isOpen hs hx, derivWithin_congr h (h hx), h hx]
+
+theorem logDeriv_congr {𝕜 𝕜' : Type*} [NontriviallyNormedField 𝕜] [NontriviallyNormedField 𝕜']
+    [NormedAlgebra 𝕜 𝕜'] {f g : 𝕜 → 𝕜'} {s : Set 𝕜} (hs : IsOpen s) (h : s.EqOn f g) :
+    s.EqOn (logDeriv f) (logDeriv g) :=
+  logDeriv_congr_apply hs h
 
 end Complex
 
@@ -92,13 +107,13 @@ theorem completedDedekindZeta_one_sub (s : ℂ) :
     completedDedekindZeta K (1 - s) = completedDedekindZeta K s := by
   sorry
 
-theorem completedDedekindZeta_eq_mul {s : ℂ} (hs : s ≠ 0) (hs' : s ≠ 1) :
+theorem completedDedekindZeta_eq_mul (s : ℂ) (hs : s ≠ 0) (hs' : s ≠ 1) :
     completedDedekindZeta K s = |discr K| ^ (s / 2) * s.Gammaℝ ^ nrRealPlaces K *
       s.Gammaℂ ^ nrComplexPlaces K * dedekindZeta K s :=
   sorry
 
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
-theorem two_mul_logDeriv_completedDedekindZeta {s : ℂ} (hs : 1 < s.re) :
+theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : s ≠ 0) (hs' : s ≠ 1) :
     2 * logDeriv (completedDedekindZeta K) s = nrComplexPlaces K * log 2 +
       log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma + log 2) +
         Module.finrank ℚ K * (s.digamma - log (2 * π)) + logDeriv (dedekindZeta K) s := by
