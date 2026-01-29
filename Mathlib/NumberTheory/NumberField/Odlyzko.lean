@@ -155,15 +155,16 @@ theorem completedDedekindZeta_eq_mul (s : ℂ) (hs : 1 < s.re) :
       s.Gammaℂ ^ nrComplexPlaces K * dedekindZeta K s :=
   sorry
 
--- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
-theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
+theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     logDeriv (completedDedekindZeta K) s =
       log (discr K) / 2 + nrRealPlaces K * (((s / 2).digamma - log π) / 2) +
         nrComplexPlaces K * (s.digamma - (2 * π).log) + logDeriv (dedekindZeta K) s := by
   let U : Set ℂ := {s | 1 < s.re}
   have hU : IsOpen U := isOpen_lt continuous_const Complex.continuous_re
+  have hs1 :  ∀ (n : ℕ), s ≠ -n := by rintro n rfl; simp at hs; grind
+  have hs2 :  ∀ (n : ℕ), s ≠ -2 * n := by rintro n rfl; simp at hs; grind
   rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s (by grind)]
-  have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by sorry
+  have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by simp [discr_ne_zero]
   have h2 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
   have h3 : s.Gammaℂ ≠ 0 := sorry
   have h4 : dedekindZeta K s ≠ 0 := sorry
@@ -171,11 +172,12 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
   have h6 : s.Gammaℝ ^ nrRealPlaces K ≠ 0 := pow_ne_zero _ h2
   have h7 : s.Gammaℂ ^ nrComplexPlaces K ≠ 0 := pow_ne_zero _ h3
   have h12 : Differentiable ℂ (fun s : ℂ ↦ s / 2) := by fun_prop
-  have h8 : DifferentiableAt ℂ (fun s : ℂ ↦ ((|discr K| : ℤ) : ℂ) ^ (s / 2)) s := sorry
+  have h8 : DifferentiableAt ℂ (fun s : ℂ ↦ ((|discr K| : ℤ) : ℂ) ^ (s / 2)) s := by
+    fun_prop (disch := simp [discr_ne_zero])
   have h13 : DifferentiableAt ℂ Complex.Gammaℝ s := sorry
-  have h9 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℝ ^ nrRealPlaces K) s := sorry
+  have h9 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℝ ^ nrRealPlaces K) s := by fun_prop
   have h14 : DifferentiableAt ℂ Complex.Gammaℂ s := sorry
-  have h10 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℂ ^ nrComplexPlaces K) s := sorry
+  have h10 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℂ ^ nrComplexPlaces K) s := by fun_prop
   have h11 : DifferentiableAt ℂ (dedekindZeta K) s := sorry -- ((h8.mul h9).mul h10)
   rw [logDeriv_mul s (by exact mul_ne_zero (mul_ne_zero h5 h6) h7) h4
     (by exact (h8.mul h9).mul h10) h11]
@@ -186,28 +188,18 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     ← Complex.ofReal_intCast, ← Complex.ofReal_log, Int.cast_abs, log_abs,
     deriv_id'', one_div, smul_eq_mul, ← div_eq_mul_inv]
   · simp
-  · rintro n rfl
-    simp at hs
-    grind
-  · rintro n rfl
-    simp at hs
-    grind
+  · exact hs1
+  · exact hs2
 
--- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
-theorem two_mul_logDeriv_completedDedekindZeta' (s : ℂ) (hs : 1 < s.re) :
-    2 * logDeriv (completedDedekindZeta K) s = nrComplexPlaces K * log 2 +
+theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
+    2 * logDeriv (completedDedekindZeta K) s =
       log |discr K| + nrRealPlaces K * ((s / 2).digamma - s.digamma + log 2) +
         Module.finrank ℚ K * (s.digamma - log (2 * π)) + logDeriv (dedekindZeta K) s := by
-  let U : Set ℂ := {s | 1 < s.re}
-  have hU : IsOpen U := isOpen_lt continuous_const Complex.continuous_re
-  have heq : U.EqOn (completedDedekindZeta K) (fun s ↦
-    |discr K| ^ (s / 2) * s.Gammaℝ ^ nrRealPlaces K *
-      s.Gammaℂ ^ nrComplexPlaces K * dedekindZeta K s) := by
-    intro s hs
-    apply completedDedekindZeta_eq_mul <;> grind
-  rw [Complex.logDeriv_congr_apply hU heq s (by grind)]
-  rw [logDeriv_mul, logDeriv_mul, logDeriv_mul]
-  sorry
+  rw [logDeriv_completedDedekindZeta K s hs, ← InfinitePlace.card_add_two_mul_card_eq_rank]
+  rw [mul_add, mul_add, mul_add]
+  simp only [log_mul two_ne_zero pi_ne_zero]
+
+  simp [mul_add]
 
 end completedDedekindZeta
 
