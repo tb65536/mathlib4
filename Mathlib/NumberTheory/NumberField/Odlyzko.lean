@@ -70,6 +70,39 @@ theorem logDeriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : �
 theorem cpow_ne_zero' {x y : ℂ} (hx : x ≠ 0) : x ^ y ≠ 0 :=
   cpow_ne_zero_iff.mpr (Or.inl hx)
 
+open scoped Real
+
+attribute [fun_prop] Differentiable.const_cpow
+
+theorem logDeriv_Gammaℝ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -2 * n) :
+    logDeriv Gammaℝ s = (digamma (s / 2) - Real.log π) / 2 := by
+  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by grind
+  change logDeriv (fun s ↦ π ^ (-s / 2) * (Gamma ∘ (· / 2)) s) s = _
+  rw [logDeriv_mul, logDeriv_const_cpow, ← ofReal_log, Pi.smul_apply, smul_eq_mul,
+    deriv_div_const, deriv_neg, neg_div, mul_neg, mul_one_div, neg_add_eq_sub, logDeriv_comp,
+    deriv_div_const, deriv_id'', mul_one_div, ← sub_div, digamma_def]
+  · fun_prop (disch := assumption)
+  · simp
+  · positivity
+  · fun_prop
+  · simp
+  · exact Gamma_ne_zero hs
+  · fun_prop (disch := simp)
+  · fun_prop (disch := assumption)
+
+theorem logDeriv_Gammaℂ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -n) :
+    logDeriv Gammaℂ s = digamma s - (2 * π).log := by
+  change logDeriv (fun s ↦ 2 * (2 * Real.pi) ^ (-s) * Gamma s) s = _
+  rw [logDeriv_mul, logDeriv_const_mul, logDeriv_const_cpow, ← ofReal_ofNat, ← ofReal_mul,
+    ← ofReal_log, Pi.smul_apply, smul_eq_mul, deriv_neg, mul_neg_one, neg_add_eq_sub, digamma_def]
+  · positivity
+  · fun_prop
+  · simp
+  · simp
+  · exact Gamma_ne_zero hs
+  · fun_prop (disch := simp)
+  · fun_prop (disch := assumption)
+
 end Complex
 
 namespace NumberField -- dedekind zeta function
@@ -125,8 +158,8 @@ theorem completedDedekindZeta_eq_mul (s : ℂ) (hs : 1 < s.re) :
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
 theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     logDeriv (completedDedekindZeta K) s =
-      log (discr K) / 2 - nrRealPlaces K * ((s / 2).digamma / 4) -
-        nrComplexPlaces K * (0) + logDeriv (dedekindZeta K) s := by
+      log (discr K) / 2 + nrRealPlaces K * (((s / 2).digamma - log π) / 2) +
+        nrComplexPlaces K * (s.digamma - (2 * π).log) + logDeriv (dedekindZeta K) s := by
   let U : Set ℂ := {s | 1 < s.re}
   have hU : IsOpen U := isOpen_lt continuous_const Complex.continuous_re
   rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s (by grind)]
@@ -148,10 +181,17 @@ theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     (by exact (h8.mul h9).mul h10) h11]
   rw [logDeriv_mul s (by exact mul_ne_zero h5 h6) h7 (by exact h8.mul h9) h10]
   rw [logDeriv_mul s h5 h6 h8 h9]
-  rw [Complex.logDeriv_const_cpow h12, logDeriv_fun_pow h13, logDeriv_fun_pow h14]
-  simp [← div_eq_mul_inv]
-  -- need logDeriv of Gammaℝ and Gammaℂ
-  sorry
+  rw [Complex.logDeriv_const_cpow h12, Pi.smul_apply, deriv_div_const, logDeriv_fun_pow h13,
+    logDeriv_fun_pow h14, Complex.logDeriv_Gammaℝ, Complex.logDeriv_Gammaℂ,
+    ← Complex.ofReal_intCast, ← Complex.ofReal_log, Int.cast_abs, log_abs,
+    deriv_id'', one_div, smul_eq_mul, ← div_eq_mul_inv]
+  · simp
+  · rintro n rfl
+    simp at hs
+    grind
+  · rintro n rfl
+    simp at hs
+    grind
 
 -- this will be the function that we integrate from `1 + ε - i ∞` to `1 + ε + i ∞`
 theorem two_mul_logDeriv_completedDedekindZeta' (s : ℂ) (hs : 1 < s.re) :
