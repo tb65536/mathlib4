@@ -16,7 +16,7 @@ public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 /-!
 # Convolution of functions
 
-This file defines the convolution on two functions, i.e. `x ↦ ∫ f(t)g(x - t) ∂t`.
+This file defines the convolution on two functions, i.e. `x ↦ ∫ f(x - t)g(t) ∂t`.
 In the general case, these functions can be vector-valued, and have an arbitrary (additive)
 group as domain. We use a continuous bilinear operation `L` on these function values as
 "multiplication". The domain must be equipped with a Haar measure `μ`
@@ -278,11 +278,7 @@ theorem Integrable.convolution_integrand (hf : Integrable f μ) (hg : Integrable
   have h2_meas : AEStronglyMeasurable (fun y : G => ∫ x : G, ‖L (f (x - y)) (g y)‖ ∂μ) ν :=
     h_meas.prod_swap.norm.integral_prod_right'
   simp_rw [integrable_prod_iff' h_meas]
-  refine ⟨Eventually.of_forall fun t => ?_, ?_⟩
-  · have := hf.comp_sub_right t
-    -- needs a swap?
-    sorry
-  -- refine ⟨Eventually.of_forall fun t => (L (f t)).integrable_comp (hg.comp_sub_right t), ?_⟩
+  refine ⟨Eventually.of_forall fun t => (L.flip (g t)).integrable_comp (hf.comp_sub_right t), ?_⟩
   refine Integrable.mono' ?_ h2_meas
       (Eventually.of_forall fun t => (?_ : _ ≤ ‖L‖ * (∫ x, ‖f (x - t)‖ ∂μ) * ‖g t‖))
   · simp only [integral_sub_right_eq_self (‖f ·‖)]
@@ -312,7 +308,7 @@ theorem _root_.HasCompactSupport.convolutionExistsAt {x₀ : G}
     isClosed_closure.measurableSet subset_closure (hg.integrableOn_isCompact h)
   have A : AEStronglyMeasurable (f ∘ v)
       (μ.restrict (tsupport fun t : G => L (f (x₀ - t)) (g t))) := by
-    apply (hg.comp v.continuous).continuousOn.aestronglyMeasurable_of_isCompact h
+    apply (hf.comp v.continuous).continuousOn.aestronglyMeasurable_of_isCompact h
     exact (isClosed_tsupport _).measurableSet
   convert ((v.continuous.measurable.measurePreserving
       (μ.restrict (tsupport fun t => L (f (x₀ - t)) (g t)))).aestronglyMeasurable_comp_iff
@@ -499,11 +495,10 @@ variable (L)
 theorem convolution_congr [MeasurableAdd₂ G] [MeasurableNeg G] [SFinite μ]
     [IsAddRightInvariant μ] (h1 : f =ᵐ[μ] f') (h2 : g =ᵐ[μ] g') : f ⋆[L, μ] g = f' ⋆[L, μ] g' := by
   ext x
-  apply integral_congr_ae
-  exact (h1.prodMk <| h2.comp_tendsto
-    (quasiMeasurePreserving_sub_left_of_right_invariant μ x).tendsto_ae).fun_comp ↿fun x y ↦ L x y
+  exact integral_congr_ae <| .fun_comp (.prodMk (h1.comp_tendsto <|
+    (quasiMeasurePreserving_sub_left_of_right_invariant μ x).tendsto_ae) h2) (↿fun x y ↦ L x y)
 
-theorem support_convolution_subset_swap : support (f ⋆[L, μ] g) ⊆ support g + support f := by
+theorem support_convolution_subset : support (f ⋆[L, μ] g) ⊆ support f + support g := by
   intro x h2x
   by_contra hx
   apply h2x
@@ -512,9 +507,12 @@ theorem support_convolution_subset_swap : support (f ⋆[L, μ] g) ⊆ support g
   convert integral_zero G F using 2
   ext t
   rcases hx (x - t) t with (h | h | h)
-  · rw [h, (L _).map_zero]
   · rw [h, L.map_zero₂]
+  · rw [h, (L _).map_zero]
   · exact (h <| sub_add_cancel x t).elim
+
+@[deprecated (since := "2026-01-30")]
+alias support_convolution_subset_swap := support_convolution_subset
 
 section
 
@@ -531,10 +529,10 @@ variable [IsTopologicalAddGroup G]
 
 protected theorem _root_.HasCompactSupport.convolution [T2Space G] (hcf : HasCompactSupport f)
     (hcg : HasCompactSupport g) : HasCompactSupport (f ⋆[L, μ] g) :=
-  (hcg.isCompact.add hcf).of_isClosed_subset isClosed_closure <|
+  (hcf.isCompact.add hcg).of_isClosed_subset isClosed_closure <|
     closure_minimal
-      ((support_convolution_subset_swap L).trans <| add_subset_add subset_closure subset_closure)
-      (hcg.isCompact.add hcf).isClosed
+      ((support_convolution_subset L).trans <| add_subset_add subset_closure subset_closure)
+      (hcf.isCompact.add hcg).isClosed
 
 variable [BorelSpace G] [TopologicalSpace P]
 
