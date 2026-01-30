@@ -172,24 +172,113 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
--- does this need abelian or compact?
+theorem foobar {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDisconnectedSpace α] :
+    Subsingleton α := by
+  refine ⟨fun a b ↦ ?_⟩
+  rw [← Set.singleton_eq_singleton_iff,
+    ← connectedComponent_eq_singleton, ← connectedComponent_eq_singleton,
+    PreconnectedSpace.connectedComponent_eq_univ, PreconnectedSpace.connectedComponent_eq_univ]
+
+universe u
+
+def MyGroup (n : ℕ) : Type := Multiplicative (ZMod n)
+
+instance MyGroupGroup (n : ℕ) : Group (MyGroup n) := sorry
+
+instance MyGroupTopologicalSpace (n : ℕ) : TopologicalSpace (MyGroup n) := sorry
+
+def MyAddGroup (n : ℕ) : Type := ZMod n
+
+instance MyAddGroupAddGroup (n : ℕ) : AddGroup (MyAddGroup n) := sorry
+
+instance MyAddGroupTopologicalSpace (n : ℕ) : TopologicalSpace (MyAddGroup n) := sorry
+
+attribute [to_additive existing] MyGroup MyGroupGroup MyGroupTopologicalSpace
+
+@[to_additive]
+theorem card_myGroup (n : ℕ) : Nat.card (MyGroup n) = n := by
+  exact Nat.card_zmod n
+
+
+@[to_additive]
+theorem Group.foo' (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) (hA : ConnectedSpace A) :
+    Subsingleton A := by
+  contrapose! hA
+  let α := Σ B : Subgroup A, {f : B →* MyGroup p | Function.Surjective f ∧ Continuous f}
+  have : Nonempty α := sorry
+  let r : α → α → Prop :=
+    fun f g ↦ f.1 ≤ g.1 ∧ ∀ (x : f.1) (y : g.1), x.1 = y.1 → f.2.1 x = g.2.1 y
+  have trans : ∀ {f g h}, r f g → r g h → r f h := by
+    intro f g h rfg rgh
+    refine ⟨rfg.1.trans rgh.1, fun x z hxz ↦ ?_⟩
+    let y : g.1 := ⟨x.1, rfg.1 x.2⟩
+    exact (rfg.2 x y rfl).trans (rgh.2 y z hxz)
+  have chain : ∀ s, IsChain r s → s.Nonempty → ∃ f, ∀ g ∈ s, r g f := by
+    intro s hsc hs
+    refine ⟨⟨⨆ f ∈ s, f.1, ?_, ?_, ?_⟩, ?_⟩
+    all_goals sorry
+  obtain ⟨f, hf⟩ := exists_maximal_of_nonempty_chains_bounded chain trans
+  suffices f.1 = ⊤ by
+    rw [connectedSpace_iff_clopen]
+
+    -- disconnect
+    sorry
+  contrapose! hf
+  obtain ⟨a, ha⟩ := SetLike.exists_not_mem_of_ne_top f.1 hf
+  let B := f.1 ⊔ Subgroup.zpowers a
+  let C := f.2.1.ker.map f.1.subtype -- index p in f.1
+  have h1 : C.relIndex f.1 = p := by
+    rw [← f.1.range_subtype, f.1.subtype.range_eq_map,
+      Subgroup.relIndex_map_map_of_injective _ _ f.1.subtype_injective, Subgroup.relIndex_top_right,
+      Subgroup.index_ker, f.2.1.range_eq_top_of_surjective f.2.2.1, Subgroup.card_top]
+    exact card_myGroup p
+  have h2 : f.1.relIndex B = p := by
+    rw [Subgroup.relIndex_sup_left]
+    sorry
+  have h3 : C ≤ f.1 := Subgroup.map_subtype_le f.2.1.ker
+  have h4 : f.1 ≤ B := le_sup_left
+  refine ⟨⟨B, ?_, ?_, ?_⟩, ?_⟩
+  sorry
+  -- idea: if not the whole space yet, then we have a subspace of index p^2
+  -- what is it's closure?
+  -- if index p, then we're good (quotient)
+  -- if index p^2, then still good (take translates)
+
+@[to_additive]
+theorem Group.foo (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [CompactSpace A] [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
+    TotallyDisconnectedSpace A := by
+  -- quotient by connected component of the identity, giving totally disconnected
+  sorry
+
 @[to_additive]
 noncomputable def Group.rootable
     (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
     [CompactSpace A] [ConnectedSpace A] [T2Space A] : RootableBy A ℕ := by
   apply rootableByOfPowLeftSurj
-  intro n hn0
-
-  -- quotient is compact, connected, abelian, exponent n, which should imply trivial
-
-  -- enough to show that every Hausdorff topological vector space over F_p is totally disconnected
-
-  -- might require the existence of a nontrivial character on the compact abelian quotient
-  -- image of the character is a connected, exponent n subgroup of torus, hence trivial
-
-  -- in general true for torsion groups by the same argument or by Baire category theorem
-
-  sorry
+  suffices ∀ p : ℕ, p.Prime → Function.Surjective fun a : A ↦ a ^ p by
+    apply Nat.prime_composite_induction
+    · simp
+    · simp [← Function.id_def, Function.surjective_id]
+    · grind
+    · intro a _ ha b _ hb _
+      simp only [pow_mul]
+      exact (hb (by grind)).comp (ha (by grind))
+  intro p hp
+  let f : A →* A := powMonoidHom p
+  change Function.Surjective f
+  have hf : ∀ a : A ⧸ f.range, a ^ p = 1 := by
+    intro a
+    obtain ⟨a, rfl⟩ := QuotientGroup.mk_surjective a
+    rw [← QuotientGroup.mk_pow, QuotientGroup.eq_one_iff]
+    exact ⟨a, rfl⟩
+  have : IsClosed (f.range : Set A) := (isCompact_range (continuous_pow p)).isClosed
+  have := foo (A ⧸ f.range) p hp hf
+  have : ConnectedSpace (A ⧸ f.range) :=
+    QuotientGroup.mk_surjective.connectedSpace QuotientGroup.continuous_mk
+  rw [← MonoidHom.range_eq_top, ← QuotientGroup.subsingleton_iff]
+  exact foobar
 
 -- PRed
 @[to_additive]
