@@ -247,9 +247,11 @@ theorem Group.foo' (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologica
 
 @[to_additive]
 theorem Group.foo (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
+    [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
     TotallyDisconnectedSpace A := by
-  -- quotient by connected component of the identity, giving totally disconnected
+  have := Group.foo' (Subgroup.connectedComponentOfOne A) p hp (fun a ↦ Subtype.ext (hA a))
+    (Subtype.connectedSpace isConnected_connectedComponent)
+  -- this should be API
   sorry
 
 @[to_additive]
