@@ -6,7 +6,11 @@ Authors: Andrew Yang
 module
 
 public import Mathlib.Algebra.Category.Grp.Injective
+public import Mathlib.Analysis.Convex.KreinMilman
+public import Mathlib.Analysis.Normed.Module.WeakDual
 public import Mathlib.GroupTheory.Divisible
+public import Mathlib.MeasureTheory.Function.LpSpace.Complete
+public import Mathlib.MeasureTheory.Measure.Haar.Basic
 public import Mathlib.RingTheory.DedekindDomain.Factorization
 public import Mathlib.RingTheory.DiscreteValuationRing.Basic
 public import Mathlib.RingTheory.HopkinsLevitzki
@@ -148,16 +152,48 @@ lemma IsDiscreteValuationRing.isOpen_iff
 
 end IsDedekindDomain
 
-section CompactHausdorff
+section Pontryagin
 
--- PRed
-@[to_additive] -- todo: to_additivize `instIsMulTorsionFree` in `Algebra/Group/Subgroup/Basic`.
-instance instIsMulTorsionFree
-    {G : Type*} [Group G] (H : Subgroup G) [IsMulTorsionFree G] : IsMulTorsionFree H where
-  pow_left_injective n hn a b := by
-    have := pow_left_injective hn (M := G) (a₁ := a) (a₂ := b)
-    dsimp at *
-    norm_cast at this
+open ComplexOrder
+
+-- Banach-Alaoglu: isCompact_polar & isCompact_closedBall
+variable (G : Type*) [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
+  [MeasurableSpace G] [BorelSpace G] [LocallyCompactSpace G]
+
+-- variable {G} in
+-- def posdef (φ : G → ℂ) : Prop :=
+--   ∀ n, ∀ g : Fin n → G, ∀ c : Fin n → ℂ, ∑ i, ∑ j, c i * star (c j) * φ (g i / g j) ≥ 0
+
+-- def K := {φ : G → ℂ | Continuous φ ∧ φ 1 = 1 ∧ posdef φ}
+
+-- theorem convex_K : Convex ℝ (K G) := by
+--   intro φ hφ ψ hψ s t hs ht hst
+--   refine ⟨(hφ.1.const_smul s).add (hψ.1.const_smul t), ?_, ?_⟩
+--   · simpa [hφ.2.1, hψ.2.1, ← Complex.ofReal_add]
+--   · sorry
+
+abbrev L := WeakDual ℝ (MeasureTheory.Lp ℝ 1 (MeasureTheory.Measure.haar (G := G)))
+
+def K : Set (L G) := sorry -- the functionals given by integrating against some φ bar
+
+def B : Set (L G) := WeakDual.toStrongDual ⁻¹' Metric.closedBall 0 1
+
+theorem isCompact_B : IsCompact (B G) := WeakDual.isCompact_closedBall ℝ 0 1
+
+theorem convex_K : Convex ℝ (K G) := by
+  sorry
+
+theorem isClosed_K : IsClosed (K G) := by
+  sorry
+
+theorem isCompact_K : IsClosed (K G) := by
+  sorry
+
+#check IsCompact.extremePoints_nonempty
+
+end Pontryagin
+
+section CompactHausdorff
 
 open Pointwise in
 def Ideal.connectedComponentOfZero
@@ -179,34 +215,18 @@ theorem foobar {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDi
     ← connectedComponent_eq_singleton, ← connectedComponent_eq_singleton,
     PreconnectedSpace.connectedComponent_eq_univ, PreconnectedSpace.connectedComponent_eq_univ]
 
-universe u
-
-def MyGroup (n : ℕ) : Type := Multiplicative (ZMod n)
-
-instance MyGroupGroup (n : ℕ) : Group (MyGroup n) := sorry
-
-instance MyGroupTopologicalSpace (n : ℕ) : TopologicalSpace (MyGroup n) := sorry
-
-def MyAddGroup (n : ℕ) : Type := ZMod n
-
-instance MyAddGroupAddGroup (n : ℕ) : AddGroup (MyAddGroup n) := sorry
-
-instance MyAddGroupTopologicalSpace (n : ℕ) : TopologicalSpace (MyAddGroup n) := sorry
-
-attribute [to_additive existing] MyGroup MyGroupGroup MyGroupTopologicalSpace
-
 @[to_additive]
-theorem card_myGroup (n : ℕ) : Nat.card (MyGroup n) = n := by
-  exact Nat.card_zmod n
-
-
-@[to_additive]
-theorem Group.foo' (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) (hA : ConnectedSpace A) :
+theorem Group.foo' (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [T2Space A] (p : ℕ) (hp : p.Prime) (hAp : ∀ a : A, a ^ p = 1) (hA : ConnectedSpace A) :
     Subsingleton A := by
+  have := Fact.mk hp
   contrapose! hA
-  let α := Σ B : Subgroup A, {f : B →* MyGroup p | Function.Surjective f ∧ Continuous f}
-  have : Nonempty α := sorry
+  obtain ⟨a₀, ha₀⟩ := exists_ne (1 : A)
+  have : Nat.card (Subgroup.zpowers a₀) = p :=
+    (Nat.card_zpowers a₀).trans (orderOf_eq_prime (hAp a₀) ha₀)
+  let α := Σ B : Subgroup A, {f : B →* Subgroup.zpowers a₀ | Function.Surjective f ∧ Continuous f}
+  have : Nonempty α :=
+    ⟨Subgroup.zpowers a₀, MonoidHom.id (Subgroup.zpowers a₀), Function.surjective_id, continuous_id⟩
   let r : α → α → Prop :=
     fun f g ↦ f.1 ≤ g.1 ∧ ∀ (x : f.1) (y : g.1), x.1 = y.1 → f.2.1 x = g.2.1 y
   have trans : ∀ {f g h}, r f g → r g h → r f h := by
@@ -232,7 +252,7 @@ theorem Group.foo' (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologica
     rw [← f.1.range_subtype, f.1.subtype.range_eq_map,
       Subgroup.relIndex_map_map_of_injective _ _ f.1.subtype_injective, Subgroup.relIndex_top_right,
       Subgroup.index_ker, f.2.1.range_eq_top_of_surjective f.2.2.1, Subgroup.card_top]
-    exact card_myGroup p
+    sorry
   have h2 : f.1.relIndex B = p := by
     rw [Subgroup.relIndex_sup_left]
     sorry
@@ -240,13 +260,16 @@ theorem Group.foo' (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologica
   have h4 : f.1 ≤ B := le_sup_left
   refine ⟨⟨B, ?_, ?_, ?_⟩, ?_⟩
   sorry
+  sorry
+  sorry
+  sorry
   -- idea: if not the whole space yet, then we have a subspace of index p^2
   -- what is it's closure?
   -- if index p, then we're good (quotient)
   -- if index p^2, then still good (take translates)
 
 @[to_additive]
-theorem Group.foo (A : Type u) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+theorem Group.foo (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
     [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
     TotallyDisconnectedSpace A := by
   have := Group.foo' (Subgroup.connectedComponentOfOne A) p hp (fun a ↦ Subtype.ext (hA a))
