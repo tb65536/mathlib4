@@ -27,10 +27,22 @@ open scoped Topology
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F]
   [NormedSpace 𝕜 F] {f : 𝕜 → F} {s : Set 𝕜} {x : 𝕜}
 
+open Filter
+
 -- PRed
+theorem deriv_zero_of_frequently_mem (t : Set F) (ht : ¬ AccPt (f x) (𝓟 t))
+    (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 :=
+  sorry
+
 theorem deriv_zero_of_frequently_mem_discrete {t : Set F}
     (ht : IsDiscrete t) (ht' : IsClosed t) (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 := by
   sorry
+
+theorem deriv_zero_of_frequently_mem_finite {t : Set F}
+    (ht : t.Finite) (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 := by
+  apply deriv_zero_of_frequently_mem t ?_ h
+  contrapose! ht
+  exact .of_accPt ht
 
 end temp
 
@@ -40,9 +52,11 @@ theorem deriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : ℂ)
   by_cases hc : c = 0
   · simp only [hc, Complex.log_zero, mul_zero, zero_mul]
     let t : Set ℂ := {0, 1}
-    refine deriv_zero_of_frequently_mem_discrete t.toFinite.isDiscrete t.toFinite.isClosed
-      (Filter.Frequently.of_forall fun y ↦ ?_)
-    by_cases hy : f y = 0 <;> simp [hy, t]
+    apply deriv_zero_of_frequently_mem t ?_ (Filter.Frequently.of_forall fun y ↦ ?_)
+    · have ht := t.toFinite
+      contrapose! ht
+      exact .of_accPt ht
+    · by_cases hy : f y = 0 <;> simp [hy, t]
   · exact ((hf x).hasDerivAt.const_cpow (Or.inl hc)).deriv
 
 namespace Complex -- logDeriv
@@ -100,8 +114,6 @@ theorem logDeriv_Gammaℂ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -n) :
 
 theorem Gammaℂ_ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : s.Gammaℂ ≠ 0 := by
   simp [Gammaℂ, Gamma_ne_zero_of_re_pos hs]
-
-#check Gamma_ne_zero
 
 -- ought to be differentiableOn
 @[fun_prop]
