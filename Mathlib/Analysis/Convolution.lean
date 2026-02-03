@@ -536,25 +536,25 @@ protected theorem _root_.HasCompactSupport.convolution [T2Space G] (hcf : HasCom
 
 variable [BorelSpace G] [TopologicalSpace P]
 
-/-- The convolution `f * g` is continuous if `f` is locally integrable and `g` is continuous and
-compactly supported. Version where `g` depends on an additional parameter in a subset `s` of
+/-- The convolution `f * g` is continuous if `g` is locally integrable and `f` is continuous and
+compactly supported. Version where `f` depends on an additional parameter in a subset `s` of
 a parameter space `P` (and the compact support `k` is independent of the parameter in `s`). -/
-theorem continuousOn_convolution_right_with_param {g : P → G → E'} {s : Set P} {k : Set G}
-    (hk : IsCompact k) (hgs : ∀ p, ∀ x, p ∈ s → x ∉ k → g p x = 0)
-    (hf : LocallyIntegrable f μ) (hg : ContinuousOn ↿g (s ×ˢ univ)) :
-    ContinuousOn (fun q : P × G => (f ⋆[L, μ] g q.1) q.2) (s ×ˢ univ) := by
+theorem continuousOn_convolution_right_with_param {f : P → G → E} {s : Set P} {k : Set G}
+    (hk : IsCompact k) (hfs : ∀ p, ∀ x, p ∈ s → x ∉ k → f p x = 0)
+    (hg : LocallyIntegrable g μ) (hf : ContinuousOn ↿f (s ×ˢ univ)) :
+    ContinuousOn (fun q : P × G => (f q.1 ⋆[L, μ] g) q.2) (s ×ˢ univ) := by
   /- First get rid of the case where the space is not locally compact. Then `g` vanishes everywhere
   and the conclusion is trivial. -/
-  by_cases! H : ∀ p ∈ s, ∀ x, g p x = 0
+  by_cases! H : ∀ p ∈ s, ∀ x, f p x = 0
   · apply (continuousOn_const (c := 0)).congr
     rintro ⟨p, x⟩ ⟨hp, -⟩
     apply integral_eq_zero_of_ae (Eventually.of_forall (fun y ↦ ?_))
     simp [H p hp _]
   have : LocallyCompactSpace G := by
     rcases H with ⟨p, hp, x, hx⟩
-    have A : support (g p) ⊆ k := support_subset_iff'.2 (fun y hy ↦ hgs p y hp hy)
-    have B : Continuous (g p) := by
-      refine hg.comp_continuous (.prodMk_right _) fun x => ?_
+    have A : support (f p) ⊆ k := support_subset_iff'.2 (fun y hy ↦ hfs p y hp hy)
+    have B : Continuous (f p) := by
+      refine hf.comp_continuous (.prodMk_right _) fun x => ?_
       simpa only [prodMk_mem_set_prod_eq, mem_univ, and_true] using hp
     rcases eq_zero_or_locallyCompactSpace_of_support_subset_isCompact_of_addGroup hk A B with H | H
     · simp [H] at hx
@@ -567,46 +567,46 @@ theorem continuousOn_convolution_right_with_param {g : P → G → E'} {s : Set 
   obtain ⟨t, t_comp, ht⟩ : ∃ t, IsCompact t ∧ t ∈ 𝓝 x₀ := exists_compact_mem_nhds x₀
   let k' : Set G := (-k) +ᵥ t
   have k'_comp : IsCompact k' := IsCompact.vadd_set hk.neg t_comp
-  let g' : (P × G) → G → E' := fun p x ↦ g p.1 (p.2 - x)
+  let f' : (P × G) → G → E := fun p x ↦ f p.1 (p.2 - x)
   let s' : Set (P × G) := s ×ˢ t
-  have A : ContinuousOn g'.uncurry (s' ×ˢ univ) := by
-    have : g'.uncurry = g.uncurry ∘ (fun w ↦ (w.1.1, w.1.2 - w.2)) := by ext y; rfl
+  have A : ContinuousOn f'.uncurry (s' ×ˢ univ) := by
+    have : f'.uncurry = f.uncurry ∘ (fun w ↦ (w.1.1, w.1.2 - w.2)) := by ext y; rfl
     rw [this]
-    refine hg.comp (by fun_prop) ?_
+    refine hf.comp (by fun_prop) ?_
     simp +contextual [s', MapsTo]
-  have B : ContinuousOn (fun a ↦ ∫ x, L (f x) (g' a x) ∂μ) s' := by
-    apply continuousOn_integral_bilinear_of_locally_integrable_of_compact_support L k'_comp A _
-      (hf.integrableOn_isCompact k'_comp)
+  have B : ContinuousOn (fun a ↦ ∫ x, L (f' a x) (g x) ∂μ) s' := by
+    apply continuousOn_integral_bilinear_of_locally_integrable_of_compact_support L.flip k'_comp A _
+      (hg.integrableOn_isCompact k'_comp)
     rintro ⟨p, x⟩ y ⟨hp, hx⟩ hy
-    apply hgs p _ hp
+    apply hfs p _ hp
     contrapose! hy
     exact ⟨y - x, by simpa using hy, x, hx, by simp⟩
   apply ContinuousWithinAt.mono_of_mem_nhdsWithin (B (q₀, x₀) ⟨hq₀, mem_of_mem_nhds ht⟩)
   exact mem_nhdsWithin_prod_iff.2 ⟨s, self_mem_nhdsWithin, t, nhdsWithin_le_nhds ht, Subset.rfl⟩
 
-/-- The convolution `f * g` is continuous if `f` is locally integrable and `g` is continuous and
-compactly supported. Version where `g` depends on an additional parameter in an open subset `s` of
+/-- The convolution `f * g` is continuous if `g` is locally integrable and `f` is continuous and
+compactly supported. Version where `f` depends on an additional parameter in an open subset `s` of
 a parameter space `P` (and the compact support `k` is independent of the parameter in `s`),
 given in terms of compositions with an additional continuous map. -/
 theorem continuousOn_convolution_right_with_param_comp {s : Set P} {v : P → G}
-    (hv : ContinuousOn v s) {g : P → G → E'} {k : Set G} (hk : IsCompact k)
-    (hgs : ∀ p, ∀ x, p ∈ s → x ∉ k → g p x = 0) (hf : LocallyIntegrable f μ)
-    (hg : ContinuousOn ↿g (s ×ˢ univ)) : ContinuousOn (fun x => (f ⋆[L, μ] g x) (v x)) s := by
+    (hv : ContinuousOn v s) {f : P → G → E} {k : Set G} (hk : IsCompact k)
+    (hfs : ∀ p, ∀ x, p ∈ s → x ∉ k → f p x = 0) (hg : LocallyIntegrable g μ)
+    (hf : ContinuousOn ↿f (s ×ˢ univ)) : ContinuousOn (fun x => (f x ⋆[L, μ] g) (v x)) s := by
   apply
-    (continuousOn_convolution_right_with_param L hk hgs hf hg).comp (continuousOn_id.prodMk hv)
+    (continuousOn_convolution_right_with_param L hk hfs hg hf).comp (continuousOn_id.prodMk hv)
   intro x hx
   simp only [hx, prodMk_mem_set_prod_eq, mem_univ, and_self_iff, _root_.id]
 
 /-- The convolution is continuous if one function is locally integrable and the other has compact
 support and is continuous. -/
-theorem _root_.HasCompactSupport.continuous_convolution_right (hcg : HasCompactSupport g)
-    (hf : LocallyIntegrable f μ) (hg : Continuous g) : Continuous (f ⋆[L, μ] g) := by
+theorem _root_.HasCompactSupport.continuous_convolution_right (hcf : HasCompactSupport f)
+    (hg : LocallyIntegrable g μ) (hf : Continuous f) : Continuous (f ⋆[L, μ] g) := by
   rw [← continuousOn_univ]
-  let g' : G → G → E' := fun _ q => g q
-  have : ContinuousOn ↿g' (univ ×ˢ univ) := (hg.comp continuous_snd).continuousOn
+  let f' : G → G → E := fun _ q => f q
+  have : ContinuousOn ↿f' (univ ×ˢ univ) := (hf.comp continuous_snd).continuousOn
   exact continuousOn_convolution_right_with_param_comp L
-    (continuousOn_univ.2 continuous_id) hcg
-    (fun p x _ hx => image_eq_zero_of_notMem_tsupport hx) hf this
+    (continuousOn_univ.2 continuous_id) hcf
+    (fun p x _ hx => image_eq_zero_of_notMem_tsupport hx) hg this
 
 /-- The convolution is continuous if one function is integrable and the other is bounded and
 continuous. -/
@@ -630,9 +630,6 @@ end Group
 section CommGroup
 
 variable [AddCommGroup G]
-
-theorem support_convolution_subset : support (f ⋆[L, μ] g) ⊆ support f + support g :=
-  (support_convolution_subset_swap L).trans (add_comm _ _).subset
 
 variable [IsAddLeftInvariant μ] [IsNegInvariant μ]
 
