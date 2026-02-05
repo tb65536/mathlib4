@@ -148,6 +148,23 @@ end IsDedekindDomain
 
 section CompactHausdorff
 
+-- PRed
+@[to_additive]
+theorem ContinuousMonoidHom.mul_apply {A B : Type*} [Monoid A] [CommMonoid B]
+    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
+    (f g : ContinuousMonoidHom A B) (a : A) : (f * g) a = f a * g a := by
+  rfl
+
+-- PRed
+@[to_additive]
+theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
+    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
+    (f : ContinuousMonoidHom A B) (n : ℕ) (a : A) : (f ^ n) a = (f a) ^ n := by
+  induction n
+  case zero => simp
+  case succ n ih =>
+    rw [pow_succ, pow_succ, ContinuousMonoidHom.mul_apply, ih]
+
 open Pointwise in
 def Ideal.connectedComponentOfZero
     (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] : Ideal R where
@@ -222,7 +239,7 @@ noncomputable def Group.rootable
   suffices ∀ p : ℕ, p.Prime → Function.Surjective fun a : A ↦ a ^ p by
     apply Nat.prime_composite_induction
     · simp
-    · simp [← Function.id_def, Function.surjective_id]
+    · simpa using Function.surjective_id
     · grind
     · intro a _ ha b _ hb _
       simp only [pow_mul]
@@ -242,27 +259,11 @@ noncomputable def Group.rootable
   rw [← MonoidHom.range_eq_top, ← QuotientGroup.subsingleton_iff]
   exact subsingleton_of_connected_totallyDisconnected
 
--- PRed
-@[to_additive]
-theorem ContinuousMonoidHom.mul_apply {A B : Type*} [Monoid A] [CommMonoid B]
-    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
-    (f g : ContinuousMonoidHom A B) (a : A) : (f * g) a = f a * g a := by
-  rfl
-
--- PRed
-@[to_additive]
-theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
-    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
-    (f : ContinuousMonoidHom A B) (n : ℕ) (a : A) : (f ^ n) a = (f a) ^ n := by
-  induction n
-  case zero => simp
-  case succ n ih =>
-    rw [pow_succ, pow_succ, ContinuousMonoidHom.mul_apply, ih]
-
 /-- A connected compact Hausdorff abelian topological group does not admit a nontrivial compact
 group of automorphisms. -/
 @[to_additive]
-theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+theorem CommGroup.no_compact_automorphisms
+    {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
     [ConnectedSpace A] [CompactSpace A] [T2Space A] (K : Subgroup (ContinuousMonoidHom A A))
     (hK : IsCompact (K : Set (ContinuousMonoidHom A A))) :
     K = ⊥ := by
@@ -299,14 +300,8 @@ theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologi
 instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
   let C₀ : Ideal R := Ideal.connectedComponentOfZero R
-  suffices C₀ = ⊥ by
-    replace this : connectedComponent (0 : R) = {0} := SetLike.ext'_iff.mp this
-    rw [totallyDisconnectedSpace_iff_connectedComponent_subsingleton]
-    intro x
-    have key := (continuous_add_left (-x)).image_connectedComponent_subset x
-    rw [neg_add_cancel, this, Set.image_subset_iff] at key
-    -- this can probably be done more cleanly...
-    exact Set.subsingleton_of_forall_eq x (by simpa using key)
+  suffices C₀ = ⊥ from
+    totallyDisconnectedSpace_iff_connectedComponent_zero.mpr (SetLike.ext'_iff.mp this)
   have C₀_isClosed : IsClosed (C₀ : Set R) := isClosed_connectedComponent
   have C₀_isCompact : IsCompact (C₀ : Set R) := C₀_isClosed.isCompact
   have : CompactSpace C₀ := isCompact_iff_compactSpace.mp C₀_isCompact
@@ -321,11 +316,10 @@ instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     map_zero' := by apply DFunLike.ext; intros; apply zero_smul
     map_add' := by intros; apply DFunLike.ext; intros; apply add_smul
     continuous_toFun := ContinuousAddMonoidHom.continuous_of_continuous_uncurry _ continuous_smul }
-  have key := AddCommGroup.foo f.range (isCompact_range f.continuous)
+  have key := AddCommGroup.no_compact_automorphisms f.range (isCompact_range f.continuous)
   refine eq_bot_iff.mpr fun c hc ↦ ?_
   replace key : f.toAddMonoidHom 1 ⟨c, hc⟩ = (0 : ContinuousAddMonoidHom C₀ C₀) ⟨c, hc⟩ := by
     rw [AddMonoidHom.range_eq_bot_iff.mp key, AddMonoidHom.zero_apply]
-  replace key : (1 : R) • c = 0 := Subtype.ext_iff.mp key
-  rwa [one_smul] at key
+  exact (one_smul R c).symm.trans (Subtype.ext_iff.mp key)
 
 end CompactHausdorff
