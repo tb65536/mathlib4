@@ -5,26 +5,20 @@ Authors: Andrew Yang
 -/
 module
 
-public import Mathlib.Algebra.Category.Grp.Injective
-public import Mathlib.Analysis.Convex.KreinMilman
-public import Mathlib.Analysis.Normed.Module.WeakDual
 public import Mathlib.GroupTheory.Divisible
-public import Mathlib.MeasureTheory.Function.LpSpace.Complete
-public import Mathlib.MeasureTheory.Measure.Haar.Basic
 public import Mathlib.RingTheory.DedekindDomain.Factorization
 public import Mathlib.RingTheory.DiscreteValuationRing.Basic
 public import Mathlib.RingTheory.HopkinsLevitzki
 public import Mathlib.RingTheory.IntegralDomain
 public import Mathlib.RingTheory.LocalRing.Quotient
+public import Mathlib.Topology.Algebra.Field
 public import Mathlib.Topology.Algebra.Group.ClosedSubgroup
 public import Mathlib.Topology.Algebra.Group.SubmonoidClosure
-public import Mathlib.Topology.Algebra.Field
+public import Mathlib.Topology.Algebra.Group.CompactOpen
 public import Mathlib.Topology.Algebra.Module.Basic
 public import Mathlib.Topology.Algebra.Module.Compact
 public import Mathlib.Topology.Algebra.OpenSubgroup
-public import Mathlib.Topology.Algebra.PontryaginDual
 public import Mathlib.Topology.Algebra.Ring.Ideal
-public import Mathlib.Topology.Instances.AddCircle.Defs
 
 /-!
 
