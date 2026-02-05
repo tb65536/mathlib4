@@ -152,47 +152,6 @@ lemma IsDiscreteValuationRing.isOpen_iff
 
 end IsDedekindDomain
 
-section Pontryagin
-
-open ComplexOrder
-
--- Banach-Alaoglu: isCompact_polar & isCompact_closedBall
-variable (G : Type*) [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
-  [MeasurableSpace G] [BorelSpace G] [LocallyCompactSpace G]
-
--- variable {G} in
--- def posdef (φ : G → ℂ) : Prop :=
---   ∀ n, ∀ g : Fin n → G, ∀ c : Fin n → ℂ, ∑ i, ∑ j, c i * star (c j) * φ (g i / g j) ≥ 0
-
--- def K := {φ : G → ℂ | Continuous φ ∧ φ 1 = 1 ∧ posdef φ}
-
--- theorem convex_K : Convex ℝ (K G) := by
---   intro φ hφ ψ hψ s t hs ht hst
---   refine ⟨(hφ.1.const_smul s).add (hψ.1.const_smul t), ?_, ?_⟩
---   · simpa [hφ.2.1, hψ.2.1, ← Complex.ofReal_add]
---   · sorry
-
-abbrev L := WeakDual ℝ (MeasureTheory.Lp ℝ 1 (MeasureTheory.Measure.haar (G := G)))
-
-def K : Set (L G) := sorry -- the functionals given by integrating against some φ bar
-
-def B : Set (L G) := WeakDual.toStrongDual ⁻¹' Metric.closedBall 0 1
-
-theorem isCompact_B : IsCompact (B G) := WeakDual.isCompact_closedBall ℝ 0 1
-
-theorem convex_K : Convex ℝ (K G) := by
-  sorry
-
-theorem isClosed_K : IsClosed (K G) := by
-  sorry
-
-theorem isCompact_K : IsClosed (K G) := by
-  sorry
-
-#check IsCompact.extremePoints_nonempty
-
-end Pontryagin
-
 section CompactHausdorff
 
 open Pointwise in
@@ -208,79 +167,63 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
-theorem foobar {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDisconnectedSpace α] :
+theorem subsingleton_of_connected_totallyDisconnected
+    {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDisconnectedSpace α] :
     Subsingleton α := by
   refine ⟨fun a b ↦ ?_⟩
   rw [← Set.singleton_eq_singleton_iff,
     ← connectedComponent_eq_singleton, ← connectedComponent_eq_singleton,
     PreconnectedSpace.connectedComponent_eq_univ, PreconnectedSpace.connectedComponent_eq_univ]
 
+open Pointwise in
 @[to_additive]
-theorem Group.foo' (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [T2Space A] (p : ℕ) (hp : p.Prime) (hAp : ∀ a : A, a ^ p = 1) (hA : ConnectedSpace A) :
+theorem connectedComponent_smul
+    {G : Type*} [Group G] [TopologicalSpace G] [ContinuousMul G] (g h : G) :
+    g • connectedComponent h = connectedComponent (g * h) :=
+  Topology.IsQuotientMap.image_connectedComponent (Homeomorph.mulLeft g).isQuotientMap
+    (by simp [isConnected_singleton]) h
+
+@[to_additive]
+theorem totallyDisconnectedSpace_iff_connectedComponent_one
+    {G : Type*} [Group G] [TopologicalSpace G] [ContinuousMul G] :
+    TotallyDisconnectedSpace G ↔ connectedComponent (1 : G) = {1} := by
+  refine ⟨fun _ ↦ connectedComponent_eq_singleton 1,
+    fun h ↦ totallyDisconnectedSpace_iff_connectedComponent_singleton.mpr fun g ↦ ?_⟩
+  rw [← mul_one g, ← connectedComponent_smul, h, Set.smul_set_singleton, smul_eq_mul]
+
+/-- A connected compact Hausdorff vector space over `𝔽_p` is trivial.
+This might sound easy, but it might require existence of continuous characters.
+Here's a proof, using existence of continuous characters:
+If `χ : A → circle` is a continuous character, then the image of `χ` is connected but is a
+subgroup of the `p`th roots of unity, hence trivial. Thus, `A` has no nontrivial continuous
+characters, and this implies that `A` is trivial. -/
+@[to_additive]
+theorem Group.tricky
+    (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [ConnectedSpace A] [CompactSpace A] [T2Space A]
+    (p : ℕ) (hp : p.Prime) (hAp : ∀ a : A, a ^ p = 1) :
     Subsingleton A := by
-  have := Fact.mk hp
-  contrapose! hA
-  obtain ⟨a₀, ha₀⟩ := exists_ne (1 : A)
-  have : Nat.card (Subgroup.zpowers a₀) = p :=
-    (Nat.card_zpowers a₀).trans (orderOf_eq_prime (hAp a₀) ha₀)
-  let α := Σ B : Subgroup A, {f : B →* Subgroup.zpowers a₀ | Function.Surjective f ∧ Continuous f}
-  have : Nonempty α :=
-    ⟨Subgroup.zpowers a₀, MonoidHom.id (Subgroup.zpowers a₀), Function.surjective_id, continuous_id⟩
-  let r : α → α → Prop :=
-    fun f g ↦ f.1 ≤ g.1 ∧ ∀ (x : f.1) (y : g.1), x.1 = y.1 → f.2.1 x = g.2.1 y
-  have trans : ∀ {f g h}, r f g → r g h → r f h := by
-    intro f g h rfg rgh
-    refine ⟨rfg.1.trans rgh.1, fun x z hxz ↦ ?_⟩
-    let y : g.1 := ⟨x.1, rfg.1 x.2⟩
-    exact (rfg.2 x y rfl).trans (rgh.2 y z hxz)
-  have chain : ∀ s, IsChain r s → s.Nonempty → ∃ f, ∀ g ∈ s, r g f := by
-    intro s hsc hs
-    refine ⟨⟨⨆ f ∈ s, f.1, ?_, ?_, ?_⟩, ?_⟩
-    all_goals sorry
-  obtain ⟨f, hf⟩ := exists_maximal_of_nonempty_chains_bounded chain trans
-  suffices f.1 = ⊤ by
-    rw [connectedSpace_iff_clopen]
+  sorry
 
-    -- disconnect
-    sorry
-  contrapose! hf
-  obtain ⟨a, ha⟩ := SetLike.exists_not_mem_of_ne_top f.1 hf
-  let B := f.1 ⊔ Subgroup.zpowers a
-  let C := f.2.1.ker.map f.1.subtype -- index p in f.1
-  have h1 : C.relIndex f.1 = p := by
-    rw [← f.1.range_subtype, f.1.subtype.range_eq_map,
-      Subgroup.relIndex_map_map_of_injective _ _ f.1.subtype_injective, Subgroup.relIndex_top_right,
-      Subgroup.index_ker, f.2.1.range_eq_top_of_surjective f.2.2.1, Subgroup.card_top]
-    sorry
-  have h2 : f.1.relIndex B = p := by
-    rw [Subgroup.relIndex_sup_left]
-    sorry
-  have h3 : C ≤ f.1 := Subgroup.map_subtype_le f.2.1.ker
-  have h4 : f.1 ≤ B := le_sup_left
-  refine ⟨⟨B, ?_, ?_, ?_⟩, ?_⟩
-  sorry
-  sorry
-  sorry
-  sorry
-  -- idea: if not the whole space yet, then we have a subspace of index p^2
-  -- what is it's closure?
-  -- if index p, then we're good (quotient)
-  -- if index p^2, then still good (take translates)
-
+/-- A compact Hausdorff vector space over `𝔽_p` is totally disconnected. -/
 @[to_additive]
-theorem Group.foo (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [T2Space A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
+theorem Group.tricky'
+    (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
+    [T2Space A] [CompactSpace A] (p : ℕ) (hp : p.Prime) (hA : ∀ a : A, a ^ p = 1) :
     TotallyDisconnectedSpace A := by
-  have := Group.foo' (Subgroup.connectedComponentOfOne A) p hp (fun a ↦ Subtype.ext (hA a))
-    (Subtype.connectedSpace isConnected_connectedComponent)
-  -- this should be API
-  sorry
+  have : ConnectedSpace (Subgroup.connectedComponentOfOne A) :=
+    Subtype.connectedSpace isConnected_connectedComponent
+  have : CompactSpace (Subgroup.connectedComponentOfOne A) :=
+    isCompact_iff_compactSpace.mp (isClosed_connectedComponent.isCompact)
+  have := Group.tricky (Subgroup.connectedComponentOfOne A) p hp (fun a ↦ Subtype.ext (hA a))
+  rw [totallyDisconnectedSpace_iff_connectedComponent_one]
+  exact ((Set.subsingleton_coe _).mp this).eq_singleton_of_mem mem_connectedComponent
 
+/-- A connected compact Hausdorff abelian topological group is divisible. -/
 @[to_additive]
 noncomputable def Group.rootable
     (A : Type*) [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] [ConnectedSpace A] [T2Space A] : RootableBy A ℕ := by
+    [ConnectedSpace A] [CompactSpace A] [T2Space A] : RootableBy A ℕ := by
   apply rootableByOfPowLeftSurj
   suffices ∀ p : ℕ, p.Prime → Function.Surjective fun a : A ↦ a ^ p by
     apply Nat.prime_composite_induction
@@ -299,11 +242,11 @@ noncomputable def Group.rootable
     rw [← QuotientGroup.mk_pow, QuotientGroup.eq_one_iff]
     exact ⟨a, rfl⟩
   have : IsClosed (f.range : Set A) := (isCompact_range (continuous_pow p)).isClosed
-  have := foo (A ⧸ f.range) p hp hf
+  have := tricky' (A ⧸ f.range) p hp hf
   have : ConnectedSpace (A ⧸ f.range) :=
     QuotientGroup.mk_surjective.connectedSpace QuotientGroup.continuous_mk
   rw [← MonoidHom.range_eq_top, ← QuotientGroup.subsingleton_iff]
-  exact foobar
+  exact subsingleton_of_connected_totallyDisconnected
 
 -- PRed
 @[to_additive]
@@ -322,10 +265,11 @@ theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
   case succ n ih =>
     rw [pow_succ, pow_succ, ContinuousMonoidHom.mul_apply, ih]
 
-open Pointwise in
+/-- A connected compact Hausdorff abelian topological group does not admit a nontrivial compact
+group of automorphisms. -/
 @[to_additive]
 theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A]
-    [CompactSpace A] [ConnectedSpace A] [T2Space A] (K : Subgroup (ContinuousMonoidHom A A))
+    [ConnectedSpace A] [CompactSpace A] [T2Space A] (K : Subgroup (ContinuousMonoidHom A A))
     (hK : IsCompact (K : Set (ContinuousMonoidHom A A))) :
     K = ⊥ := by
   have A_rootable : RootableBy A ℕ := Group.rootable A
@@ -357,6 +301,7 @@ theorem CommGroup.foo {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologi
   use RootableBy.root b n
   simp [ContinuousMonoidHom.pow_apply, ← map_pow, RootableBy.root_cancel b hn0]
 
+/-- A compact Hausdorff ring is totally disconnected. -/
 instance {R : Type*} [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
     [CompactSpace R] [T2Space R] : TotallyDisconnectedSpace R := by
   let C₀ : Ideal R := Ideal.connectedComponentOfZero R
