@@ -611,19 +611,18 @@ theorem _root_.HasCompactSupport.continuous_convolution_right (hcf : HasCompactS
 /-- The convolution is continuous if one function is integrable and the other is bounded and
 continuous. -/
 theorem _root_.BddAbove.continuous_convolution_right_of_integrable
-    [FirstCountableTopology G] [SecondCountableTopologyEither G E']
-    (hbg : BddAbove (range fun x => ‖g x‖)) (hf : Integrable f μ) (hg : Continuous g) :
+    [FirstCountableTopology G] [SecondCountableTopologyEither G E]
+    (hbf : BddAbove (range fun x => ‖f x‖)) (hg : Integrable g μ) (hf : Continuous f) :
     Continuous (f ⋆[L, μ] g) := by
   refine continuous_iff_continuousAt.mpr fun x₀ => ?_
   have : ∀ᶠ x in 𝓝 x₀, ∀ᵐ t : G ∂μ, ‖L (f (x - t)) (g t)‖ ≤ ‖L‖ * (⨆ i, ‖f i‖) * ‖g t‖ := by
     filter_upwards with x; filter_upwards with t
-    apply_rules [L.le_of_opNorm₂_le_of_le, le_rfl, le_ciSup hbg (x - t)]
+    apply_rules [L.le_of_opNorm₂_le_of_le, le_rfl, le_ciSup hbf (x - t)]
   refine continuousAt_of_dominated ?_ this ?_ ?_
   · exact Eventually.of_forall fun x =>
       hf.aestronglyMeasurable.convolution_integrand_snd' L hg.aestronglyMeasurable
-  · exact (hf.norm.const_mul _).mul_const _
-  · exact Eventually.of_forall fun t => (L.continuous₂.comp₂ continuous_const <|
-      hg.comp <| continuous_id.sub continuous_const).continuousAt
+  · exact hg.norm.const_mul _
+  · exact Eventually.of_forall fun t ↦ by fun_prop
 
 end Group
 
@@ -663,11 +662,11 @@ theorem convolution_mul_swap [NormedSpace ℝ 𝕜] {f : G → 𝕜} {g : G → 
 theorem convolution_neg_of_neg_eq (h1 : ∀ᵐ x ∂μ, f (-x) = f x) (h2 : ∀ᵐ x ∂μ, g (-x) = g x) :
     (f ⋆[L, μ] g) (-x) = (f ⋆[L, μ] g) x :=
   calc
-    ∫ t : G, (L (f t)) (g (-x - t)) ∂μ = ∫ t : G, (L (f (-t))) (g (x + t)) ∂μ := by
+    ∫ t : G, (L (f (-x - t))) (g t) ∂μ = ∫ t : G, (L (f (x + t))) (g (-t)) ∂μ := by
       apply integral_congr_ae
-      filter_upwards [h1, (eventually_add_left_iff μ x).2 h2] with t ht h't
+      filter_upwards [h2, (eventually_add_left_iff μ x).2 h1] with t ht h't
       simp_rw [ht, ← h't, neg_add']
-    _ = ∫ t : G, (L (f t)) (g (x - t)) ∂μ := by
+    _ = ∫ t : G, (L (f (x - t))) (g t) ∂μ := by
       rw [← integral_neg_eq_self]
       simp only [neg_neg, ← sub_eq_add_neg]
 
@@ -678,17 +677,17 @@ variable [IsTopologicalAddGroup G]
 variable [BorelSpace G]
 
 theorem _root_.HasCompactSupport.continuous_convolution_left
-    (hcf : HasCompactSupport f) (hf : Continuous f) (hg : LocallyIntegrable g μ) :
+    (hcg : HasCompactSupport g) (hg : Continuous g) (hf : LocallyIntegrable f μ) :
     Continuous (f ⋆[L, μ] g) := by
   rw [← convolution_flip]
-  exact hcf.continuous_convolution_right L.flip hg hf
+  exact hcg.continuous_convolution_right L.flip hf hg
 
 theorem _root_.BddAbove.continuous_convolution_left_of_integrable
-    [FirstCountableTopology G] [SecondCountableTopologyEither G E]
-    (hbf : BddAbove (range fun x => ‖f x‖)) (hf : Continuous f) (hg : Integrable g μ) :
+    [FirstCountableTopology G] [SecondCountableTopologyEither G E']
+    (hbg : BddAbove (range fun x => ‖g x‖)) (hg : Continuous g) (hf : Integrable f μ) :
     Continuous (f ⋆[L, μ] g) := by
   rw [← convolution_flip]
-  exact hbf.continuous_convolution_right_of_integrable L.flip hg hf
+  exact hbg.continuous_convolution_right_of_integrable L.flip hf hg
 
 end CommGroup
 
@@ -701,17 +700,17 @@ on `Metric.ball x₀ R`.
 
 We can simplify the RHS further if we assume `f` is integrable, but also if `L = (•)` or more
 generally if `L` has an `AntilipschitzWith`-condition. -/
-theorem convolution_eq_right' {x₀ : G} {R : ℝ} (hf : support f ⊆ ball (0 : G) R)
-    (hg : ∀ x ∈ ball x₀ R, g x = g x₀) : (f ⋆[L, μ] g) x₀ = ∫ t, L (f t) (g x₀) ∂μ := by
-  have h2 : ∀ t, L (f t) (g (x₀ - t)) = L (f t) (g x₀) := fun t ↦ by
-    by_cases ht : t ∈ support f
-    · have h2t := hf ht
+theorem convolution_eq_right' {x₀ : G} {R : ℝ} (hg : support g ⊆ ball (0 : G) R)
+    (hf : ∀ x ∈ ball x₀ R, f x = f x₀) : (f ⋆[L, μ] g) x₀ = ∫ t, L (f x₀) (g t) ∂μ := by
+  have h2 : ∀ t, L (f (x₀ - t)) (g t) = L (f x₀) (g t) := fun t ↦ by
+    by_cases ht : t ∈ support g
+    · have h2t := hg ht
       rw [mem_ball_zero_iff] at h2t
-      specialize hg (x₀ - t)
-      rw [sub_eq_add_neg, add_mem_ball_iff_norm, norm_neg, ← sub_eq_add_neg] at hg
-      rw [hg h2t]
+      specialize hf (x₀ - t)
+      rw [sub_eq_add_neg, add_mem_ball_iff_norm, norm_neg, ← sub_eq_add_neg] at hf
+      rw [hf h2t]
     · rw [notMem_support] at ht
-      simp_rw [ht, L.map_zero₂]
+      simp_rw [ht, map_zero]
   simp_rw [convolution_def, h2]
 
 variable [BorelSpace G] [SecondCountableTopology G]
@@ -722,42 +721,42 @@ variable [IsAddLeftInvariant μ] [SFinite μ]
 
 We can simplify the second argument of `dist` further if we add some extra type-classes on `E`
 and `𝕜` or if `L` is scalar multiplication. -/
-theorem dist_convolution_le' {x₀ : G} {R ε : ℝ} {z₀ : E'} (hε : 0 ≤ ε) (hif : Integrable f μ)
-    (hf : support f ⊆ ball (0 : G) R) (hmg : AEStronglyMeasurable g μ)
-    (hg : ∀ x ∈ ball x₀ R, dist (g x) z₀ ≤ ε) :
-    dist ((f ⋆[L, μ] g : G → F) x₀) (∫ t, L (f t) z₀ ∂μ) ≤ (‖L‖ * ∫ x, ‖f x‖ ∂μ) * ε := by
+theorem dist_convolution_le' {x₀ : G} {R ε : ℝ} {z₀ : E} (hε : 0 ≤ ε) (hig : Integrable g μ)
+    (hg : support g ⊆ ball (0 : G) R) (hmf : AEStronglyMeasurable f μ)
+    (hf : ∀ x ∈ ball x₀ R, dist (f x) z₀ ≤ ε) :
+    dist ((f ⋆[L, μ] g : G → F) x₀) (∫ t, L z₀ (g t) ∂μ) ≤ (‖L‖ * ∫ x, ‖g x‖ ∂μ) * ε := by
   have hfg : ConvolutionExistsAt f g x₀ L μ := by
-    refine BddAbove.convolutionExistsAt L ?_ Metric.isOpen_ball.measurableSet (Subset.trans ?_ hf)
-      hif.integrableOn hmg
-    swap; · refine fun t => mt fun ht : f t = 0 => ?_; simp_rw [ht, L.map_zero₂]
+    refine BddAbove.convolutionExistsAt L ?_ Metric.isOpen_ball.measurableSet (Subset.trans ?_ hg)
+      hig.integrableOn hmf
+    swap; · refine fun t => mt fun ht : g t = 0 => ?_; simp_rw [ht, map_zero]
     rw [bddAbove_def]
     refine ⟨‖z₀‖ + ε, ?_⟩
     rintro _ ⟨x, hx, rfl⟩
-    refine norm_le_norm_add_const_of_dist_le (hg x ?_)
+    refine norm_le_norm_add_const_of_dist_le (hf x ?_)
     rwa [mem_ball_iff_norm, norm_sub_rev, ← mem_ball_zero_iff]
-  have h2 : ∀ t, dist (L (f t) (g (x₀ - t))) (L (f t) z₀) ≤ ‖L (f t)‖ * ε := by
-    intro t; by_cases ht : t ∈ support f
-    · have h2t := hf ht
+  have h2 : ∀ t, dist (L (f (x₀ - t)) (g t)) (L z₀ (g t)) ≤ ‖L.flip (g t)‖ * ε := by
+    intro t; by_cases ht : t ∈ support g
+    · have h2t := hg ht
       rw [mem_ball_zero_iff] at h2t
-      specialize hg (x₀ - t)
-      rw [sub_eq_add_neg, add_mem_ball_iff_norm, norm_neg, ← sub_eq_add_neg] at hg
-      refine ((L (f t)).dist_le_opNorm _ _).trans ?_
-      exact mul_le_mul_of_nonneg_left (hg h2t) (norm_nonneg _)
+      specialize hf (x₀ - t)
+      rw [sub_eq_add_neg, add_mem_ball_iff_norm, norm_neg, ← sub_eq_add_neg] at hf
+      refine ((L.flip (g t)).dist_le_opNorm _ _).trans ?_
+      exact mul_le_mul_of_nonneg_left (hf h2t) (norm_nonneg _)
     · rw [notMem_support] at ht
-      simp_rw [ht, L.map_zero₂, L.map_zero, norm_zero, zero_mul, dist_self]
+      simp_rw [ht, map_zero, norm_zero, zero_mul, dist_self]
       rfl
   simp_rw [convolution_def]
   simp_rw [dist_eq_norm] at h2 ⊢
-  rw [← integral_sub hfg.integrable]; swap; · exact (L.flip z₀).integrable_comp hif
-  refine (norm_integral_le_of_norm_le ((L.integrable_comp hif).norm.mul_const ε)
+  rw [← integral_sub hfg.integrable]; swap; · exact (L z₀).integrable_comp hig
+  refine (norm_integral_le_of_norm_le ((L.flip.integrable_comp hig).norm.mul_const ε)
     (Eventually.of_forall h2)).trans ?_
   rw [integral_mul_const]
   refine mul_le_mul_of_nonneg_right ?_ hε
-  have h3 : ∀ t, ‖L (f t)‖ ≤ ‖L‖ * ‖f t‖ := by
+  have h3 : ∀ t, ‖L.flip (g t)‖ ≤ ‖L.flip‖ * ‖g t‖ := by
     intro t
-    exact L.le_opNorm (f t)
-  refine (integral_mono (L.integrable_comp hif).norm (hif.norm.const_mul _) h3).trans_eq ?_
-  rw [integral_const_mul]
+    exact L.flip.le_opNorm (g t)
+  refine (integral_mono (L.flip.integrable_comp hig).norm (hig.norm.const_mul _) h3).trans_eq ?_
+  rw [integral_const_mul, opNorm_flip]
 
 variable [NormedSpace ℝ E] [NormedSpace ℝ E'] [CompleteSpace E']
 
