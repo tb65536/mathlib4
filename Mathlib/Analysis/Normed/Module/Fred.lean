@@ -17,7 +17,6 @@ theorem fredholm_alternative [CompleteSpace X] (hT : IsCompactOperator T) {μ : 
   sorry
 
 end fredholm
-
 section spectral
 
 open Module.End
