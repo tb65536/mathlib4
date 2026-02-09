@@ -227,61 +227,42 @@ section pain
 
 open Complex TensorProduct
 
+theorem ContinuousLinearMap.rayleighQuotient_le_norm
+    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
+    T.rayleighQuotient x ≤ ‖T‖ := by
+  sorry
+
+theorem ContinuousLinearMap.rayleighQuotient_le_nnnorm
+    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
+    T.rayleighQuotient x ≤ ‖T‖₊ :=
+  (T.rayleighQuotient_le_norm x).trans_eq (coe_nnnorm T).symm
+
+open Metric
+
 theorem IsSelfAdjoint.spectralRadius_eq_nnnorm' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
     spectralRadius 𝕜 T = ‖T‖₊ := by
-  by_cases h𝕜 : RCLike.im (RCLike.I : 𝕜) = 1
-  · let f := RCLike.complexLinearIsometryEquiv h𝕜
-    let : NormedAlgebra ℂ 𝕜 := sorry
-    let : NormedSpace ℂ X := NormedSpace.restrictScalars ℂ 𝕜 X
-    let : InnerProductSpace ℂ X :=
-    { inner := sorry
-      norm_sq_eq_re_inner := sorry
-      conj_inner_symm := sorry
-      add_left := sorry
-      smul_left := sorry }
-    let : Module ℂ X := sorry
-    have : LinearMap.CompatibleSMul X X ℂ 𝕜 := sorry
-    let T' : X →L[ℂ] X := T.restrictScalars ℂ
-    have : spectralRadius 𝕜 T = spectralRadius ℂ T' := sorry
-    let f' : (X →L[𝕜] X) →ₐ (X →L[ℂ] X) := sorry
-    sorry
+  cases subsingleton_or_nontrivial X; simp
+  apply le_antisymm (spectrum.spectralRadius_le_nnnorm T)
+
+  obtain ⟨x, hx⟩ : ∃ x : X, x ≠ 0 := exists_ne 0
+  have H₁ : IsCompact (sphere (0 : X) ‖x‖) := isCompact_sphere _ _
+  have H₂ : (sphere (0 : E) ‖x‖).Nonempty := ⟨x, by simp⟩
+  -- key point: in finite dimension, a continuous function on the sphere has a max
+  obtain ⟨x₀, hx₀', hTx₀⟩ :=
+    H₁.exists_isMaxOn H₂ T'.val.reApplyInnerSelf_continuous.continuousOn
+  have hx₀ : ‖x₀‖ = ‖x‖ := by simpa using hx₀'
+  have : IsMaxOn T'.val.reApplyInnerSelf (sphere 0 ‖x₀‖) x₀ := by simpa only [← hx₀] using hTx₀
+  have hx₀_ne : x₀ ≠ 0 := by
+    have : ‖x₀‖ ≠ 0 := by simp only [hx₀, norm_eq_zero, hx, Ne, not_false_iff]
+    simpa [← norm_eq_zero, Ne]
+  exact hasEigenvalue_of_hasEigenvector (T'.prop.hasEigenvector_of_isMaxOn hx₀_ne this)
+
+  rw [spectralRadius]
+  apply le_iSup₂_of_le
 
 
-  let f : 𝕜 →ₐ[ℝ] ℂ :=
-  { toFun x := RCLike.re x + RCLike.im x * I
-    map_add' x y := by simp only [map_add, ofReal_add]; ring
-    map_mul' x y := by
-      simp only [RCLike.mul_re, ofReal_sub, ofReal_mul, RCLike.mul_im, ofReal_add]
-      ring_nf
-      rw [I_sq]
-      ring
-    map_one' := by simp
-    map_zero' := by simp
-    commutes' := by simp }
-  let : Algebra 𝕜 ℂ := f.toAlgebra
-
-  let : NormedAddCommGroup (TensorProduct 𝕜 ℂ X) :=
-  { norm := sorry
-    dist_self := sorry
-    dist_comm := sorry
-    dist_triangle := sorry
-    eq_of_dist_eq_zero := sorry }
-  let : InnerProductSpace ℂ (TensorProduct 𝕜 ℂ X) :=
-  { norm_smul_le := sorry
-    inner := sorry
-    norm_sq_eq_re_inner := sorry
-    conj_inner_symm := sorry
-    add_left := sorry
-    smul_left := sorry }
-  have : CompleteSpace (TensorProduct 𝕜 ℂ X) := sorry
-  let T' : TensorProduct 𝕜 ℂ X →L[ℂ] TensorProduct 𝕜 ℂ X :=
-    ⟨T.toLinearMap.baseChange ℂ, sorry⟩
-  have hT' : IsSelfAdjoint T' := sorry
-  have h1 : spectralRadius ℂ T' = spectralRadius 𝕜 T := sorry
-  have h2 : ‖T'‖₊ = ‖T‖₊ := sorry
-  rw [← h1, ← h2]
-  exact hT'.spectralRadius_eq_nnnorm
+  -- Rayliegh quotient?
 
 end pain
 
