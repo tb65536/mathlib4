@@ -3,17 +3,7 @@ Copyright (c) 2026 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import Mathlib.Algebra.Order.Ring.Star
-import Mathlib.Analysis.Normed.Module.RCLike.Basic
-import Mathlib.Analysis.Normed.Module.RieszLemma
-import Mathlib.Analysis.Normed.Operator.Banach
-import Mathlib.Analysis.Normed.Operator.BoundedLinearMaps
-import Mathlib.Analysis.Normed.Operator.Compact
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Instances
-import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
-import Mathlib.Analysis.CStarAlgebra.ContinuousLinearMap
+import Mathlib
 
 
 /-!
@@ -233,10 +223,67 @@ section spectral
 
 open Module.End
 
+section pain
+
+open Complex TensorProduct
+
 theorem IsSelfAdjoint.spectralRadius_eq_nnnorm' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
     spectralRadius 𝕜 T = ‖T‖₊ := by
-  sorry
+  by_cases h𝕜 : RCLike.im (RCLike.I : 𝕜) = 1
+  · let f := RCLike.complexLinearIsometryEquiv h𝕜
+    let : NormedAlgebra ℂ 𝕜 := sorry
+    let : NormedSpace ℂ X := NormedSpace.restrictScalars ℂ 𝕜 X
+    let : InnerProductSpace ℂ X :=
+    { inner := sorry
+      norm_sq_eq_re_inner := sorry
+      conj_inner_symm := sorry
+      add_left := sorry
+      smul_left := sorry }
+    let : Module ℂ X := sorry
+    have : LinearMap.CompatibleSMul X X ℂ 𝕜 := sorry
+    let T' : X →L[ℂ] X := T.restrictScalars ℂ
+    have : spectralRadius 𝕜 T = spectralRadius ℂ T' := sorry
+    let f' : (X →L[𝕜] X) →ₐ (X →L[ℂ] X) := sorry
+    sorry
+
+
+  let f : 𝕜 →ₐ[ℝ] ℂ :=
+  { toFun x := RCLike.re x + RCLike.im x * I
+    map_add' x y := by simp only [map_add, ofReal_add]; ring
+    map_mul' x y := by
+      simp only [RCLike.mul_re, ofReal_sub, ofReal_mul, RCLike.mul_im, ofReal_add]
+      ring_nf
+      rw [I_sq]
+      ring
+    map_one' := by simp
+    map_zero' := by simp
+    commutes' := by simp }
+  let : Algebra 𝕜 ℂ := f.toAlgebra
+
+  let : NormedAddCommGroup (TensorProduct 𝕜 ℂ X) :=
+  { norm := sorry
+    dist_self := sorry
+    dist_comm := sorry
+    dist_triangle := sorry
+    eq_of_dist_eq_zero := sorry }
+  let : InnerProductSpace ℂ (TensorProduct 𝕜 ℂ X) :=
+  { norm_smul_le := sorry
+    inner := sorry
+    norm_sq_eq_re_inner := sorry
+    conj_inner_symm := sorry
+    add_left := sorry
+    smul_left := sorry }
+  have : CompleteSpace (TensorProduct 𝕜 ℂ X) := sorry
+  let T' : TensorProduct 𝕜 ℂ X →L[ℂ] TensorProduct 𝕜 ℂ X :=
+    ⟨T.toLinearMap.baseChange ℂ, sorry⟩
+  have hT' : IsSelfAdjoint T' := sorry
+  have h1 : spectralRadius ℂ T' = spectralRadius 𝕜 T := sorry
+  have h2 : ‖T'‖₊ = ‖T‖₊ := sorry
+  rw [← h1, ← h2]
+  exact hT'.spectralRadius_eq_nnnorm
+
+end pain
 
 theorem IsCompactOperator.forall_eigenspace_ne_bot_iff_eq_zero
     {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X] [CompleteSpace X]
@@ -289,10 +336,10 @@ theorem spectral_theorem_aux' [CompleteSpace X] (hT : T.IsSymmetric) (hT' : IsCo
   specialize hS 0
   simp [h] at hS
 
-variable {X : Type*} [NormedAddCommGroup X] [InnerProductSpace ℂ X]
-variable {T : X →L[ℂ] X}
+variable {X 𝕜 : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X]
+variable {T : X →L[𝕜] X}
 theorem spectral_theorem' [CompleteSpace X] (hT : T.IsSymmetric) (hT' : IsCompactOperator T) :
-    (⨆ μ, eigenspace (T : Module.End ℂ X) μ) = ⊤ := by
+    (⨆ μ, eigenspace (T : Module.End 𝕜 X) μ) = ⊤ := by
   have := spectral_theorem_aux' hT hT'
   sorry
 
