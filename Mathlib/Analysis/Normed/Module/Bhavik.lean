@@ -229,46 +229,35 @@ open Complex TensorProduct
 
 theorem ContinuousLinearMap.rayleighQuotient_le_norm
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    T.rayleighQuotient x ≤ ‖T‖ := by
+    |T.rayleighQuotient x| ≤ ‖T‖ := by
   sorry
 
-theorem ContinuousLinearMap.rayleighQuotient_le_nnnorm
+theorem ContinuousLinearMap.iSup_rayleighQuoteint_eq_norm
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    T.rayleighQuotient x ≤ ‖T‖₊ :=
-  (T.rayleighQuotient_le_norm x).trans_eq (coe_nnnorm T).symm
-
-open Metric
+    (⨆ x, T.rayleighQuotient x) = ‖T‖ := by
+  sorry
 
 theorem IsSelfAdjoint.spectralRadius_eq_nnnorm' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
     spectralRadius 𝕜 T = ‖T‖₊ := by
-  cases subsingleton_or_nontrivial X; simp
+  cases subsingleton_or_nontrivial X
+  · simp
   apply le_antisymm (spectrum.spectralRadius_le_nnnorm T)
-
-  obtain ⟨x, hx⟩ : ∃ x : X, x ≠ 0 := exists_ne 0
-  have H₁ : IsCompact (sphere (0 : X) ‖x‖) := isCompact_sphere _ _
-  have H₂ : (sphere (0 : E) ‖x‖).Nonempty := ⟨x, by simp⟩
-  -- key point: in finite dimension, a continuous function on the sphere has a max
-  obtain ⟨x₀, hx₀', hTx₀⟩ :=
-    H₁.exists_isMaxOn H₂ T'.val.reApplyInnerSelf_continuous.continuousOn
-  have hx₀ : ‖x₀‖ = ‖x‖ := by simpa using hx₀'
-  have : IsMaxOn T'.val.reApplyInnerSelf (sphere 0 ‖x₀‖) x₀ := by simpa only [← hx₀] using hTx₀
-  have hx₀_ne : x₀ ≠ 0 := by
-    have : ‖x₀‖ ≠ 0 := by simp only [hx₀, norm_eq_zero, hx, Ne, not_false_iff]
-    simpa [← norm_eq_zero, Ne]
-  exact hasEigenvalue_of_hasEigenvector (T'.prop.hasEigenvector_of_isMaxOn hx₀_ne this)
-
-  rw [spectralRadius]
-  apply le_iSup₂_of_le
-
-
-  -- Rayliegh quotient?
+  -- can also shift the minus sign
+  suffices h : algebraMap ℝ 𝕜 ‖T‖ ∈ spectrum 𝕜 T ∨ -algebraMap ℝ 𝕜 ‖T‖ ∈ spectrum 𝕜 T by
+    rcases h with h | h <;> exact le_trans (by simp) (le_biSup _ h)
+  -- norm or its negative is approximated by Rayleigh quotients
+  simp_rw [spectrum, Set.mem_compl_iff, spectrum.mem_resolventSet_iff]
+  -- cannot be invertible
+  sorry
 
 end pain
 
+variable {X 𝕜 : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X] [CompleteSpace X]
+  {T : X →L[𝕜] X}
+
 theorem IsCompactOperator.forall_eigenspace_ne_bot_iff_eq_zero
-    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X] [CompleteSpace X]
-    {T : X →L[𝕜] X} (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
+    (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
     (∀ μ, HasEigenvalue (T : End 𝕜 X) μ → μ = 0) ↔ T = 0 := by
   constructor
   · intro h
@@ -284,20 +273,18 @@ theorem IsCompactOperator.forall_eigenspace_ne_bot_iff_eq_zero
     simp [hasEigenvector_iff] at hv
     grind [smul_eq_zero]
 
-variable {X 𝕜 : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X]
-variable {T : X →L[𝕜] X}
-theorem spectral_theorem_aux' [CompleteSpace X] (hT : T.IsSymmetric) (hT' : IsCompactOperator T) :
+theorem spectral_theorem (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
     (⨆ μ, eigenspace (T : Module.End 𝕜 X) μ)ᗮ = ⊥ := by
   let S : (⨆ μ, eigenspace T μ : Submodule 𝕜 X)ᗮ →L[𝕜] (⨆ μ, eigenspace T μ : Submodule 𝕜 X)ᗮ :=
   { cont := by
       simp only [LinearMap.restrict, LinearMap.codRestrict, LinearMap.domRestrict_apply,
         ContinuousLinearMap.coe_coe, AddHom.toFun_eq_coe, AddHom.coe_mk]
       fun_prop
-    __ := T.restrict hT.orthogonalComplement_iSup_eigenspaces_invariant }
+    __ := T.restrict hT'.orthogonalComplement_iSup_eigenspaces_invariant }
   have hS_compact : IsCompactOperator S :=
-    hT'.restrict' hT.orthogonalComplement_iSup_eigenspaces_invariant
+    hT.restrict' hT'.orthogonalComplement_iSup_eigenspaces_invariant
   have hS_symm : S.IsSymmetric :=
-    hT.restrict_invariant (hT.orthogonalComplement_iSup_eigenspaces_invariant)
+    hT'.restrict_invariant (hT'.orthogonalComplement_iSup_eigenspaces_invariant)
   have hS μ : eigenspace (S : Module.End 𝕜 (⨆ μ, eigenspace T μ : Submodule 𝕜 X)ᗮ) μ = ⊥ := by
     rw [Submodule.eq_bot_iff]
     intro v hv
@@ -316,12 +303,5 @@ theorem spectral_theorem_aux' [CompleteSpace X] (hT : T.IsSymmetric) (hT' : IsCo
   rw [← Submodule.nontrivial_iff_ne_bot] at hV
   specialize hS 0
   simp [h] at hS
-
-variable {X 𝕜 : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X]
-variable {T : X →L[𝕜] X}
-theorem spectral_theorem' [CompleteSpace X] (hT : T.IsSymmetric) (hT' : IsCompactOperator T) :
-    (⨆ μ, eigenspace (T : Module.End 𝕜 X) μ) = ⊤ := by
-  have := spectral_theorem_aux' hT hT'
-  sorry
 
 end spectral
