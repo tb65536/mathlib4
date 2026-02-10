@@ -20,43 +20,13 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 @[expose] public section
 
-section temp
-
-open scoped Topology
-
-variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F]
-  [NormedSpace 𝕜 F] {f : 𝕜 → F} {s : Set 𝕜} {x : 𝕜}
-
-open Filter
-
--- PRed
-theorem deriv_zero_of_frequently_mem (t : Set F) (ht : ¬ AccPt (f x) (𝓟 t))
-    (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 :=
-  sorry
-
-theorem deriv_zero_of_frequently_mem_discrete {t : Set F}
-    (ht : IsDiscrete t) (ht' : IsClosed t) (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 := by
-  sorry
-
-theorem deriv_zero_of_frequently_mem_finite {t : Set F}
-    (ht : t.Finite) (h : ∃ᶠ y in 𝓝[≠] x, f y ∈ t) : deriv f x = 0 := by
-  apply deriv_zero_of_frequently_mem t ?_ h
-  contrapose! ht
-  exact .of_accPt ht
-
-end temp
-
 theorem deriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : ℂ) :
     deriv (fun x ↦ c ^ f x) = fun x ↦ c ^ f x * Complex.log c * deriv f x := by
   ext x
   by_cases hc : c = 0
   · simp only [hc, Complex.log_zero, mul_zero, zero_mul]
-    let t : Set ℂ := {0, 1}
-    apply deriv_zero_of_frequently_mem t ?_ (Filter.Frequently.of_forall fun y ↦ ?_)
-    · have ht := t.toFinite
-      contrapose! ht
-      exact .of_accPt ht
-    · by_cases hy : f y = 0 <;> simp [hy, t]
+    apply deriv_zero_of_frequently_mem {0, 1} (mt Set.Infinite.of_accPt (by simp))
+    simp [Complex.zero_cpow_eq_iff, em', NormedField.nhdsNE_neBot]
   · exact ((hf x).hasDerivAt.const_cpow (Or.inl hc)).deriv
 
 namespace Complex -- logDeriv
