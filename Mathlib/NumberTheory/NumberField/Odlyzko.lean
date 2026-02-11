@@ -20,15 +20,6 @@ public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 @[expose] public section
 
-theorem deriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : ℂ) :
-    deriv (fun x ↦ c ^ f x) = fun x ↦ c ^ f x * Complex.log c * deriv f x := by
-  ext x
-  by_cases hc : c = 0
-  · simp only [hc, Complex.log_zero, mul_zero, zero_mul]
-    apply deriv_zero_of_frequently_mem {0, 1} (mt Set.Infinite.of_accPt (by simp))
-    simp [Complex.zero_cpow_eq_iff, em', NormedField.nhdsNE_neBot]
-  · exact ((hf x).hasDerivAt.const_cpow (Or.inl hc)).deriv
-
 namespace Complex -- logDeriv
 
 theorem logDeriv_congr_apply {𝕜 𝕜' : Type*} [NontriviallyNormedField 𝕜] [NontriviallyNormedField 𝕜']
@@ -42,10 +33,9 @@ theorem logDeriv_congr {𝕜 𝕜' : Type*} [NontriviallyNormedField 𝕜] [Nont
     s.EqOn (logDeriv f) (logDeriv g) :=
   logDeriv_congr_apply hs h
 
-theorem logDeriv_const_cpow {f : ℂ → ℂ} (hf : Differentiable ℂ f) (c : ℂ) :
-    logDeriv (fun s ↦ c ^ f s) = log c • deriv f := by
-  rw [logDeriv, deriv_const_cpow hf]
-  ext x
+theorem logDeriv_const_cpow {f : ℂ → ℂ} {x : ℂ} (hf : DifferentiableAt ℂ f x) (c : ℂ) :
+    logDeriv (fun s ↦ c ^ f s) x = log c * deriv f x := by
+  rw [logDeriv_apply, deriv_const_cpow hf]
   by_cases hc : c = 0
   · simp [hc]
   · apply div_eq_of_eq_mul (cpow_ne_zero_iff.mpr (Or.inl hc))
@@ -172,10 +162,10 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     (by exact (h8.mul h9).mul h10) h11]
   rw [logDeriv_mul s (by exact mul_ne_zero h5 h6) h7 (by exact h8.mul h9) h10]
   rw [logDeriv_mul s h5 h6 h8 h9]
-  rw [Complex.logDeriv_const_cpow h12, Pi.smul_apply, deriv_div_const, logDeriv_fun_pow h13,
+  rw [Complex.logDeriv_const_cpow (h12 s), deriv_div_const, logDeriv_fun_pow h13,
     logDeriv_fun_pow h14, Complex.logDeriv_Gammaℝ, Complex.logDeriv_Gammaℂ,
     ← Complex.ofReal_intCast, ← Complex.ofReal_log, Int.cast_abs, log_abs,
-    deriv_id'', one_div, smul_eq_mul, ← div_eq_mul_inv]
+    deriv_id'', one_div, ← div_eq_mul_inv]
   · simp
   · exact hs1
   · exact hs2
