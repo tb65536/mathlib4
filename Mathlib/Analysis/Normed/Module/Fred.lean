@@ -9,6 +9,54 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
+namespace ContinuousLinearMap
+
+open InnerProductSpace
+
+variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
+
+theorem rayleighQuotient_le_norm (x : E) :
+    |T.rayleighQuotient x| ≤ ‖T‖ := by
+  grw [rayleighQuotient, reApplyInnerSelf_apply, abs_div, abs_sq, RCLike.abs_re_le_norm,
+    norm_inner_le_norm, le_opNorm, mul_assoc, ← sq, mul_div_assoc]
+  exact mul_le_of_le_one_right T.opNorm_nonneg (div_self_le_one (‖x‖ ^ 2))
+
+theorem norm_eq_iSup_rayleighQuotient [CompleteSpace E] (hT : IsSelfAdjoint T) :
+    ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
+  set M := ⨆ x, |T.rayleighQuotient x|
+  have bdd : BddAbove (Set.range fun x ↦ |T.rayleighQuotient x|) :=
+    ⟨‖T‖, fun x ⟨y, h⟩ ↦ h ▸ T.rayleighQuotient_le_norm y⟩
+  have nonneg : 0 ≤ M := le_ciSup_of_le bdd 0 (abs_nonneg _)
+  have hM x : |RCLike.re ⟪T x, x⟫_𝕜| ≤ M * ‖x‖ ^ 2 := by
+    by_cases hx : x = 0
+    · simp [hx]
+    have : _ ≤ M := le_ciSup bdd x
+    rwa [rayleighQuotient, abs_div, abs_sq, reApplyInnerSelf, div_le_iff₀] at this
+    rwa [sq_pos_iff, norm_ne_zero_iff]
+  refine le_antisymm ?_ (ciSup_le T.rayleighQuotient_le_norm)
+  refine opNorm_le_of_unit_norm nonneg fun x hx ↦ ?_
+  have key x y : 4 * RCLike.re ⟪T x, y⟫_𝕜 =
+      RCLike.re ⟪T (x + y), x + y⟫_𝕜 - RCLike.re ⟪T (x - y), x - y⟫_𝕜 := by
+    have key := RCLike.add_conj ⟪T x, y⟫_𝕜
+    rw [conj_inner_symm, ← hT.adjoint_eq, adjoint_inner_right, hT.adjoint_eq] at key
+    replace key := congrArg RCLike.re key
+    rw [map_add, ← RCLike.ofReal_ofNat, RCLike.re_ofReal_mul, RCLike.ofReal_re] at key
+    grind [inner_add_left, inner_add_right, inner_sub_left, inner_sub_right]
+  replace key x y : |4 * RCLike.re ⟪T x, y⟫_𝕜| ≤ M * (‖x + y‖ ^ 2 + ‖x - y‖ ^ 2) := by
+    grw [key, abs_sub, hM, hM, ← mul_add]
+  replace key x y (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : |RCLike.re ⟪T x, y⟫_𝕜| ≤ M := by
+    specialize key x y
+    rw [sq, sq, parallelogram_law_with_norm 𝕜 x y, hx, hy] at key
+    grind
+  by_cases hTx : ‖T x‖ = 0
+  · rwa [hTx]
+  specialize key x (((‖T x‖⁻¹ : ℝ) : 𝕜) • T x) hx (by simp [norm_smul, hTx])
+  rwa [inner_smul_right, RCLike.re_ofReal_mul, abs_mul, abs_inv, abs_norm, inv_mul_eq_div,
+    inner_self_eq_norm_sq_to_K, RCLike.re_ofReal_pow, abs_sq, sq,
+    mul_div_cancel_left₀ _ hTx] at key
+
+end ContinuousLinearMap
+
 section spectral
 
 open Module.End
@@ -17,15 +65,12 @@ section pain
 
 open Complex TensorProduct
 
-theorem ContinuousLinearMap.rayleighQuotient_le_norm
-    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    |T.rayleighQuotient x| ≤ ‖T‖ := by
-  sorry
 
-theorem ContinuousLinearMap.iSup_rayleighQuoteint_eq_norm
-    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    (⨆ x, T.rayleighQuotient x) = ‖T‖ := by
-  sorry
+#synth SupSet ℝ
+
+
+
+
 
 theorem IsSelfAdjoint.spectralRadius_eq_nnnorm' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
