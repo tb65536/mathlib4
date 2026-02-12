@@ -149,7 +149,7 @@ theorem exists_seq {𝕜 X : Type*}
       (∀ n, ∀ y ∈ (S ^ (n + 1)).range, 1 ≤ ‖f n - y‖) := by
   obtain ⟨x, hx⟩ : ∃ x : X, ∀ y, S y ≠ x := by simpa [Function.Surjective] using hS_not_surj
   let V (n : ℕ) : Submodule 𝕜 X := S.iterateRange n
-  have hV_succ (n : ℕ) : V (n + 1) = (V n).map (S : End 𝕜 X) := sorry
+  have hV_succ (n : ℕ) : V (n + 1) = (V n).map (S : End 𝕜 X) := LinearMap.iterateRange_succ
   have hV_closed (n : ℕ) : IsClosed (V n : Set X) := by
     induction n with
     | zero => simp [V, Module.End.one_eq_id]
@@ -190,7 +190,9 @@ theorem fredholm_alternative {𝕜 X : Type*}
     exists_seq (mt (.intro hK.injective) h₂)
     (hK.isClosedEmbedding S.uniformContinuous) (c := c) hc (R := ‖c‖ + 1) (by simp)
   have hf_mem' (n : ℕ) : S (f n) ∈ ((S : End 𝕜 X) ^ (n + 1)).range := by
-    sorry
+    rw [iterate_succ']
+    rw [LinearMap.range_comp]
+    exact ⟨f n, hf_mem n, rfl⟩
   have hp : Pairwise fun x₁ x₂ ↦ ‖μ‖ ≤ ‖T (f x₁) - T (f x₂)‖ := by
     intro m n hmn
     wlog! hmn' : m < n generalizing m n
