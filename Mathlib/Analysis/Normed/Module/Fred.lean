@@ -22,8 +22,6 @@ namespace ContinuousLinearMap
 
 open InnerProductSpace RCLike
 
-example {α : ℝ} : α * α / α = α := by exact mul_self_div_self α
-
 variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
 
 theorem rayleighQuotient_le_norm (x : E) :
@@ -68,13 +66,6 @@ open Module.End
 section pain
 
 open Complex TensorProduct
-
-
-#synth SupSet ℝ
-
-
-
-
 
 theorem IsSelfAdjoint.spectralRadius_eq_nnnorm' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
