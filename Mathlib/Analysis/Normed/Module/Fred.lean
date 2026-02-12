@@ -240,4 +240,74 @@ theorem spectral_theorem (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
   specialize hS 0
   simp [h] at hS
 
+theorem IsCompactOperator.smul_unit_iff {M₁ M₂ S : Type*} [TopologicalSpace M₁] [AddCommMonoid M₁]
+    [TopologicalSpace M₂] [AddCommMonoid M₂] [Monoid S] [DistribMulAction S M₂]
+    [ContinuousConstSMul S M₂] {f : M₁ → M₂} {c : Sˣ} :
+    IsCompactOperator (c • f) ↔ IsCompactOperator f :=
+  ⟨fun h ↦ by simpa using h.smul c⁻¹, fun h ↦ h.smul c⟩
+
+theorem IsCompactOperator.smul_isUnit_iff {M₁ M₂ S : Type*} [TopologicalSpace M₁] [AddCommMonoid M₁]
+    [TopologicalSpace M₂] [AddCommMonoid M₂] [Monoid S] [DistribMulAction S M₂]
+    [ContinuousConstSMul S M₂] {f : M₁ → M₂} {c : S} (hc : IsUnit c) :
+    IsCompactOperator (c • f) ↔ IsCompactOperator f := by
+  obtain ⟨c, rfl⟩ := hc
+  exact smul_unit_iff
+
+theorem IsCompactOperator.smul_iff {M₁ M₂ S : Type*} [TopologicalSpace M₁] [AddCommMonoid M₁]
+    [TopologicalSpace M₂] [AddCommMonoid M₂] [Group S] [DistribMulAction S M₂]
+    [ContinuousConstSMul S M₂] {f : M₁ → M₂} (c : S) :
+    IsCompactOperator (c • f) ↔ IsCompactOperator f :=
+  smul_isUnit_iff (Group.isUnit c)
+
+theorem IsCompactOperator.smul₀_iff {M₁ M₂ S : Type*} [TopologicalSpace M₁] [AddCommMonoid M₁]
+    [TopologicalSpace M₂] [AddCommMonoid M₂] [GroupWithZero S] [DistribMulAction S M₂]
+    [ContinuousConstSMul S M₂] {f : M₁ → M₂} {c : S} (hc : c ≠ 0) :
+    IsCompactOperator (c • f) ↔ IsCompactOperator f :=
+  smul_isUnit_iff hc.isUnit
+
+theorem isCompactOperator_id_iff_locallyCompactSpace
+    {G : Type*} [AddGroup G] [TopologicalSpace G] [IsTopologicalAddGroup G] :
+    IsCompactOperator (id : G → G) ↔ LocallyCompactSpace G :=
+  ⟨fun ⟨_, hK, hK0⟩ ↦ hK.locallyCompactSpace_of_mem_nhds_of_addGroup hK0,
+    fun _ ↦ exists_compact_mem_nhds 0⟩
+
+theorem LinearMap.isCompactOperator_one_iff_finiteDimensional {𝕜 E : Type*}
+    [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace 𝕜]
+    [LocallyCompactSpace 𝕜] :
+    IsCompactOperator (1 : E →ₗ[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
+  rw [Module.End.coe_one, isCompactOperator_id_iff_locallyCompactSpace]
+  exact ⟨fun _ ↦ FiniteDimensional.of_locallyCompactSpace 𝕜,
+    fun h ↦ LocallyCompactSpace.of_finiteDimensional_of_complete 𝕜 E⟩
+
+theorem ContinuousLinearMap.isCompactOperator_one_iff_finiteDimensional
+    {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+    [CompleteSpace 𝕜] [LocallyCompactSpace 𝕜] :
+    IsCompactOperator (1 : E →L[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
+  exact LinearMap.isCompactOperator_one_iff_finiteDimensional
+
+theorem spectral_theorem' (hT : IsCompactOperator T) (hT' : T.IsSymmetric) (μ : 𝕜) (hμ : μ ≠ 0) :
+    FiniteDimensional 𝕜 (eigenspace (T : Module.End 𝕜 X) μ) := by
+  have : IsClosed (eigenspace (T : Module.End 𝕜 X) μ : Set X) := by
+    rw [Module.End.eigenspace_def]
+    exact (T - μ • 1).isClosed_ker
+  have inv : ∀ x ∈ eigenspace (T : Module.End 𝕜 X) μ, T x ∈ eigenspace (T : Module.End 𝕜 X) μ := by
+    intro x hx
+    rw [mem_eigenspace_iff, ContinuousLinearMap.coe_coe] at hx ⊢
+    rw [hx, map_smul, hx]
+  have : T.restrict inv = μ • 1 := by
+    ext x
+    exact mem_eigenspace_iff.mp x.2
+  have h2 := hT.restrict' inv
+  have h3 := hT'.restrict_invariant inv
+  rw [this] at h2
+  replace h2 := (IsCompactOperator.smul₀_iff hμ).mp h2
+  rw [LinearMap.isCompactOperator_one_iff_finiteDimensional] at h2
+  exact h2
+
 end spectral
+
+-- goal: prove that characters separate points
+-- If G is a nontrivial group, then convolving with a function h gives a compact operator on L^2(G)
+-- and the spectral theorem gives a decomposition of L^2(G) into finite-dimensional representations
+-- and as long as one of these is nontrivial, then we can get a non-trivial irreducible
+-- representation which must be one dimensional by Schur's lemma.
