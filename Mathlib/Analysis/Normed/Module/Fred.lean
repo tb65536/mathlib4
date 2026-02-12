@@ -20,21 +20,25 @@ theorem parallelogram_law_with_norm_sq (𝕜 : Type*) {E : Type*}
     ‖x + y‖ ^ 2 + ‖x - y‖ ^ 2 = 2 * (‖x‖ ^ 2 + ‖y‖ ^ 2) := by
   simpa only [sq] using parallelogram_law_with_norm 𝕜 x y
 
+@[simp]
 theorem ContinuousLinearMap.rayleighQuotient_zero_apply
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x : E) :
     rayleighQuotient (0 : E →L[𝕜] E) x = 0 := by
   simp [reApplyInnerSelf_apply]
 
+@[simp]
 theorem ContinuousLinearMap.rayleighQuotient_apply_zero
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) :
     rayleighQuotient T 0 = 0 := by
   simp [reApplyInnerSelf_apply]
 
+@[simp]
 theorem ContinuousLinearMap.rayleighQuotient_neg_apply {𝕜 E : Type*} [RCLike 𝕜]
     [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
     rayleighQuotient (-T) x = -rayleighQuotient T x := by
   simp [rayleighQuotient, reApplyInnerSelf_apply, neg_div]
 
+@[simp]
 theorem ContinuousLinearMap.rayleighQuotient_apply_neg {𝕜 E : Type*} [RCLike 𝕜]
     [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
     rayleighQuotient T (-x) = rayleighQuotient T x := by
@@ -93,8 +97,8 @@ open Complex TensorProduct
 
 open InnerProductSpace RCLike
 
--- do we actually need 𝕜 to be nontrivially normed?
-theorem ContinuousLinearMap.foo {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
+theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
+    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
     [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
     ∃ c > 0, ∀ x, c * ‖x‖ ≤ ‖T x‖ := by
   cases subsingleton_or_nontrivial X
@@ -107,42 +111,27 @@ theorem ContinuousLinearMap.foo {𝕜 X : Type*} [NontriviallyNormedField 𝕜] 
   · rw [← hu, ← mul_apply, Units.inv_mul, one_apply]
   · apply le_opNorm
 
-theorem ContinuousLinearMap.foo' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
+theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
+    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] {T : X →L[𝕜] X}
     (t : ℝ) (ht : 0 < t)
     (hT' : (algebraMap ℝ 𝕜) t ∈ resolventSet 𝕜 T) :
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ (t ^ 2 + ‖T‖ ^ 2) / (2 * t) - c := by
   by_cases hT0 : T = 0
-  · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0, rayleighQuotient_zero_apply]⟩
-  obtain ⟨c, hc0, hc⟩ := foo hT'
+  · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0]⟩
+  obtain ⟨c, hc0, hc⟩ := exists_lower_bound_of_isUnit hT'
   refine ⟨min (c ^ 2 / (2 * t)) ((t ^ 2 + ‖T‖ ^ 2) / (2 * t)), by positivity, fun x ↦ ?_⟩
   by_cases hx : x = 0
-  · simp [hx, rayleighQuotient_apply_zero]
-  suffices T.rayleighQuotient x ≤ ((t ^ 2 + ‖T‖ ^ 2) / (2 * t)) - c ^ 2 / (2 * t) by grind
+  · simp [hx]
+  suffices T.rayleighQuotient x ≤ (t ^ 2 + ‖T‖ ^ 2) / (2 * t) - c ^ 2 / (2 * t) by
+    grw [this, min_le_left]
   rw [rayleighQuotient, reApplyInnerSelf_apply]
-  have key := add_conj ⟪T x, x⟫_𝕜
-  rw [conj_inner_symm] at key
   specialize hc x
-  rw [← sq_le_sq₀ (by positivity) (by positivity)] at hc
-  rw [norm_sq_eq_re_inner (𝕜 := 𝕜)] at hc
-  simp only [sub_apply, inner_sub_left, inner_sub_right, map_sub, ← norm_sq_eq_re_inner] at hc
-  simp only [algebraMap_apply, norm_smul] at hc
-  simp only [norm_algebraMap', Real.norm_eq_abs] at hc
-  simp only [inner_smul_left, inner_smul_right] at hc
-  simp only [RCLike.mul_re, RCLike.ofReal_re, RCLike.ofReal_im, zero_mul, sub_zero,
-    RCLike.conj_ofReal] at hc
-  replace key := congrArg RCLike.re key
-  rw [map_add] at key
-  replace hc : (c * ‖x‖) ^ 2 ≤ (|t| * ‖x‖) ^ 2 -
-    t * (RCLike.re ⟪T x, x⟫_𝕜 + RCLike.re ⟪x, T x⟫_𝕜) + ‖T x‖ ^ 2 := by grind
-  rw [key] at hc
-  simp only [RCLike.mul_re, ofNat_re, RCLike.ofReal_re, ofNat_im, RCLike.ofReal_im, mul_zero,
-    sub_zero] at hc
+  rw [← sq_le_sq₀ (by positivity) (by positivity), sub_apply, algebraMap_apply,
+    norm_sub_sq (𝕜 := 𝕜), inner_re_symm] at hc
   grw [le_opNorm] at hc
-  replace hc : t * (2 * RCLike.re ⟪T x, x⟫_𝕜) ≤ (|t| * ‖x‖) ^ 2 + (‖T‖ * ‖x‖) ^ 2 - (c * ‖x‖) ^ 2 := by
-    grind
-  have : 0 < ‖T‖ := by positivity
-  field_simp
+  simp [inner_smul_right, norm_smul, abs_of_pos ht] at hc
+  simp [field]
   grind
 
 theorem ContinuousLinearMap.foo'' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [Nontrivial X]
@@ -151,7 +140,8 @@ theorem ContinuousLinearMap.foo'' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommG
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ ‖T‖ - c := by
   by_cases hT0 : T = 0
   · simp [hT0, spectrum.mem_resolventSet_iff] at hT'
-  obtain ⟨c, hc0, hc⟩ := ContinuousLinearMap.foo' ‖T‖ (norm_pos_iff.mpr hT0) hT'
+  obtain ⟨c, hc0, hc⟩ := ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
+    ‖T‖ (norm_pos_iff.mpr hT0) hT'
   refine ⟨c, hc0, fun x ↦ ?_⟩
   specialize hc x
   have : 0 < ‖T‖ := norm_pos_iff.mpr hT0
