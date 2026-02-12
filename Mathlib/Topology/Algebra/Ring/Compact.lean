@@ -148,23 +148,6 @@ end IsDedekindDomain
 
 section CompactHausdorff
 
--- PRed
-@[to_additive]
-theorem ContinuousMonoidHom.mul_apply {A B : Type*} [Monoid A] [CommMonoid B]
-    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
-    (f g : ContinuousMonoidHom A B) (a : A) : (f * g) a = f a * g a := by
-  rfl
-
--- PRed
-@[to_additive]
-theorem ContinuousMonoidHom.pow_apply {A B : Type*} [Monoid A] [CommMonoid B]
-    [TopologicalSpace A] [TopologicalSpace B] [ContinuousMul B]
-    (f : ContinuousMonoidHom A B) (n : ℕ) (a : A) : (f ^ n) a = (f a) ^ n := by
-  induction n
-  case zero => simp
-  case succ n ih =>
-    rw [pow_succ, pow_succ, ContinuousMonoidHom.mul_apply, ih]
-
 open Pointwise in
 def Ideal.connectedComponentOfZero
     (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] : Ideal R where
