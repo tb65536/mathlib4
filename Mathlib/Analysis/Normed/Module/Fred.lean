@@ -10,6 +10,21 @@ import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
 -- PRed
+theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
+    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
+    [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
+    ∃ c > 0, ∀ x, c * ‖x‖ ≤ ‖T x‖ := by
+  cases subsingleton_or_nontrivial X
+  · refine ⟨1, one_pos, fun x ↦ ?_⟩
+    rw [one_mul, Subsingleton.elim (T x) x]
+  obtain ⟨u, hu⟩ := hT
+  refine ⟨‖u⁻¹.1‖⁻¹, by simp, fun x ↦ ?_⟩
+  rw [inv_mul_le_iff₀ (by simp)]
+  transitivity ‖u⁻¹.1 (T x)‖
+  · rw [← hu, ← mul_apply, Units.inv_mul, one_apply]
+  · apply le_opNorm
+
+-- PRed
 @[rclike_simps]
 theorem RCLike.re_mul_ofReal {K : Type*} [RCLike K] (z : K) (r : ℝ) : re (z * ↑r) = re z * r := by
   rw [mul_comm, re_ofReal_mul, mul_comm]
@@ -20,30 +35,35 @@ theorem parallelogram_law_with_norm_sq (𝕜 : Type*) {E : Type*}
     ‖x + y‖ ^ 2 + ‖x - y‖ ^ 2 = 2 * (‖x‖ ^ 2 + ‖y‖ ^ 2) := by
   simpa only [sq] using parallelogram_law_with_norm 𝕜 x y
 
+-- PRed
 @[simp]
 theorem ContinuousLinearMap.rayleighQuotient_zero_apply
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x : E) :
     rayleighQuotient (0 : E →L[𝕜] E) x = 0 := by
   simp [reApplyInnerSelf_apply]
 
+-- PRed
 @[simp]
 theorem ContinuousLinearMap.rayleighQuotient_apply_zero
     {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) :
     rayleighQuotient T 0 = 0 := by
   simp [reApplyInnerSelf_apply]
 
+-- PRed
 @[simp]
 theorem ContinuousLinearMap.rayleighQuotient_neg_apply {𝕜 E : Type*} [RCLike 𝕜]
     [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
     rayleighQuotient (-T) x = -rayleighQuotient T x := by
   simp [rayleighQuotient, reApplyInnerSelf_apply, neg_div]
 
+-- PRed
 @[simp]
 theorem ContinuousLinearMap.rayleighQuotient_apply_neg {𝕜 E : Type*} [RCLike 𝕜]
     [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
     rayleighQuotient T (-x) = rayleighQuotient T x := by
   simp [rayleighQuotient, reApplyInnerSelf_apply]
 
+-- PRed
 theorem resolventSet_neg (R : Type*) {A : Type*} [CommRing R] [Ring A] [Algebra R A] (a : A) :
     resolventSet R (-a) = -resolventSet R a := by
   simp_rw [Set.ext_iff, Set.mem_neg, spectrum.mem_resolventSet_iff, sub_neg_eq_add, map_neg,
@@ -66,6 +86,7 @@ theorem rayleighQuotient_le_norm (x : E) :
 theorem bddAbove_rayleighQuotient : BddAbove (Set.range fun x ↦ |T.rayleighQuotient x|) :=
   ⟨‖T‖, fun _ ⟨y, h⟩ ↦ h ▸ T.rayleighQuotient_le_norm y⟩
 
+-- waiting on #35173
 theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
     ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
   set M := ⨆ x, |T.rayleighQuotient x|
@@ -101,20 +122,6 @@ section pain
 open Complex TensorProduct
 
 open InnerProductSpace RCLike
-
-theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
-    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
-    [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
-    ∃ c > 0, ∀ x, c * ‖x‖ ≤ ‖T x‖ := by
-  cases subsingleton_or_nontrivial X
-  · refine ⟨1, one_pos, fun x ↦ ?_⟩
-    rw [one_mul, Subsingleton.elim (T x) x]
-  obtain ⟨u, hu⟩ := hT
-  refine ⟨‖u⁻¹.1‖⁻¹, by simp, fun x ↦ ?_⟩
-  rw [inv_mul_le_iff₀ (by simp)]
-  transitivity ‖u⁻¹.1 (T x)‖
-  · rw [← hu, ← mul_apply, Units.inv_mul, one_apply]
-  · apply le_opNorm
 
 theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
     {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X]
