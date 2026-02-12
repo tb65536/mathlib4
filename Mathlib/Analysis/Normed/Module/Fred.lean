@@ -9,51 +9,55 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
+@[rclike_simps]
+theorem RCLike.re_mul_ofReal {K : Type*} [RCLike K] (z : K) (r : ℝ) : re (z * ↑r) = re z * r := by
+  rw [mul_comm, re_ofReal_mul, mul_comm]
+
+theorem parallelogram_law_with_norm_sq (𝕜 : Type*) {E : Type*}
+    [RCLike 𝕜] [SeminormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x y : E) :
+    ‖x + y‖ ^ 2 + ‖x - y‖ ^ 2 = 2 * (‖x‖ ^ 2 + ‖y‖ ^ 2) := by
+  simpa only [sq] using parallelogram_law_with_norm 𝕜 x y
+
 namespace ContinuousLinearMap
 
-open InnerProductSpace
+open InnerProductSpace RCLike
+
+example {α : ℝ} : α * α / α = α := by exact mul_self_div_self α
 
 variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
 
 theorem rayleighQuotient_le_norm (x : E) :
     |T.rayleighQuotient x| ≤ ‖T‖ := by
-  grw [rayleighQuotient, reApplyInnerSelf_apply, abs_div, abs_sq, RCLike.abs_re_le_norm,
+  grw [rayleighQuotient, reApplyInnerSelf_apply, abs_div, abs_sq, abs_re_le_norm,
     norm_inner_le_norm, le_opNorm, mul_assoc, ← sq, mul_div_assoc]
   exact mul_le_of_le_one_right T.opNorm_nonneg (div_self_le_one (‖x‖ ^ 2))
 
-theorem norm_eq_iSup_rayleighQuotient [CompleteSpace E] (hT : IsSelfAdjoint T) :
+theorem bddAbove_rayleighQuotient : BddAbove (Set.range fun x ↦ |T.rayleighQuotient x|) :=
+  ⟨‖T‖, fun _ ⟨y, h⟩ ↦ h ▸ T.rayleighQuotient_le_norm y⟩
+
+theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
     ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
   set M := ⨆ x, |T.rayleighQuotient x|
-  have bdd : BddAbove (Set.range fun x ↦ |T.rayleighQuotient x|) :=
-    ⟨‖T‖, fun x ⟨y, h⟩ ↦ h ▸ T.rayleighQuotient_le_norm y⟩
-  have nonneg : 0 ≤ M := le_ciSup_of_le bdd 0 (abs_nonneg _)
-  have hM x : |RCLike.re ⟪T x, x⟫_𝕜| ≤ M * ‖x‖ ^ 2 := by
-    by_cases hx : x = 0
-    · simp [hx]
-    have : _ ≤ M := le_ciSup bdd x
-    rwa [rayleighQuotient, abs_div, abs_sq, reApplyInnerSelf, div_le_iff₀] at this
-    rwa [sq_pos_iff, norm_ne_zero_iff]
+  have nonneg : 0 ≤ M := le_ciSup_of_le T.bddAbove_rayleighQuotient 0 (abs_nonneg _)
+  replace hM x : |re ⟪T x, x⟫_𝕜| ≤ M * ‖x‖ ^ 2 := by
+    have hM : |T.rayleighQuotient x| ≤ M := le_ciSup T.bddAbove_rayleighQuotient x
+    by_cases hx : 0 < ‖x‖ ^ 2
+    · rwa [rayleighQuotient, abs_div, abs_sq, reApplyInnerSelf, div_le_iff₀ hx] at hM
+    · simp_all
   refine le_antisymm ?_ (ciSup_le T.rayleighQuotient_le_norm)
   refine opNorm_le_of_unit_norm nonneg fun x hx ↦ ?_
-  have key x y : 4 * RCLike.re ⟪T x, y⟫_𝕜 =
-      RCLike.re ⟪T (x + y), x + y⟫_𝕜 - RCLike.re ⟪T (x - y), x - y⟫_𝕜 := by
-    have key := RCLike.add_conj ⟪T x, y⟫_𝕜
-    rw [conj_inner_symm, ← hT.adjoint_eq, adjoint_inner_right, hT.adjoint_eq] at key
-    replace key := congrArg RCLike.re key
-    rw [map_add, ← RCLike.ofReal_ofNat, RCLike.re_ofReal_mul, RCLike.ofReal_re] at key
-    grind [inner_add_left, inner_add_right, inner_sub_left, inner_sub_right]
-  replace key x y : |4 * RCLike.re ⟪T x, y⟫_𝕜| ≤ M * (‖x + y‖ ^ 2 + ‖x - y‖ ^ 2) := by
-    grw [key, abs_sub, hM, hM, ← mul_add]
-  replace key x y (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : |RCLike.re ⟪T x, y⟫_𝕜| ≤ M := by
-    specialize key x y
-    rw [sq, sq, parallelogram_law_with_norm 𝕜 x y, hx, hy] at key
-    grind
+  have key x y (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : |re ⟪T x, y⟫_𝕜| ≤ M := by
+    transitivity M * (‖x + y‖ ^ 2 + ‖x - y‖ ^ 2) / 4
+    · have key := congrArg re (add_conj ⟪T x, y⟫_𝕜)
+      rw [map_add, conj_inner_symm, ← coe_coe, ← hT, coe_coe, re_mul_ofReal, ofNat_re] at key
+      grind [inner_add_left, inner_add_right, inner_sub_left, inner_sub_right]
+    · rw [parallelogram_law_with_norm_sq 𝕜 x y, hx, hy]
+      grind
   by_cases hTx : ‖T x‖ = 0
   · rwa [hTx]
   specialize key x (((‖T x‖⁻¹ : ℝ) : 𝕜) • T x) hx (by simp [norm_smul, hTx])
-  rwa [inner_smul_right, RCLike.re_ofReal_mul, abs_mul, abs_inv, abs_norm, inv_mul_eq_div,
-    inner_self_eq_norm_sq_to_K, RCLike.re_ofReal_pow, abs_sq, sq,
-    mul_div_cancel_left₀ _ hTx] at key
+  rwa [inner_smul_right, inner_self_eq_norm_sq_to_K, ← ofReal_pow, ← ofReal_mul, ofReal_re,
+    inv_mul_eq_div, sq, mul_self_div_self, abs_norm] at key
 
 end ContinuousLinearMap
 
