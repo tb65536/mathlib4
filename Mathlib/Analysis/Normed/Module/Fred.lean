@@ -44,6 +44,11 @@ theorem ContinuousLinearMap.rayleighQuotient_apply_neg {𝕜 E : Type*} [RCLike 
     rayleighQuotient T (-x) = rayleighQuotient T x := by
   simp [rayleighQuotient, reApplyInnerSelf_apply]
 
+theorem resolventSet_neg (R : Type*) {A : Type*} [CommRing R] [Ring A] [Algebra R A] (a : A) :
+    resolventSet R (-a) = -resolventSet R a := by
+  simp_rw [Set.ext_iff, Set.mem_neg, spectrum.mem_resolventSet_iff, sub_neg_eq_add, map_neg,
+    ← neg_add', IsUnit.neg_iff, implies_true]
+
 namespace ContinuousLinearMap
 
 open InnerProductSpace RCLike
@@ -112,10 +117,8 @@ theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
   · apply le_opNorm
 
 theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
-    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
-    [InnerProductSpace 𝕜 X] {T : X →L[𝕜] X}
-    (t : ℝ) (ht : 0 < t)
-    (hT' : (algebraMap ℝ 𝕜) t ∈ resolventSet 𝕜 T) :
+    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [InnerProductSpace 𝕜 X]
+    {T : X →L[𝕜] X} (t : ℝ) (ht : 0 < t) (hT' : (algebraMap ℝ 𝕜) t ∈ resolventSet 𝕜 T) :
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ (t ^ 2 + ‖T‖ ^ 2) / (2 * t) - c := by
   by_cases hT0 : T = 0
   · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0]⟩
@@ -134,56 +137,46 @@ theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
   simp [field]
   grind
 
-theorem ContinuousLinearMap.foo'' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [Nontrivial X]
-    [InnerProductSpace 𝕜 X] {T : X →L[𝕜] X}
-    (hT' : (algebraMap ℝ 𝕜) ‖T‖ ∈ resolventSet 𝕜 T) :
+theorem ContinuousLinearMap.rayleighQuotient_le_of_norm_mem_resolventSet
+    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [Nontrivial X] [InnerProductSpace 𝕜 X]
+    {T : X →L[𝕜] X} (hT' : algebraMap ℝ 𝕜 ‖T‖ ∈ resolventSet 𝕜 T) :
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ ‖T‖ - c := by
   by_cases hT0 : T = 0
   · simp [hT0, spectrum.mem_resolventSet_iff] at hT'
-  obtain ⟨c, hc0, hc⟩ := ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
-    ‖T‖ (norm_pos_iff.mpr hT0) hT'
+  obtain ⟨c, hc0, hc⟩ := T.rayleighQuotient_le_of_mem_resolventSet ‖T‖ (by positivity) hT'
   refine ⟨c, hc0, fun x ↦ ?_⟩
-  specialize hc x
-  have : 0 < ‖T‖ := norm_pos_iff.mpr hT0
   grw [hc]
   field_simp
   grind
 
-theorem ContinuousLinearMap.foo''' {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [Nontrivial X]
-    [InnerProductSpace 𝕜 X] {T : X →L[𝕜] X}
-    (hT' : (algebraMap ℝ 𝕜) ‖T‖ ∈ resolventSet 𝕜 T)
-    (hT'' : (algebraMap ℝ 𝕜) (-‖T‖) ∈ resolventSet 𝕜 T) :
+theorem ContinuousLinearMap.abs_rayleighQuotient_le_of_norm_mem_resolventSet
+    {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X] [Nontrivial X] [InnerProductSpace 𝕜 X]
+    {T : X →L[𝕜] X} (hT' : algebraMap ℝ 𝕜 ‖T‖ ∈ resolventSet 𝕜 T)
+      (hT'' : algebraMap ℝ 𝕜 (-‖T‖) ∈ resolventSet 𝕜 T) :
     ∃ c > 0, ∀ x, |T.rayleighQuotient x| ≤ ‖T‖ - c := by
   replace hT'' : (algebraMap ℝ 𝕜) (‖-T‖) ∈ resolventSet 𝕜 (-T) := by
-    simp [spectrum.mem_resolventSet_iff] at hT'' ⊢
-    rw [← IsUnit.neg_iff, neg_add']
-    exact hT''
-  obtain ⟨c, hc0, hc⟩ := ContinuousLinearMap.foo'' hT'
-  obtain ⟨d, hd0, hd⟩ := ContinuousLinearMap.foo'' hT''
+    rwa [resolventSet_neg, Set.mem_neg, ← map_neg, norm_neg]
+  obtain ⟨c, hc0, hc⟩ := T.rayleighQuotient_le_of_norm_mem_resolventSet hT'
+  obtain ⟨d, hd0, hd⟩ := (-T).rayleighQuotient_le_of_norm_mem_resolventSet hT''
   refine ⟨min c d, lt_min hc0 hd0, fun x ↦ ?_⟩
   specialize hc x
   specialize hd x
-  simp [rayleighQuotient_neg_apply] at hd
+  rw [rayleighQuotient_neg_apply, norm_neg] at hd
   grind
 
 theorem ContinuousLinearMap.spectralRadius_eq_nnnorm
     {𝕜 X : Type*} [RCLike 𝕜] [NormedAddCommGroup X]
     [InnerProductSpace 𝕜 X] [CompleteSpace X] {T : X →L[𝕜] X} (hT : IsSelfAdjoint T) :
     spectralRadius 𝕜 T = ‖T‖₊ := by
-  by_cases hT0 : T = 0
-  · simp [hT0]
-  have : Nontrivial X := by
-    contrapose! hT0
-    exact Subsingleton.eq_zero T
+  cases subsingleton_or_nontrivial X
+  · simp
   apply le_antisymm (spectrum.spectralRadius_le_nnnorm T)
   suffices h : algebraMap ℝ 𝕜 ‖T‖ ∈ spectrum 𝕜 T ∨ algebraMap ℝ 𝕜 (-‖T‖) ∈ spectrum 𝕜 T by
     rcases h with h | h <;> exact le_trans (by simp) (le_biSup _ h)
   simp_rw [spectrum, Set.mem_compl_iff]
   by_contra! h
-  obtain ⟨c, hc0, hc⟩ := ContinuousLinearMap.foo''' h.1 h.2
-  have := ciSup_le hc
-  have := norm_eq_iSup_rayleighQuotient T hT.isSymmetric
-  grind
+  obtain ⟨c, hc0, hc⟩ := T.abs_rayleighQuotient_le_of_norm_mem_resolventSet h.1 h.2
+  grind [ciSup_le hc, norm_eq_iSup_rayleighQuotient T hT.isSymmetric]
 
 end pain
 
