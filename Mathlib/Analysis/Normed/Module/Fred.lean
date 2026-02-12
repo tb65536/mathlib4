@@ -170,7 +170,7 @@ theorem ContinuousLinearMap.spectralRadius_eq_nnnorm
     spectralRadius 𝕜 T = ‖T‖₊ := by
   cases subsingleton_or_nontrivial X
   · simp
-  apply le_antisymm (spectrum.spectralRadius_le_nnnorm T)
+  apply le_antisymm (spectrum.spectralRadius_le_nnnorm T) -- does this actually require complete?
   suffices h : algebraMap ℝ 𝕜 ‖T‖ ∈ spectrum 𝕜 T ∨ algebraMap ℝ 𝕜 (-‖T‖) ∈ spectrum 𝕜 T by
     rcases h with h | h <;> exact le_trans (by simp) (le_biSup _ h)
   simp_rw [spectrum, Set.mem_compl_iff]
