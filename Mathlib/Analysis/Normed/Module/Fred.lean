@@ -29,11 +29,6 @@ theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
   apply antilipschitz_of_isEmbedding T (T.isHomeomorph_of_isUnit hT).isEmbedding
 
 -- PRed
-@[rclike_simps]
-theorem RCLike.re_mul_ofReal {K : Type*} [RCLike K] (z : K) (r : ℝ) : re (z * ↑r) = re z * r := by
-  rw [mul_comm, re_ofReal_mul, mul_comm]
-
--- PRed
 theorem parallelogram_law_with_norm_sq (𝕜 : Type*) {E : Type*}
     [RCLike 𝕜] [SeminormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x y : E) :
     ‖x + y‖ ^ 2 + ‖x - y‖ ^ 2 = 2 * (‖x‖ ^ 2 + ‖y‖ ^ 2) := by
