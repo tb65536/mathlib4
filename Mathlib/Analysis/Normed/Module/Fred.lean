@@ -9,6 +9,7 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
+-- PRed
 theorem ContinuousLinearMap.isHomeomorph_of_isUnit
     {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
     [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
@@ -67,7 +68,7 @@ open InnerProductSpace RCLike
 
 variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
 
--- waiting on #35173
+-- waiting on parallelogram law
 theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
     ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
   set M := ⨆ x, |T.rayleighQuotient x|
@@ -244,6 +245,22 @@ theorem ContinuousLinearMap.isCompactOperator_one_iff_finiteDimensional
     [CompleteSpace 𝕜] [LocallyCompactSpace 𝕜] :
     IsCompactOperator (1 : E →L[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
   exact LinearMap.isCompactOperator_one_iff_finiteDimensional
+
+theorem ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
+    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
+    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
+    (f : M →L[R] M)
+    (μ : R) (n : ℕ) : IsClosed (genEigenspace (f : Module.End R M) μ n : Set M) := by
+  rw [genEigenspace_nat, one_eq_id, ← coe_id, ← coe_smul, ← coe_sub, ← coe_pow]
+  apply ContinuousLinearMap.isClosed_ker
+
+theorem ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
+    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
+    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
+    (f : M →L[R] M)
+    (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) := by
+  rw [Module.End.eigenspace_def]
+  exact (f - μ • (1 : M →L[R] M) : M →L[R] M).isClosed_ker
 
 theorem spectral_theorem' (hT : IsCompactOperator T) (hT' : T.IsSymmetric) (μ : 𝕜) (hμ : μ ≠ 0) :
     FiniteDimensional 𝕜 (eigenspace (T : Module.End 𝕜 X) μ) := by
