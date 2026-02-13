@@ -246,28 +246,24 @@ theorem ContinuousLinearMap.isCompactOperator_one_iff_finiteDimensional
     IsCompactOperator (1 : E →L[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
   exact LinearMap.isCompactOperator_one_iff_finiteDimensional
 
-theorem ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
+instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
     [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
     [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
     (f : M →L[R] M)
     (μ : R) (n : ℕ) : IsClosed (genEigenspace (f : Module.End R M) μ n : Set M) := by
   rw [genEigenspace_nat, one_eq_id, ← coe_id, ← coe_smul, ← coe_sub, ← coe_pow]
+  -- fix PRed
   apply ContinuousLinearMap.isClosed_ker
 
-theorem ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
+instance ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
     [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
     [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
     (f : M →L[R] M)
-    (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) := by
-  rw [Module.End.eigenspace_def]
-  exact (f - μ • (1 : M →L[R] M) : M →L[R] M).isClosed_ker
+    (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) :=
+  isClosed_genEigenspace f μ 1
 
 theorem spectral_theorem' (hT : IsCompactOperator T) (hT' : T.IsSymmetric) (μ : 𝕜) (hμ : μ ≠ 0) :
     FiniteDimensional 𝕜 (eigenspace (T : Module.End 𝕜 X) μ) := by
-  -- this should be a lemma...
-  have : IsClosed (eigenspace (T : Module.End 𝕜 X) μ : Set X) := by
-    rw [Module.End.eigenspace_def]
-    exact (T - μ • 1).isClosed_ker
   have inv : ∀ x ∈ eigenspace (T : Module.End 𝕜 X) μ, T x ∈ eigenspace (T : Module.End 𝕜 X) μ := by
     intro x hx
     rw [mem_eigenspace_iff, ContinuousLinearMap.coe_coe] at hx ⊢
