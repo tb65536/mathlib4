@@ -21,12 +21,6 @@ theorem ContinuousLinearMap.isHomeomorph_of_isUnit
     right_inv x := by rw [← mul_apply, Units.mul_inv, one_apply] }
   exact f.isHomeomorph
 
-theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
-    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
-    [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
-    ∃ K, AntilipschitzWith K T := by
-  apply antilipschitz_of_isEmbedding T (T.isHomeomorph_of_isUnit hT).isEmbedding
-
 -- PRed, with name change
 theorem parallelogram_law_with_norm_sq (𝕜 : Type*) {E : Type*}
     [RCLike 𝕜] [SeminormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x y : E) :
@@ -117,7 +111,7 @@ theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
   by_cases hT0 : T = 0
   · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0]⟩
   obtain ⟨c, hc0, hc⟩ := (antilipschitzWith_iff_exists_mul_le_mul _).mp
-    (exists_lower_bound_of_isUnit hT')
+    (antilipschitz_of_isEmbedding _ (isHomeomorph_of_isUnit hT').isEmbedding)
   refine ⟨min (c ^ 2 / (2 * t)) ((t ^ 2 + ‖T‖ ^ 2) / (2 * t)), by positivity, fun x ↦ ?_⟩
   by_cases hx : x = 0
   · simp [hx]
