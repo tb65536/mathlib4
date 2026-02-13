@@ -9,20 +9,24 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
+theorem ContinuousLinearMap.isHomeomorph_of_isUnit
+    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
+    [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
+    IsHomeomorph T := by
+  obtain ⟨u, rfl⟩ := hT
+  let f : X ≃ₜ X :=
+  { toFun := u.1
+    invFun := u⁻¹.1
+    left_inv x := by rw [← mul_apply, Units.inv_mul, one_apply]
+    right_inv x := by rw [← mul_apply, Units.mul_inv, one_apply] }
+  exact f.isHomeomorph
+
 -- PRed
 theorem ContinuousLinearMap.exists_lower_bound_of_isUnit
     {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
     [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
-    ∃ c > 0, ∀ x, c * ‖x‖ ≤ ‖T x‖ := by
-  cases subsingleton_or_nontrivial X
-  · refine ⟨1, one_pos, fun x ↦ ?_⟩
-    rw [one_mul, Subsingleton.elim (T x) x]
-  obtain ⟨u, hu⟩ := hT
-  refine ⟨‖u⁻¹.1‖⁻¹, by simp, fun x ↦ ?_⟩
-  rw [inv_mul_le_iff₀ (by simp)]
-  transitivity ‖u⁻¹.1 (T x)‖
-  · rw [← hu, ← mul_apply, Units.inv_mul, one_apply]
-  · apply le_opNorm
+    ∃ K, AntilipschitzWith K T := by
+  apply antilipschitz_of_isEmbedding T (T.isHomeomorph_of_isUnit hT).isEmbedding
 
 -- PRed
 @[rclike_simps]
@@ -129,7 +133,16 @@ theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ (t ^ 2 + ‖T‖ ^ 2) / (2 * t) - c := by
   by_cases hT0 : T = 0
   · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0]⟩
-  obtain ⟨c, hc0, hc⟩ := exists_lower_bound_of_isUnit hT'
+  -- these next few lines should be API for `AntiLipschitzWith`
+  obtain ⟨K, hK⟩ := exists_lower_bound_of_isUnit hT'
+  have := hK.le_mul_norm (map_zero _)
+  set c : ℝ := (K + 1)⁻¹ with hcK
+  have hc0 : c > 0 := by positivity
+  have hc : ∀ x, c * ‖x‖ ≤ ‖((algebraMap 𝕜 (X →L[𝕜] X)) ((algebraMap ℝ 𝕜) t) - T) x‖ := by
+    intro x
+    grw [hK.le_mul_norm (map_zero _) x, ← mul_assoc]
+    apply mul_le_of_le_one_left (norm_nonneg _)
+    grind
   refine ⟨min (c ^ 2 / (2 * t)) ((t ^ 2 + ‖T‖ ^ 2) / (2 * t)), by positivity, fun x ↦ ?_⟩
   by_cases hx : x = 0
   · simp [hx]
@@ -141,7 +154,7 @@ theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
     norm_sub_sq (𝕜 := 𝕜), inner_re_symm] at hc
   grw [le_opNorm] at hc
   simp [inner_smul_right, norm_smul, abs_of_pos ht] at hc
-  simp [field]
+  field_simp
   grind
 
 theorem ContinuousLinearMap.rayleighQuotient_le_of_norm_mem_resolventSet
