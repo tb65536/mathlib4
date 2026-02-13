@@ -74,17 +74,6 @@ open InnerProductSpace RCLike
 
 variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
 
--- PRed
-theorem rayleighQuotient_le_norm (x : E) :
-    |T.rayleighQuotient x| ≤ ‖T‖ := by
-  grw [rayleighQuotient, reApplyInnerSelf_apply, abs_div, abs_sq, abs_re_le_norm,
-    norm_inner_le_norm, le_opNorm, mul_assoc, ← sq, mul_div_assoc]
-  exact mul_le_of_le_one_right T.opNorm_nonneg (div_self_le_one (‖x‖ ^ 2))
-
--- PRed
-theorem bddAbove_rayleighQuotient : BddAbove (Set.range fun x ↦ |T.rayleighQuotient x|) :=
-  ⟨‖T‖, fun _ ⟨y, h⟩ ↦ h ▸ T.rayleighQuotient_le_norm y⟩
-
 -- waiting on #35173
 theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
     ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
