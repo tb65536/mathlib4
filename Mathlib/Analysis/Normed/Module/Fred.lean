@@ -111,7 +111,7 @@ theorem ContinuousLinearMap.rayleighQuotient_le_of_mem_resolventSet
     ∃ c > 0, ∀ x, T.rayleighQuotient x ≤ (t ^ 2 + ‖T‖ ^ 2) / (2 * t) - c := by
   by_cases hT0 : T = 0
   · exact ⟨t ^ 2 / (2 * t), by positivity, by simp [hT0]⟩
-  obtain ⟨c, hc0, hc⟩ := (antilipschitzWith_iff_exists_mul_le_mul _).mp
+  obtain ⟨c, hc0, hc⟩ := antilipschitzWith_iff_exists_mul_le_norm.mp
     (antilipschitz_of_isEmbedding _ (isHomeomorph_of_isUnit hT').isEmbedding)
   refine ⟨min (c ^ 2 / (2 * t)) ((t ^ 2 + ‖T‖ ^ 2) / (2 * t)), by positivity, fun x ↦ ?_⟩
   by_cases hx : x = 0
