@@ -48,9 +48,12 @@ open scoped Real
 
 attribute [fun_prop] Differentiable.const_cpow
 
-theorem logDeriv_Gammaℝ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -2 * n) :
+theorem logDeriv_Gammaℝ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -(2 * n)) :
     logDeriv Gammaℝ s = (digamma (s / 2) - Real.log π) / 2 := by
-  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by grind
+  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by
+    intro k
+    specialize hs k
+    grind
   change logDeriv (fun s ↦ π ^ (-s / 2) * (Gamma ∘ (· / 2)) s) s = _
   rw [logDeriv_mul, logDeriv_const_cpow, logDeriv_comp, digamma_def, ofReal_log]
   · simp
@@ -75,11 +78,18 @@ theorem logDeriv_Gammaℂ (s : ℂ) (hs : ∀ n : ℕ, s ≠ -n) :
 theorem Gammaℂ_ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : s.Gammaℂ ≠ 0 := by
   simp [Gammaℂ, Gamma_ne_zero_of_re_pos hs]
 
--- ought to be differentiableOn
 @[fun_prop]
-theorem differentiableAt_Gammaℝ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -2 * n) :
+theorem differentiableAt_Gammaℝ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -(2 * n)) :
     DifferentiableAt ℂ Gammaℝ s := by
-  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by grind
+  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by
+    intro k
+    specialize hs k
+    grind
+  apply DifferentiableAt.mul <;> fun_prop (disch := simp [hs])
+
+@[fun_prop]
+theorem differentiableAt_Gammaℂ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -n) :
+    DifferentiableAt ℂ Gammaℂ s := by
   apply DifferentiableAt.mul <;> fun_prop (disch := simp [hs])
 
 end Complex
@@ -140,35 +150,19 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
         nrComplexPlaces K * (s.digamma - (2 * π).log) + logDeriv (dedekindZeta K) s := by
   let U : Set ℂ := {s | 1 < s.re}
   have hU : IsOpen U := isOpen_lt continuous_const Complex.continuous_re
-  have hs1 :  ∀ (n : ℕ), s ≠ -n := by rintro n rfl; simp at hs; grind
-  have hs2 :  ∀ (n : ℕ), s ≠ -2 * n := by rintro n rfl; simp at hs; grind
-  rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s (by grind)]
-  have h1 : ((|discr K| : ℤ) : ℂ) ≠ 0 := by simp [discr_ne_zero]
-  have h2 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
-  have h3 : s.Gammaℂ ≠ 0 := Complex.Gammaℂ_ne_zero_of_re_pos (one_pos.trans hs)
-  have h4 : dedekindZeta K s ≠ 0 := sorry
-  have h5 : ((|discr K| : ℤ) : ℂ) ^ (s / 2) ≠ 0 := Complex.cpow_ne_zero' h1
-  have h6 : s.Gammaℝ ^ nrRealPlaces K ≠ 0 := pow_ne_zero _ h2
-  have h7 : s.Gammaℂ ^ nrComplexPlaces K ≠ 0 := pow_ne_zero _ h3
-  have h12 : Differentiable ℂ (fun s : ℂ ↦ s / 2) := by fun_prop
-  have h8 : DifferentiableAt ℂ (fun s : ℂ ↦ ((|discr K| : ℤ) : ℂ) ^ (s / 2)) s := by
-    fun_prop (disch := simp [discr_ne_zero])
-  have h13 : DifferentiableAt ℂ Complex.Gammaℝ s := sorry
-  have h9 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℝ ^ nrRealPlaces K) s := by fun_prop
-  have h14 : DifferentiableAt ℂ Complex.Gammaℂ s := sorry
-  have h10 : DifferentiableAt ℂ (fun s : ℂ ↦ s.Gammaℂ ^ nrComplexPlaces K) s := by fun_prop
-  have h11 : DifferentiableAt ℂ (dedekindZeta K) s := sorry -- ((h8.mul h9).mul h10)
-  rw [logDeriv_mul s (by exact mul_ne_zero (mul_ne_zero h5 h6) h7) h4
-    (by exact (h8.mul h9).mul h10) h11]
-  rw [logDeriv_mul s (by exact mul_ne_zero h5 h6) h7 (by exact h8.mul h9) h10]
-  rw [logDeriv_mul s h5 h6 h8 h9]
-  rw [Complex.logDeriv_const_cpow (h12 s), deriv_div_const, logDeriv_fun_pow h13,
-    logDeriv_fun_pow h14, Complex.logDeriv_Gammaℝ, Complex.logDeriv_Gammaℂ,
-    ← Complex.ofReal_intCast, ← Complex.ofReal_log, Int.cast_abs, log_abs,
-    deriv_id'', one_div, ← div_eq_mul_inv]
-  · simp
-  · exact hs1
-  · exact hs2
+  have hsℝ :  ∀ (n : ℕ), s ≠ -(2 * n) := by rintro n rfl; simp at hs; grind
+  have hsℂ :  ∀ (n : ℕ), s ≠ -n := by rintro n rfl; simp at hs; grind
+  have hsℝ0 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
+  have hsℂ0 : s.Gammaℂ ≠ 0 := Complex.Gammaℂ_ne_zero_of_re_pos (one_pos.trans hs)
+  have h1 : dedekindZeta K s ≠ 0 := sorry
+  have h2 : DifferentiableAt ℂ (dedekindZeta K) s := sorry
+  rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s hs]
+  rw [logDeriv_mul, logDeriv_mul, logDeriv_mul, Complex.logDeriv_const_cpow, deriv_div_const,
+    deriv_id'', one_div, logDeriv_fun_pow, Complex.logDeriv_Gammaℝ s hsℝ, logDeriv_fun_pow,
+    Complex.logDeriv_Gammaℂ s hsℂ, ← Complex.ofReal_intCast, ← Complex.ofReal_log, Int.cast_abs,
+    log_abs, ← div_eq_mul_inv]
+  any_goals simp [discr_ne_zero, hsℝ0, hsℂ0, h1]
+  any_goals fun_prop (disch := simp [discr_ne_zero, hsℝ, hsℂ])
 
 theorem two_mul_logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
     2 * logDeriv (completedDedekindZeta K) s =
