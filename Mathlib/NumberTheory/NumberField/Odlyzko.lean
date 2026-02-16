@@ -193,7 +193,8 @@ theorem tada (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (h�
       (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t)) := by
   sorry
 
--- actually, define type of nontrivial zeros and phrase in terms of `HasSum`?
+-- actually, assume positivity on all nontrivial zeros and immediately prove inequality
+-- this should avoid hairy convergence issues
 theorem contourIntegral_eq (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
     (2 * π)⁻¹ * ∫ t : ℝ, logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) =
       - Φ 0 - Φ 1 + 0 := by
@@ -201,31 +202,4 @@ theorem contourIntegral_eq (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) 
 
 end Odlyzko
 
-
-
-
 end NumberField
-
-section
-
-noncomputable def MeasureTheory.mul_convolution
-    {𝕜 G E E' F : Type*}
-    [NormedAddCommGroup E] [NormedAddCommGroup E'] [NormedAddCommGroup F]
-    [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] [NormedSpace 𝕜 E'] [NormedSpace 𝕜 F]
-    [MeasurableSpace G] [NormedSpace ℝ F] [Inv G] [Mul G] (f : G → E) (g : G → E')
-    (L : E →L[𝕜] E' →L[𝕜] F) (μ : Measure G := by volume_tac) :
-    G → F :=
-  fun x ↦ ∫ (t : G), (L (f t)) (g (t⁻¹ * x)) ∂μ
-
-noncomputable def MeasureTheory.add_convolution
-    {𝕜 G E E' F : Type*}
-    [NormedAddCommGroup E] [NormedAddCommGroup E'] [NormedAddCommGroup F]
-    [NontriviallyNormedField 𝕜] [NormedSpace 𝕜 E] [NormedSpace 𝕜 E'] [NormedSpace 𝕜 F]
-    [MeasurableSpace G] [NormedSpace ℝ F] [Neg G] [Add G] (f : G → E) (g : G → E')
-    (L : E →L[𝕜] E' →L[𝕜] F) (μ : Measure G := by volume_tac) :
-    G → F :=
-  fun x ↦ ∫ (t : G), (L (f t)) (g (- t + x)) ∂μ
-
-attribute [to_additive existing] MeasureTheory.mul_convolution
-
-end
