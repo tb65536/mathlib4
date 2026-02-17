@@ -94,7 +94,7 @@ theorem differentiableAt_Gammaℂ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -n) :
 
 end Complex
 
-namespace NumberField -- dedekind zeta function
+namespace NumberField
 
 variable (K : Type*) [Field K] [NumberField K]
 
@@ -109,15 +109,30 @@ theorem differentiableAt_dedekindZeta {s : ℂ} (hs : s ≠ 1) :
     DifferentiableAt ℂ (dedekindZeta K) s :=
   sorry
 
-theorem meromorphic_dedekindZeta : Meromorphic (dedekindZeta K) :=
+theorem differentiableOn_dedekindZeta : DifferentiableOn ℂ (dedekindZeta K) {1}ᶜ := by
+  intro s hs
+  exact (differentiableAt_dedekindZeta K hs).differentiableWithinAt
+
+theorem meromorphicAt_dedekindZeta_one : MeromorphicAt (dedekindZeta K) 1 := by
   sorry
+
+theorem meromorphic_dedekindZeta : Meromorphic (dedekindZeta K) := by
+  intro s
+  by_cases hs : s = 1
+  · rw [hs]
+    exact meromorphicAt_dedekindZeta_one K
+  exact ((differentiableOn_dedekindZeta K).analyticOnNhd isOpen_compl_singleton s hs).meromorphicAt
 
 -- this is eventually needed (or rather, the Euler product)
 theorem dedekindZeta_apply {s : ℂ} (hs : 1 < s.re) :
     dedekindZeta K s = LSeries (fun n ↦ Nat.card {I : Ideal (𝓞 K) // I.absNorm = n}) s :=
   sorry
 
--- need logDeriv_dedekindZeta
+-- todo: Euler product, which implies the following:
+
+theorem dedekindZeta_ne_zero {s : ℂ} (hs : 1 < s.re) :
+    dedekindZeta K s ≠ 0 :=
+  sorry
 
 end dedekindZeta
 
@@ -128,12 +143,33 @@ open Real
 def completedDedekindZeta (K : Type*) [Field K] [NumberField K] : ℂ → ℂ :=
   sorry
 
-theorem differentiableAt_completedDedekindZeta {s : ℂ} (hs : 1 < s.re) :
+theorem differentiableAt_completedDedekindZeta {s : ℂ} (hs0 : s ≠ 0) (hs1 : s ≠ 1) :
     DifferentiableAt ℂ (completedDedekindZeta K) s :=
   sorry
 
-theorem meromorphic_completedDedekindZeta : Meromorphic (completedDedekindZeta K) :=
+theorem differentiableOn_completedDedekindZeta :
+    DifferentiableOn ℂ (completedDedekindZeta K) {0, 1}ᶜ := by
+  intro s hs
+  rw [Set.mem_compl_iff, Set.mem_insert_iff, Set.mem_singleton_iff, not_or] at hs
+  exact (differentiableAt_completedDedekindZeta K hs.1 hs.2).differentiableWithinAt
+
+theorem meromorphicAt_completedDedekindZeta_zero : MeromorphicAt (completedDedekindZeta K) 0 := by
   sorry
+
+theorem meromorphicAt_completedDedekindZeta_one : MeromorphicAt (completedDedekindZeta K) 1 := by
+  sorry
+
+theorem meromorphic_completedDedekindZeta : Meromorphic (completedDedekindZeta K) := by
+  intro s
+  by_cases hs0 : s = 0
+  · rw [hs0]
+    exact meromorphicAt_completedDedekindZeta_zero K
+  by_cases hs1 : s = 1
+  · rw [hs1]
+    exact meromorphicAt_completedDedekindZeta_one K
+  refine ((differentiableOn_completedDedekindZeta K).analyticOnNhd ?_ s ?_).meromorphicAt
+  · simp
+  · simp [hs0, hs1]
 
 theorem completedDedekindZeta_one_sub (s : ℂ) :
     completedDedekindZeta K (1 - s) = completedDedekindZeta K s := by
@@ -155,7 +191,8 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
   have hsℝ0 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
   have hsℂ0 : s.Gammaℂ ≠ 0 := Complex.Gammaℂ_ne_zero_of_re_pos (one_pos.trans hs)
   have h1 : dedekindZeta K s ≠ 0 := sorry
-  have h2 : DifferentiableAt ℂ (dedekindZeta K) s := sorry
+  have h2 : DifferentiableAt ℂ (dedekindZeta K) s :=
+    differentiableAt_dedekindZeta K (by contrapose! hs; simp [hs])
   rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s hs]
   rw [logDeriv_mul, logDeriv_mul, logDeriv_mul, Complex.logDeriv_const_cpow, deriv_div_const,
     deriv_id'', one_div, logDeriv_fun_pow, Complex.logDeriv_Gammaℝ s hsℝ, logDeriv_fun_pow,
