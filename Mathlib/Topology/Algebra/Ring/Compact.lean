@@ -148,6 +148,7 @@ end IsDedekindDomain
 
 section CompactHausdorff
 
+-- PRed
 open Pointwise in
 def Ideal.connectedComponentOfZero
     (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] : Ideal R where
@@ -161,6 +162,7 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
+-- PRed
 theorem subsingleton_of_connected_totallyDisconnected
     {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDisconnectedSpace α] :
     Subsingleton α := by
@@ -168,22 +170,6 @@ theorem subsingleton_of_connected_totallyDisconnected
   rw [← Set.singleton_eq_singleton_iff,
     ← connectedComponent_eq_singleton, ← connectedComponent_eq_singleton,
     PreconnectedSpace.connectedComponent_eq_univ, PreconnectedSpace.connectedComponent_eq_univ]
-
-open Pointwise in
-@[to_additive]
-theorem connectedComponent_smul
-    {G : Type*} [Group G] [TopologicalSpace G] [ContinuousMul G] (g h : G) :
-    g • connectedComponent h = connectedComponent (g * h) :=
-  Topology.IsQuotientMap.image_connectedComponent (Homeomorph.mulLeft g).isQuotientMap
-    (by simp [isConnected_singleton]) h
-
-@[to_additive]
-theorem totallyDisconnectedSpace_iff_connectedComponent_one
-    {G : Type*} [Group G] [TopologicalSpace G] [ContinuousMul G] :
-    TotallyDisconnectedSpace G ↔ connectedComponent (1 : G) = {1} := by
-  refine ⟨fun _ ↦ connectedComponent_eq_singleton 1,
-    fun h ↦ totallyDisconnectedSpace_iff_connectedComponent_singleton.mpr fun g ↦ ?_⟩
-  rw [← mul_one g, ← connectedComponent_smul, h, Set.smul_set_singleton, smul_eq_mul]
 
 /-- A connected compact Hausdorff vector space over `𝔽_p` is trivial.
 This might sound easy, but it might require existence of continuous characters.
