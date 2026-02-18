@@ -216,29 +216,6 @@ theorem spectral_theorem (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
   specialize hS 0
   simp [h] at hS
 
--- PRed
-theorem isCompactOperator_id_iff_locallyCompactSpace
-    {G : Type*} [AddGroup G] [TopologicalSpace G] [IsTopologicalAddGroup G] :
-    IsCompactOperator (id : G → G) ↔ LocallyCompactSpace G :=
-  ⟨fun ⟨_, hK, hK0⟩ ↦ hK.locallyCompactSpace_of_mem_nhds_of_addGroup hK0,
-    fun _ ↦ exists_compact_mem_nhds 0⟩
-
--- PRed
-theorem LinearMap.isCompactOperator_one_iff_finiteDimensional {𝕜 E : Type*}
-    [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace 𝕜]
-    [LocallyCompactSpace 𝕜] :
-    IsCompactOperator (1 : E →ₗ[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
-  rw [Module.End.coe_one, isCompactOperator_id_iff_locallyCompactSpace]
-  exact ⟨fun _ ↦ FiniteDimensional.of_locallyCompactSpace 𝕜,
-    fun h ↦ LocallyCompactSpace.of_finiteDimensional_of_complete 𝕜 E⟩
-
--- PRed
-theorem ContinuousLinearMap.isCompactOperator_one_iff_finiteDimensional
-    {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E]
-    [CompleteSpace 𝕜] [LocallyCompactSpace 𝕜] :
-    IsCompactOperator (1 : E →L[𝕜] E) ↔ FiniteDimensional 𝕜 E := by
-  exact LinearMap.isCompactOperator_one_iff_finiteDimensional
-
 instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
     [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
     [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
@@ -255,7 +232,7 @@ instance ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
     (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) :=
   isClosed_genEigenspace f μ 1
 
-theorem spectral_theorem' (hT : IsCompactOperator T) (hT' : T.IsSymmetric) (μ : 𝕜) (hμ : μ ≠ 0) :
+theorem spectral_theorem' (hT : IsCompactOperator T) (μ : 𝕜) (hμ : μ ≠ 0) :
     FiniteDimensional 𝕜 (eigenspace (T : Module.End 𝕜 X) μ) := by
   have inv : ∀ x ∈ eigenspace (T : Module.End 𝕜 X) μ, T x ∈ eigenspace (T : Module.End 𝕜 X) μ := by
     intro x hx
@@ -265,11 +242,8 @@ theorem spectral_theorem' (hT : IsCompactOperator T) (hT' : T.IsSymmetric) (μ :
     ext x
     exact mem_eigenspace_iff.mp x.2
   have h2 := hT.restrict' inv
-  have h3 := hT'.restrict_invariant inv
-  rw [this] at h2
-  replace h2 := (IsCompactOperator.smul_iff₀ hμ).mp h2
-  rw [LinearMap.isCompactOperator_one_iff_finiteDimensional] at h2
-  exact h2
+  rwa [this, LinearMap.coe_smul, IsCompactOperator.smul_iff₀ hμ,
+    coe_one, isCompactOperator_id_iff_finiteDimensional (𝕜 := 𝕜)] at h2
 
 end spectral
 
