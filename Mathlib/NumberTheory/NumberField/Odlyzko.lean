@@ -81,10 +81,7 @@ theorem Gammaℂ_ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : s.Gammaℂ ≠ 0 
 @[fun_prop]
 theorem differentiableAt_Gammaℝ {s : ℂ} (hs : ∀ n : ℕ, s ≠ -(2 * n)) :
     DifferentiableAt ℂ Gammaℝ s := by
-  replace hs : ∀ n : ℕ, s / 2 ≠ -n := by
-    intro k
-    specialize hs k
-    grind
+  replace hs : ∀ n : ℕ, s / 2 ≠ -n := forall_imp (by grind) hs
   apply DifferentiableAt.mul <;> fun_prop (disch := simp [hs])
 
 @[fun_prop]
@@ -123,7 +120,7 @@ theorem meromorphic_dedekindZeta : Meromorphic (dedekindZeta K) := by
     exact meromorphicAt_dedekindZeta_one K
   exact ((differentiableOn_dedekindZeta K).analyticOnNhd isOpen_compl_singleton s hs).meromorphicAt
 
--- this is eventually needed (or rather, the Euler product)
+-- this probably isn't needed
 theorem dedekindZeta_apply {s : ℂ} (hs : 1 < s.re) :
     dedekindZeta K s = LSeries (fun n ↦ Nat.card {I : Ideal (𝓞 K) // I.absNorm = n}) s :=
   sorry
@@ -133,6 +130,8 @@ theorem dedekindZeta_apply {s : ℂ} (hs : 1 < s.re) :
 theorem dedekindZeta_ne_zero {s : ℂ} (hs : 1 < s.re) :
     dedekindZeta K s ≠ 0 :=
   sorry
+
+-- might not need actually need Euler product (since we'll just be discarding those terms ...)
 
 end dedekindZeta
 
@@ -190,7 +189,7 @@ theorem logDeriv_completedDedekindZeta (s : ℂ) (hs : 1 < s.re) :
   have hsℂ :  ∀ (n : ℕ), s ≠ -n := by rintro n rfl; simp at hs; grind
   have hsℝ0 : s.Gammaℝ ≠ 0 := Complex.Gammaℝ_ne_zero_of_re_pos (one_pos.trans hs)
   have hsℂ0 : s.Gammaℂ ≠ 0 := Complex.Gammaℂ_ne_zero_of_re_pos (one_pos.trans hs)
-  have h1 : dedekindZeta K s ≠ 0 := sorry
+  have h1 : dedekindZeta K s ≠ 0 := dedekindZeta_ne_zero K hs
   have h2 : DifferentiableAt ℂ (dedekindZeta K) s :=
     differentiableAt_dedekindZeta K (by contrapose! hs; simp [hs])
   rw [Complex.logDeriv_congr_apply hU (completedDedekindZeta_eq_mul K) s hs]
