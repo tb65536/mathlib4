@@ -3,8 +3,10 @@ Copyright (c) 2024 Kyle Miller, Jack Cheverton. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kyle Miller, Jack Cheverton, Jeremy Tan
 -/
-import Mathlib.Order.CompleteBooleanAlgebra
-import Mathlib.Data.Fintype.Pi
+module
+
+public import Mathlib.Order.CompleteBooleanAlgebra
+public import Mathlib.Data.Fintype.Pi
 
 /-!
 # Digraphs
@@ -31,6 +33,8 @@ of digraphs on `V`.
   `CompleteAtomicBooleanAlgebra`. In other words, this is the complete lattice of spanning subgraphs
   of the complete graph.
 -/
+
+@[expose] public section
 
 open Finset Function
 
@@ -111,6 +115,7 @@ Note that `Digraph.IsSubgraph G H` should be spelled `G ≤ H`.
 protected def IsSubgraph (x y : Digraph V) : Prop :=
   ∀ ⦃v w : V⦄, x.Adj v w → y.Adj v w
 
+/-- For digraphs `G`, `H`, `G ≤ H` iff `∀ a b, G.Adj a b → H.Adj a b`. -/
 instance : LE (Digraph V) := ⟨Digraph.IsSubgraph⟩
 
 @[simp]
@@ -132,7 +137,7 @@ theorem inf_adj (x y : Digraph V) (v w : V) : (x ⊓ y).Adj v w ↔ x.Adj v w �
 
 /-- We define `Gᶜ` to be the `Digraph V` such that no two adjacent vertices in `G`
 are adjacent in the complement, and every nonadjacent pair of vertices is adjacent. -/
-instance hasCompl : HasCompl (Digraph V) where
+instance : Compl (Digraph V) where
   compl G := { Adj := fun v w ↦ ¬G.Adj v w }
 
 @[simp] theorem compl_adj (G : Digraph V) (v w : V) : Gᶜ.Adj v w ↔ ¬G.Adj v w := Iff.rfl
@@ -162,10 +167,12 @@ theorem iSup_adj {f : ι → Digraph V} : (⨆ i, f i).Adj a b ↔ ∃ i, (f i).
 @[simp]
 theorem iInf_adj {f : ι → Digraph V} : (⨅ i, f i).Adj a b ↔ (∀ i, (f i).Adj a b) := by simp [iInf]
 
-/-- For digraphs `G`, `H`, `G ≤ H` iff `∀ a b, G.Adj a b → H.Adj a b`. -/
+instance : PartialOrder (Digraph V) where
+  __ := PartialOrder.lift _ adj_injective
+  le G H := ∀ ⦃a b⦄, G.Adj a b → H.Adj a b
+
 instance distribLattice : DistribLattice (Digraph V) :=
-  { adj_injective.distribLattice Digraph.Adj (fun _ _ ↦ rfl) fun _ _ ↦ rfl with
-    le := fun G H ↦ ∀ ⦃a b⦄, G.Adj a b → H.Adj a b }
+  adj_injective.distribLattice _ .rfl .rfl (fun _ _ ↦ rfl) fun _ _ ↦ rfl
 
 instance completeAtomicBooleanAlgebra : CompleteAtomicBooleanAlgebra (Digraph V) where
   top := Digraph.completeDigraph V

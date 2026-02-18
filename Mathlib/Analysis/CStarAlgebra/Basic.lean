@@ -3,15 +3,17 @@ Copyright (c) 2021 Frédéric Dupuis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Frédéric Dupuis
 -/
-import Mathlib.Analysis.Normed.Group.Hom
-import Mathlib.Analysis.Normed.Module.Basic
-import Mathlib.Analysis.Normed.Operator.LinearIsometry
-import Mathlib.Algebra.Star.Pi
-import Mathlib.Algebra.Star.SelfAdjoint
-import Mathlib.Algebra.Star.Subalgebra
-import Mathlib.Algebra.Star.Unitary
-import Mathlib.Data.Real.Star
-import Mathlib.Topology.Algebra.Module.Star
+module
+
+public import Mathlib.Analysis.Normed.Group.Hom
+public import Mathlib.Analysis.Normed.Module.Basic
+public import Mathlib.Analysis.Normed.Operator.LinearIsometry
+public import Mathlib.Algebra.Star.Pi
+public import Mathlib.Algebra.Star.SelfAdjoint
+public import Mathlib.Algebra.Star.Subalgebra
+public import Mathlib.Algebra.Star.Unitary
+public import Mathlib.Data.Real.Star
+public import Mathlib.Topology.Algebra.Module.Star
 
 /-!
 # Normed star rings and algebras
@@ -31,6 +33,8 @@ Note that the type classes corresponding to C⋆-algebras are defined in
   definition of C*-algebras in some sources (e.g. Wikipedia).
 
 -/
+
+@[expose] public section
 
 assert_not_exists ContinuousLinearMap.hasOpNorm
 
@@ -93,6 +97,7 @@ namespace CStarRing
 
 section NonUnital
 
+set_option backward.isDefEq.respectTransparency false in
 lemma of_le_norm_mul_star_self
     [NonUnitalNormedRing E] [StarRing E]
     (h : ∀ x : E, ‖x‖ * ‖x‖ ≤ ‖x * x⋆‖) : CStarRing E :=
@@ -106,6 +111,7 @@ lemma of_le_norm_mul_star_self
 
 variable [NonUnitalNormedRing E] [StarRing E] [CStarRing E]
 
+set_option backward.isDefEq.respectTransparency false in
 -- see Note [lower instance priority]
 /-- In a C*-ring, star preserves the norm. -/
 instance (priority := 100) to_normedStarGroup : NormedStarGroup E where

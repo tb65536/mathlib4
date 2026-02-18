@@ -3,11 +3,12 @@ Copyright (c) 2020 Joseph Myers. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joseph Myers
 -/
-import Mathlib.Algebra.BigOperators.Group.Finset.Indicator
-import Mathlib.Algebra.Module.BigOperators
-import Mathlib.LinearAlgebra.AffineSpace.AffineSubspace.Basic
-import Mathlib.LinearAlgebra.Finsupp.LinearCombination
-import Mathlib.Tactic.FinCases
+module
+
+public import Mathlib.Algebra.BigOperators.Group.Finset.Indicator
+public import Mathlib.Algebra.Module.BigOperators
+public import Mathlib.LinearAlgebra.AffineSpace.AffineSubspace.Basic
+public import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 
 /-!
 # Affine combinations of points
@@ -37,6 +38,8 @@ These definitions are for sums over a `Finset`; versions for a
 * https://en.wikipedia.org/wiki/Affine_space
 
 -/
+
+@[expose] public section
 
 
 noncomputable section
@@ -347,7 +350,7 @@ hypothesis on those lemmas that require it. -/
 def affineCombination (p : ι → P) : (ι → k) →ᵃ[k] P where
   toFun w := s.weightedVSubOfPoint p (Classical.choice S.nonempty) w +ᵥ Classical.choice S.nonempty
   linear := s.weightedVSub p
-  map_vadd' w₁ w₂ := by simp_rw [vadd_vadd, weightedVSub, vadd_eq_add, LinearMap.map_add]
+  map_vadd' w₁ w₂ := by simp_rw [vadd_vadd, weightedVSub, vadd_eq_add, map_add]
 
 /-- The linear map corresponding to `affineCombination` is
 `weightedVSub`. -/
@@ -399,11 +402,13 @@ theorem affineCombination_vsub (w₁ w₂ : ι → k) (p : ι → P) :
     s.affineCombination k p w₁ -ᵥ s.affineCombination k p w₂ = s.weightedVSub p (w₁ - w₂) := by
   rw [← AffineMap.linearMap_vsub, affineCombination_linear, vsub_eq_sub]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem attach_affineCombination_of_injective [DecidableEq P] (s : Finset P) (w : P → k) (f : s → P)
     (hf : Function.Injective f) :
     s.attach.affineCombination k f (w ∘ f) = (image f univ).affineCombination k id w := by
   simp [affineCombination, hf]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem attach_affineCombination_coe (s : Finset P) (w : P → k) :
     s.attach.affineCombination k ((↑) : s → P) (w ∘ (↑)) = s.affineCombination k id w := by
   classical rw [attach_affineCombination_of_injective s w ((↑) : s → P) Subtype.coe_injective,
@@ -577,8 +582,8 @@ theorem map_affineCombination {V₂ P₂ : Type*} [AddCommGroup V₂] [Module k 
   rw [s.affineCombination_eq_weightedVSubOfPoint_vadd_of_sum_eq_one w p hw b,
     s.affineCombination_eq_weightedVSubOfPoint_vadd_of_sum_eq_one w (f ∘ p) hw b₂, ←
     s.weightedVSubOfPoint_vadd_eq_of_sum_eq_one w (f ∘ p) hw (f b) b₂]
-  simp only [weightedVSubOfPoint_apply, RingHom.id_apply, AffineMap.map_vadd,
-    LinearMap.map_smulₛₗ, AffineMap.linearMap_vsub, map_sum, Function.comp_apply]
+  simp only [weightedVSubOfPoint_apply, RingHom.id_apply, AffineMap.map_vadd, map_smulₛₗ,
+    AffineMap.linearMap_vsub, map_sum, Function.comp_apply]
 
 /-- The value of `affineCombination`, where the given points take only two values. -/
 lemma affineCombination_apply_eq_lineMap_sum [DecidableEq ι] (w : ι → k) (p : ι → P)
@@ -709,6 +714,7 @@ section AffineSpace'
 
 variable {ι k V P : Type*} [Ring k] [AddCommGroup V] [Module k V] [AffineSpace V P]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- A `weightedVSub` with sum of weights 0 is in the `vectorSpan` of
 an indexed family. -/
 theorem weightedVSub_mem_vectorSpan {s : Finset ι} {w : ι → k} (h : ∑ i ∈ s, w i = 0)

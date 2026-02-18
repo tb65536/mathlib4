@@ -3,10 +3,13 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Snir Broshi
 -/
-import Mathlib.Analysis.SpecialFunctions.Complex.Log
-import Mathlib.RingTheory.Int.Basic
-import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
-import Mathlib.Tactic.Rify
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Complex.Log
+public import Mathlib.RingTheory.Int.Basic
+public import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
+public import Mathlib.Tactic.Rify
+public import Mathlib.Tactic.Qify
 
 /-!
 # Complex roots of unity
@@ -22,6 +25,8 @@ are exactly the complex numbers `exp (2 * π * I * (i / n))` for `i ∈ Finset.r
 * `Complex.norm_rootOfUnity_eq_one`: A complex root of unity has norm `1`.
 
 -/
+
+public section
 
 
 namespace Complex
@@ -61,11 +66,12 @@ theorem isPrimitiveRoot_exp_rat_of_even_num (q : ℚ) (h : Even q.num) :
   · nth_rw 1 [← q.num_div_den, hn, Int.nsmul_eq_mul]
     push_cast
     ring_nf
-  · rw [← Int.cast_natCast, ← Rat.divInt_eq_div, ← Rat.mk_eq_divInt _ _ (by simp) ?_]
+  · rw [← Int.cast_natCast, ← Rat.divInt_eq_div, ← Rat.mk_eq_divInt (nz := by simp)]
     apply Nat.Coprime.coprime_mul_left (k := 2)
     convert q.reduced
     grind
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isPrimitiveRoot_exp_rat_of_odd_num (q : ℚ) (h : Odd q.num) :
     IsPrimitiveRoot (exp (π * I * q)) (2 * q.den) := by
   convert isPrimitiveRoot_exp_rat (q / 2) using 1
@@ -74,7 +80,8 @@ theorem isPrimitiveRoot_exp_rat_of_odd_num (q : ℚ) (h : Odd q.num) :
   · nth_rw 2 [← q.num_div_den]
     rw [mul_comm, div_div, ← Int.cast_ofNat, ← Int.cast_natCast, ← Int.cast_mul,
       ← Rat.divInt_eq_div, ← Nat.cast_ofNat (R := ℤ), ← Nat.cast_mul,
-      ← Rat.mk_eq_divInt _ _ (by simp) (Nat.Coprime.mul_right q.reduced h.natAbs.coprime_two_right)]
+      ← Rat.mk_eq_divInt (nz := by simp)
+        (c := Nat.Coprime.mul_right q.reduced h.natAbs.coprime_two_right)]
 
 theorem isPrimitiveRoot_exp (n : ℕ) (h0 : n ≠ 0) : IsPrimitiveRoot (exp (2 * π * I / n)) n := by
   simpa only [Nat.cast_one, one_div] using
@@ -152,7 +159,7 @@ theorem IsPrimitiveRoot.arg {n : ℕ} {ζ : ℂ} (h : IsPrimitiveRoot ζ n) (hn 
   rw [Complex.isPrimitiveRoot_iff _ _ hn] at h
   obtain ⟨i, h, hin, rfl⟩ := h
   rw [mul_comm, ← mul_assoc, Complex.exp_mul_I]
-  refine ⟨if i * 2 ≤ n then i else i - n, ?_, ?isCoprime, by cutsat⟩
+  refine ⟨if i * 2 ≤ n then i else i - n, ?_, ?isCoprime, by lia⟩
   case isCoprime =>
     replace hin := Nat.isCoprime_iff_coprime.mpr hin
     split_ifs
@@ -186,7 +193,7 @@ theorem IsPrimitiveRoot.arg {n : ℕ} {ζ : ℂ} (h : IsPrimitiveRoot ζ n) (hn 
     rify at h₂
     linear_combination h₂
   · rify at h
-    linear_combination 2 * h + (n:ℝ) * one_pos (α := ℝ)
+    linear_combination 2 * h + (n : ℝ) * one_pos (α := ℝ)
 
 lemma Complex.norm_eq_one_of_mem_rootsOfUnity {ζ : ℂˣ} {n : ℕ} [NeZero n]
     (hζ : ζ ∈ rootsOfUnity n ℂ) :

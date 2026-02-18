@@ -3,12 +3,14 @@ Copyright (c) 2024 María Inés de Frutos-Fernández. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: María Inés de Frutos-Fernández
 -/
-import Mathlib.Algebra.Order.GroupWithZero.Bounds
-import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
-import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
-import Mathlib.Topology.MetricSpace.Sequences
-import Mathlib.Topology.UnitInterval
-import Mathlib.Topology.Algebra.Order.LiminfLimsup
+module
+
+public import Mathlib.Algebra.Order.GroupWithZero.Bounds
+public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
+public import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
+public import Mathlib.Topology.MetricSpace.Sequences
+public import Mathlib.Topology.UnitInterval
+public import Mathlib.Topology.Algebra.Order.LiminfLimsup
 
 /-!
 # smoothingSeminorm
@@ -39,6 +41,8 @@ seminorm on `R`.
 
 smoothingSeminorm, seminorm, nonarchimedean
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -110,6 +114,7 @@ theorem tendsto_smoothingFun_of_eq_zero {x : R} (hx : μ x = 0) :
       (le_ciInf fun n => rpow_nonneg (apply_nonneg μ _) _)
   simpa only [hL0] using tendsto_atTop_of_eventually_const h0
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `μ 1 ≤ 1` and `μ x ≠ 0`, then `smoothingFun μ x` is the limit of
 `smoothingSeminormSeq μ x`. -/
 theorem tendsto_smoothingFun_of_ne_zero (hμ1 : μ 1 ≤ 1) {x : R} (hx : μ x ≠ 0) :
@@ -176,7 +181,7 @@ theorem tendsto_smoothingFun_of_ne_zero (hμ1 : μ 1 ≤ 1) {x : R} (hx : μ x �
         (μ (x ^ (m1 : ℕ)) ^ (n / (m1 : ℕ))) ^ (1 / (n : ℝ)) := by
       apply rpow_le_rpow (apply_nonneg μ _) _ (one_div_cast_nonneg _)
       rw [pow_mul]
-      exact map_pow_le_pow μ (x^(m1 : ℕ))
+      exact map_pow_le_pow μ (x ^ (m1 : ℕ))
         (pos_iff_ne_zero.mp (Nat.div_pos (le_trans (le_max_left (m1 : ℕ) m2) hn) (PNat.pos m1)))
     have hL0' : 0 < L + ε / 2 := add_pos_of_nonneg_of_pos hL0 (half_pos hε)
     /- We show that `(μ (x ^ (m1 : ℕ)) ^ (n / (m1 : ℕ))) ^ (1 / (n : ℝ)) <
@@ -285,8 +290,9 @@ private theorem mu_property (n : ℕ) : μ ((x + y) ^ (n : ℕ)) ^ (1 / (n : ℝ
   (Classical.choose_spec (hn n)).2
 
 private theorem mu_le (n : ℕ) : mu μ hn n ≤ n := by
-  simpa [mu, ← Nat.lt_succ_iff] using (Classical.choose_spec (hn n)).1
+  simpa [mu] using (Classical.choose_spec (hn n)).1
 
+set_option backward.isDefEq.respectTransparency false in
 private theorem mu_bdd (n : ℕ) : (mu μ hn n : ℝ) / n ∈ Set.Icc (0 : ℝ) 1 := by
   refine Set.mem_Icc.mpr ⟨div_nonneg (cast_nonneg (mu μ hn n)) (cast_nonneg n), ?_⟩
   by_cases hn0 : n = 0
@@ -476,7 +482,7 @@ theorem isNonarchimedean_smoothingFun (hμ1 : μ 1 ≤ 1) (hna : IsNonarchimedea
   intro ε hε
   rw [sub_le_iff_le_add]
   have h_mul : smoothingFun μ x ^ a * smoothingFun μ y ^ b + ε ≤
-      max (smoothingFun μ x) (smoothingFun μ y) + ε :=  by
+      max (smoothingFun μ x) (smoothingFun μ y) + ε := by
     rw [max_def]
     split_ifs with h
     · rw [add_le_add_iff_right]
@@ -511,6 +517,7 @@ theorem isNonarchimedean_smoothingFun (hμ1 : μ 1 ≤ 1) (hna : IsNonarchimedea
 
 end IsNonarchimedean
 
+set_option linter.style.whitespace false in -- manual alignment is not recognised
 /-- If `μ 1 ≤ 1` and `μ` is nonarchimedean, then `smoothingFun` is a ring seminorm. -/
 def smoothingSeminorm (hμ1 : μ 1 ≤ 1) (hna : IsNonarchimedean μ) : RingSeminorm R where
   toFun     := smoothingFun μ
@@ -523,7 +530,7 @@ def smoothingSeminorm (hμ1 : μ 1 ≤ 1) (hna : IsNonarchimedean μ) : RingSemi
     simp only [smoothingSeminormSeq]
     rw [zero_pow (pos_iff_ne_zero.mp hn), map_zero, zero_rpow]
     exact one_div_ne_zero (cast_ne_zero.mpr (one_le_iff_ne_zero.mp hn))
-  add_le' _ _ :=  (isNonarchimedean_smoothingFun μ hμ1 hna).add_le (smoothingFun_nonneg μ hμ1)
+  add_le' _ _ := (isNonarchimedean_smoothingFun μ hμ1 hna).add_le (smoothingFun_nonneg μ hμ1)
   neg' n := by
     simp only [smoothingFun]
     congr
@@ -547,6 +554,7 @@ theorem smoothingSeminorm_map_one_le_one (hμ1 : μ 1 ≤ 1)
     (hna : IsNonarchimedean μ) : smoothingSeminorm μ hμ1 hna 1 ≤ 1 :=
   smoothingFun_one_le μ hμ1
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `μ 1 ≤ 1` and `μ` is nonarchimedean, then `smoothingFun μ` is
   power-multiplicative. -/
 theorem isPowMul_smoothingFun (hμ1 : μ 1 ≤ 1) : IsPowMul (smoothingFun μ) := by
@@ -554,7 +562,7 @@ theorem isPowMul_smoothingFun (hμ1 : μ 1 ≤ 1) : IsPowMul (smoothingFun μ) :
   have hlim : Tendsto (fun n => smoothingSeminormSeq μ x (m * n)) atTop
       (𝓝 (smoothingFun μ x)) :=
     Tendsto.comp (tendsto_smoothingFun_of_map_one_le_one μ hμ1 x) (tendsto_atTop_atTop_of_monotone
-      (fun n k hnk ↦ mul_le_mul_left' hnk m) (fun n ↦ ⟨n, le_mul_of_one_le_left' hm⟩))
+      (fun n k hnk ↦ mul_le_mul_right hnk m) (fun n ↦ ⟨n, le_mul_of_one_le_left' hm⟩))
   apply tendsto_nhds_unique _ (Tendsto.pow hlim m)
   have h_eq (n : ℕ) : smoothingSeminormSeq μ x (m * n) ^ m = smoothingSeminormSeq μ (x ^ m) n := by
     have hm' : (m : ℝ) ≠ 0 := cast_ne_zero.mpr (_root_.ne_of_gt (lt_of_lt_of_le zero_lt_one hm))

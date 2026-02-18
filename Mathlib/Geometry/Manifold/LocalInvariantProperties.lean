@@ -3,7 +3,9 @@ Copyright (c) 2020 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel, Floris van Doorn
 -/
-import Mathlib.Geometry.Manifold.ChartedSpace
+module
+
+public import Mathlib.Geometry.Manifold.HasGroupoid
 
 /-!
 # Local properties invariant under a groupoid
@@ -41,6 +43,8 @@ coincide on `s`, then `LiftPropWithinAt P g' s x` holds. We can't call it
 `LiftPropWithinAt.congr` as it is in the namespace associated to `LocalInvariantProp`, not
 in the one for `LiftPropWithinAt`.
 -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -513,6 +517,7 @@ theorem liftPropAt_iff_comp_subtype_val (hG : LocalInvariantProp G G' P) {U : Op
   · apply hG.congr_iff
     exact (U.chartAt_subtype_val_symm_eventuallyEq).fun_comp (chartAt H' (f x) ∘ f)
 
+set_option backward.isDefEq.respectTransparency false in
 theorem liftPropAt_iff_comp_inclusion (hG : LocalInvariantProp G G' P) {U V : Opens M} (hUV : U ≤ V)
     (f : V → M') (x : U) :
     LiftPropAt P f (Set.inclusion hUV x) ↔ LiftPropAt P (f ∘ Set.inclusion hUV : U → M') x := by

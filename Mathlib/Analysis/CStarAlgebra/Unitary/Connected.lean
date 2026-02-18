@@ -3,11 +3,13 @@ Copyright (c) 2025 Jireh Loreaux. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jireh Loreaux
 -/
-import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Continuity
-import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
-import Mathlib.Analysis.CStarAlgebra.Exponential
-import Mathlib.Analysis.SpecialFunctions.Complex.Circle
-import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Basic
+module
+
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Continuity
+public import Mathlib.Analysis.CStarAlgebra.ContinuousFunctionalCalculus.Order
+public import Mathlib.Analysis.CStarAlgebra.Exponential
+public import Mathlib.Analysis.SpecialFunctions.Complex.Circle
+public import Mathlib.Analysis.SpecialFunctions.ContinuousFunctionalCalculus.ExpLog.Basic
 
 /-! # The unitary group in a unital C⋆-algebra is locally path connected
 
@@ -50,6 +52,8 @@ products of exponential unitaries.
   C⋆-algebra is the set of unitaries that can be expressed as a product of exponentials of
   selfadjoint elements.
 -/
+
+@[expose] public section
 
 variable {A : Type*} [CStarAlgebra A]
 
@@ -131,12 +135,13 @@ noncomputable def Unitary.argSelfAdjoint (u : unitary A) : selfAdjoint A :=
 
 @[deprecated (since := "2025-10-29")] alias unitary.argSelfAdjoint := Unitary.argSelfAdjoint
 
+set_option backward.isDefEq.respectTransparency false in
 lemma selfAdjoint.norm_sq_expUnitary_sub_one {x : selfAdjoint A} (hx : ‖x‖ ≤ π) :
     ‖(expUnitary x - 1 : A)‖ ^ 2 = 2 * (1 - Real.cos ‖x‖) := by
   nontriviality A
   apply norm_sub_one_sq_eq (expUnitary x).2
   simp only [expUnitary_coe, AddSubgroupClass.coe_norm]
-  rw [← CFC.exp_eq_normedSpace_exp, ← cfc_comp_smul I _ (x : A), cfc_map_spectrum ..,
+  rw [← CFC.exp_eq_normedSpace_exp (𝕜 := ℂ), ← cfc_comp_smul I _ (x : A), cfc_map_spectrum ..,
     ← x.2.spectrumRestricts.algebraMap_image]
   simp only [Set.image_image, coe_algebraMap, smul_eq_mul, mul_comm I, ← exp_eq_exp_ℂ,
     exp_ofReal_mul_I_re]
@@ -148,6 +153,7 @@ lemma selfAdjoint.norm_sq_expUnitary_sub_one {x : selfAdjoint A} (hx : ‖x‖ �
     exact Real.cos_abs y ▸ Real.cos_le_cos_of_nonneg_of_le_pi (by positivity) hx <|
       spectrum.norm_le_norm_of_mem hy
 
+set_option backward.isDefEq.respectTransparency false in
 lemma argSelfAdjoint_expUnitary {x : selfAdjoint A} (hx : ‖x‖ < π) :
     argSelfAdjoint (expUnitary x) = x := by
   nontriviality A
@@ -161,10 +167,10 @@ lemma argSelfAdjoint_expUnitary {x : selfAdjoint A} (hx : ‖x‖ < π) :
         exact Real.cos_lt_cos_of_nonneg_of_le_pi (by positivity) le_rfl hx
       _ = 2 ^ 2 := by norm_num
   simp only [argSelfAdjoint_coe, expUnitary_coe]
-  rw [← CFC.exp_eq_normedSpace_exp, ← cfc_comp_smul .., ← cfc_comp' (hg := ?hg)]
+  rw [← CFC.exp_eq_normedSpace_exp (𝕜 := ℂ), ← cfc_comp_smul .., ← cfc_comp' (hg := ?hg)]
   case hg =>
     refine continuous_ofReal.comp_continuousOn <| continuousOn_arg.mono ?_
-    rwa [expUnitary_coe, ← CFC.exp_eq_normedSpace_exp, ← cfc_comp_smul ..,
+    rwa [expUnitary_coe, ← CFC.exp_eq_normedSpace_exp (𝕜 := ℂ), ← cfc_comp_smul ..,
       cfc_map_spectrum ..] at this
   conv_rhs => rw [← cfc_id' ℂ (x : A)]
   refine cfc_congr fun y hy ↦ ?_
@@ -175,12 +181,13 @@ lemma argSelfAdjoint_expUnitary {x : selfAdjoint A} (hx : ‖x‖ < π) :
   simp only [Real.norm_eq_abs, abs_lt] at hy
   rw [← Circle.coe_exp, Circle.arg_exp hy.1 hy.2.le]
 
+set_option backward.isDefEq.respectTransparency false in
 lemma expUnitary_argSelfAdjoint {u : unitary A} (hu : ‖(u - 1 : A)‖ < 2) :
     expUnitary (argSelfAdjoint u) = u := by
   ext
   have : ContinuousOn arg (spectrum ℂ (u : A)) :=
     continuousOn_arg.mono <| (spectrum_subset_slitPlane_iff_norm_lt_two u.2).mpr hu
-  rw [expUnitary_coe, argSelfAdjoint_coe, ← CFC.exp_eq_normedSpace_exp,
+  rw [expUnitary_coe, argSelfAdjoint_coe, ← CFC.exp_eq_normedSpace_exp (𝕜 := ℂ),
     ← cfc_comp_smul .., ← cfc_comp' ..]
   conv_rhs => rw [← cfc_id' ℂ (u : A)]
   refine cfc_congr fun y hy ↦ ?_
@@ -212,6 +219,7 @@ lemma Unitary.norm_argSelfAdjoint {u : unitary A} (hu : ‖(u - 1 : A)‖ < 2) :
 @[deprecated (since := "2025-10-29")] alias unitary.norm_argSelfAdjoint :=
   Unitary.norm_argSelfAdjoint
 
+set_option backward.isDefEq.respectTransparency false in
 lemma Unitary.norm_expUnitary_smul_argSelfAdjoint_sub_one_le (u : unitary A)
     {t : ℝ} (ht : t ∈ Set.Icc 0 1) (hu : ‖(u - 1 : A)‖ < 2) :
     ‖(expUnitary (t • argSelfAdjoint u) - 1 : A)‖ ≤ ‖(u - 1 : A)‖ := by
@@ -231,6 +239,7 @@ lemma Unitary.norm_expUnitary_smul_argSelfAdjoint_sub_one_le (u : unitary A)
   unitary.norm_expUnitary_smul_argSelfAdjoint_sub_one_le :=
   Unitary.norm_expUnitary_smul_argSelfAdjoint_sub_one_le
 
+set_option backward.isDefEq.respectTransparency false in
 @[fun_prop]
 lemma Unitary.continuousOn_argSelfAdjoint :
     ContinuousOn (argSelfAdjoint : unitary A → selfAdjoint A) (ball (1 : unitary A) 2) := by
@@ -262,6 +271,7 @@ lemma Unitary.continuousOn_argSelfAdjoint :
 @[deprecated (since := "2025-10-29")] alias unitary.continuousOn_argSelfAdjoint :=
   Unitary.continuousOn_argSelfAdjoint
 
+set_option backward.isDefEq.respectTransparency false in
 /-- the maps `unitary.argSelfAdjoint` and `selfAdjoint.expUnitary` form a partial
 homeomorphism between `ball (1 : unitary A) 2` and `ball (0 : selfAdjoint A) π`. -/
 @[simps]
@@ -311,6 +321,7 @@ lemma Unitary.expUnitary_eq_mul_inv (u v : unitary A) (huv : ‖(u - v : A)‖ <
 @[deprecated (since := "2025-10-29")] alias unitary.expUnitary_eq_mul_inv :=
   Unitary.expUnitary_eq_mul_inv
 
+set_option backward.isDefEq.respectTransparency false in
 /-- For a selfadjoint element `x` in a C⋆-algebra, this is the path from `1` to `expUnitary x`
 given by `t ↦ expUnitary (t • x)`. -/
 @[simps]
@@ -326,6 +337,7 @@ lemma selfAdjoint.joined_one_expUnitary (x : selfAdjoint A) :
     Joined (1 : unitary A) (expUnitary x) :=
   ⟨expUnitaryPathToOne x⟩
 
+set_option backward.isDefEq.respectTransparency false in
 /-- The path `t ↦ expUnitary (t • argSelfAdjoint (v * star u)) * u`
 from `u : unitary A` to `v` when `‖v - u‖ < 2`. -/
 @[simps]
@@ -353,7 +365,7 @@ lemma Unitary.isPathConnected_ball (u : unitary A) (δ : ℝ) (hδ₀ : 0 < δ) 
     convert this |>.image (f := (u * ·)) (by fun_prop)
     ext v
     rw [← inv_mul_cancel u]
-    simp [- inv_mul_cancel, Subtype.dist_eq, dist_eq_norm, ← mul_sub]
+    simp [-inv_mul_cancel, Subtype.dist_eq, dist_eq_norm, ← mul_sub]
   refine ⟨1, by simpa, fun {u} hu ↦ ?_⟩
   have hu : ‖(u - 1 : A)‖ < δ := by simpa [Subtype.dist_eq, dist_eq_norm] using hu
   refine ⟨path 1 u (hu.trans hδ₂), fun t ↦ ?_⟩

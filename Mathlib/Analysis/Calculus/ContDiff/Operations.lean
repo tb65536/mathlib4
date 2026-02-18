@@ -3,13 +3,16 @@ Copyright (c) 2019 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel, Floris van Doorn
 -/
-import Mathlib.Analysis.Calculus.ContDiff.Basic
-import Mathlib.Analysis.Calculus.Deriv.Inverse
+module
+
+public import Mathlib.Analysis.Calculus.ContDiff.Comp
+public import Mathlib.Analysis.Calculus.Deriv.Inverse
+public import Mathlib.Topology.OpenPartialHomeomorph.IsImage
 
 /-!
 # Higher differentiability of usual operations
 
-We prove that the usual operations (addition, multiplication, difference, composition, and
+We prove that the usual operations (addition, multiplication, difference, and
 so on) preserve `C^n` functions.
 
 ## Notation
@@ -23,6 +26,8 @@ In this file, we denote `(⊤ : ℕ∞) : WithTop ℕ∞` with `∞` and `⊤ : 
 
 derivative, differentiability, higher derivative, `C^n`, multilinear, Taylor series, formal series
 -/
+
+@[expose] public section
 
 open scoped NNReal Nat ContDiff
 
@@ -56,7 +61,7 @@ theorem hasFTaylorSeriesUpToOn_pi {n : WithTop ℕ∞} :
         (fun x m => ContinuousMultilinearMap.pi fun i => p' i x m) s ↔
       ∀ i, HasFTaylorSeriesUpToOn n (φ i) (p' i) s := by
   set pr := @ContinuousLinearMap.proj 𝕜 _ ι F' _ _ _
-  set L : ∀ m : ℕ, (∀ i, E[×m]→L[𝕜] F' i) ≃ₗᵢ[𝕜] E[×m]→L[𝕜] ∀ i, F' i := fun m =>
+  set L : ∀ m : ℕ, (∀ i, E [×m]→L[𝕜] F' i) ≃ₗᵢ[𝕜] E [×m]→L[𝕜] ∀ i, F' i := fun m =>
     ContinuousMultilinearMap.piₗᵢ _ _
   refine ⟨fun h i => ?_, fun h => ⟨fun x hx => ?_, ?_, ?_⟩⟩
   · exact h.continuousLinearMap_comp (pr i)
@@ -85,7 +90,7 @@ theorem contDiffWithinAt_pi :
     choose u hux p hp h'p using h
     refine ⟨⋂ i, u i, Filter.iInter_mem.2 hux, _,
       hasFTaylorSeriesUpToOn_pi.2 fun i => (hp i).mono <| iInter_subset _ _, fun m ↦ ?_⟩
-    set L : (∀ i, E[×m]→L[𝕜] F' i) ≃ₗᵢ[𝕜] E[×m]→L[𝕜] ∀ i, F' i :=
+    set L : (∀ i, E [×m]→L[𝕜] F' i) ≃ₗᵢ[𝕜] E [×m]→L[𝕜] ∀ i, F' i :=
       ContinuousMultilinearMap.piₗᵢ _ _
     change AnalyticOn 𝕜 (fun x ↦ L (fun i ↦ p i x m)) (⋂ i, u i)
     apply (L.analyticOnNhd univ).comp_analyticOn ?_ (mapsTo_univ _ _)
@@ -179,7 +184,7 @@ theorem ContDiffAt.add {f g : E → F} (hf : ContDiffAt 𝕜 n f x) (hg : ContDi
     ContDiffAt 𝕜 n (fun x => f x + g x) x := by
   rw [← contDiffWithinAt_univ] at *; exact hf.add hg
 
-/-- The sum of two `C^n`functions is `C^n`. -/
+/-- The sum of two `C^n` functions is `C^n`. -/
 @[fun_prop]
 theorem ContDiff.add {f g : E → F} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
     ContDiff 𝕜 n fun x => f x + g x :=
@@ -260,7 +265,7 @@ theorem ContDiffWithinAt.neg {s : Set E} {f : E → F} (hf : ContDiffWithinAt �
 theorem ContDiffAt.neg {f : E → F} (hf : ContDiffAt 𝕜 n f x) :
     ContDiffAt 𝕜 n (fun x => -f x) x := by rw [← contDiffWithinAt_univ] at *; exact hf.neg
 
-/-- The negative of a `C^n`function is `C^n`. -/
+/-- The negative of a `C^n` function is `C^n`. -/
 @[fun_prop]
 theorem ContDiff.neg {f : E → F} (hf : ContDiff 𝕜 n f) : ContDiff 𝕜 n fun x => -f x :=
   contDiff_neg.comp hf
@@ -405,7 +410,7 @@ nonrec theorem ContDiffAt.mul {f g : E → 𝔸} (hf : ContDiffAt 𝕜 n f x) (h
 theorem ContDiffOn.mul {f g : E → 𝔸} (hf : ContDiffOn 𝕜 n f s) (hg : ContDiffOn 𝕜 n g s) :
     ContDiffOn 𝕜 n (fun x => f x * g x) s := fun x hx => (hf x hx).mul (hg x hx)
 
-/-- The product of two `C^n`functions is `C^n`. -/
+/-- The product of two `C^n` functions is `C^n`. -/
 @[fun_prop]
 theorem ContDiff.mul {f g : E → 𝔸} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
     ContDiff 𝕜 n fun x => f x * g x :=
@@ -496,56 +501,61 @@ end MulProd
 
 section SMul
 
+variable {𝕜' : Type*} [NormedRing 𝕜']
+  [NormedAlgebra 𝕜 𝕜'] [Module 𝕜' F] [IsBoundedSMul 𝕜' F] [IsScalarTower 𝕜 𝕜' F]
+
 -- The scalar multiplication is smooth.
 @[fun_prop]
-theorem contDiff_smul : ContDiff 𝕜 n fun p : 𝕜 × F => p.1 • p.2 :=
+theorem contDiff_smul : ContDiff 𝕜 n fun p : 𝕜' × F => p.1 • p.2 :=
   isBoundedBilinearMap_smul.contDiff
 
 /-- The scalar multiplication of two `C^n` functions within a set at a point is `C^n` within this
 set at this point. -/
-@[fun_prop]
-theorem ContDiffWithinAt.smul {s : Set E} {f : E → 𝕜} {g : E → F} (hf : ContDiffWithinAt 𝕜 n f s x)
-    (hg : ContDiffWithinAt 𝕜 n g s x) : ContDiffWithinAt 𝕜 n (fun x => f x • g x) s x :=
+@[to_fun (attr := fun_prop)]
+theorem ContDiffWithinAt.smul {s : Set E} {f : E → 𝕜'} {g : E → F} (hf : ContDiffWithinAt 𝕜 n f s x)
+    (hg : ContDiffWithinAt 𝕜 n g s x) : ContDiffWithinAt 𝕜 n (f • g) s x :=
   contDiff_smul.contDiffWithinAt.comp x (hf.prodMk hg) subset_preimage_univ
 
 /-- The scalar multiplication of two `C^n` functions at a point is `C^n` at this point. -/
-@[fun_prop]
-theorem ContDiffAt.smul {f : E → 𝕜} {g : E → F} (hf : ContDiffAt 𝕜 n f x)
-    (hg : ContDiffAt 𝕜 n g x) : ContDiffAt 𝕜 n (fun x => f x • g x) x := by
+@[to_fun (attr := fun_prop)]
+theorem ContDiffAt.smul {f : E → 𝕜'} {g : E → F} (hf : ContDiffAt 𝕜 n f x)
+    (hg : ContDiffAt 𝕜 n g x) : ContDiffAt 𝕜 n (f • g) x := by
   rw [← contDiffWithinAt_univ] at *; exact hf.smul hg
 
 /-- The scalar multiplication of two `C^n` functions is `C^n`. -/
-@[fun_prop]
-theorem ContDiff.smul {f : E → 𝕜} {g : E → F} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
-    ContDiff 𝕜 n fun x => f x • g x :=
+@[to_fun (attr := fun_prop)]
+theorem ContDiff.smul {f : E → 𝕜'} {g : E → F} (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
+    ContDiff 𝕜 n (f • g) :=
   contDiff_smul.comp (hf.prodMk hg)
 
 /-- The scalar multiplication of two `C^n` functions on a domain is `C^n`. -/
-@[fun_prop]
-theorem ContDiffOn.smul {s : Set E} {f : E → 𝕜} {g : E → F} (hf : ContDiffOn 𝕜 n f s)
-    (hg : ContDiffOn 𝕜 n g s) : ContDiffOn 𝕜 n (fun x => f x • g x) s := fun x hx =>
+@[to_fun (attr := fun_prop)]
+theorem ContDiffOn.smul {s : Set E} {f : E → 𝕜'} {g : E → F} (hf : ContDiffOn 𝕜 n f s)
+    (hg : ContDiffOn 𝕜 n g s) : ContDiffOn 𝕜 n (f • g) s := fun x hx =>
   (hf x hx).smul (hg x hx)
 
 end SMul
 
 /-! ### Constant scalar multiplication
 
-TODO: generalize results in this section.
-
-1. It should be possible to assume `[Monoid R] [DistribMulAction R F] [SMulCommClass 𝕜 R F]`.
-2. If `c` is a unit (or `R` is a group), then one can drop `ContDiff*` assumptions in some
-  lemmas.
+TODO: generalize results in this section -- if `c` is a unit (or `R` is a group), then one can
+drop `ContDiff*` assumptions in some lemmas about `iteratedFDeriv` and `iteratedFDerivWithin`.
 -/
 
 section ConstSMul
 
-variable {R : Type*} [Semiring R] [Module R F] [SMulCommClass 𝕜 R F]
-variable [ContinuousConstSMul R F]
+variable {R A : Type*} [DistribSMul R F] [SMulCommClass 𝕜 R F] [ContinuousConstSMul R F]
+  [NormedRing A] [NormedAlgebra 𝕜 A] [Module A F] [IsScalarTower 𝕜 A F] [IsBoundedSMul A F]
 
--- The scalar multiplication with a constant is smooth.
+/-- Scalar multiplication is smooth (as a function of the vector variable). -/
 @[fun_prop]
 theorem contDiff_const_smul (c : R) : ContDiff 𝕜 n fun p : F => c • p :=
   (c • ContinuousLinearMap.id 𝕜 F).contDiff
+
+/-- Scalar multiplication is smooth (as a function of the scalar variable). -/
+@[fun_prop]
+theorem contDiff_smul_const (v : F) : ContDiff 𝕜 n fun a : A => a • v :=
+  ((ContinuousLinearMap.id 𝕜 A).smulRight v).contDiff
 
 /-- The scalar multiplication of a constant and a `C^n` function within a set at a point is `C^n`
 within this set at this point. -/
@@ -554,6 +564,13 @@ theorem ContDiffWithinAt.const_smul {s : Set E} {f : E → F} {x : E} (c : R)
     (hf : ContDiffWithinAt 𝕜 n f s x) : ContDiffWithinAt 𝕜 n (fun y => c • f y) s x :=
   (contDiff_const_smul c).contDiffAt.comp_contDiffWithinAt x hf
 
+/-- The scalar multiplication of `C^n` function within a set at a point and a constant and is `C^n`
+within this set at this point. -/
+@[fun_prop]
+theorem ContDiffWithinAt.smul_const {s : Set E} {f : E → A} {x : E}
+    (hf : ContDiffWithinAt 𝕜 n f s x) (v : F) : ContDiffWithinAt 𝕜 n (fun y => f y • v) s x :=
+  (contDiff_smul_const v).contDiffAt.comp_contDiffWithinAt x hf
+
 /-- The scalar multiplication of a constant and a `C^n` function at a point is `C^n` at this
 point. -/
 @[fun_prop]
@@ -561,23 +578,48 @@ theorem ContDiffAt.const_smul {f : E → F} {x : E} (c : R) (hf : ContDiffAt �
     ContDiffAt 𝕜 n (fun y => c • f y) x := by
   rw [← contDiffWithinAt_univ] at *; exact hf.const_smul c
 
+/-- The scalar multiplication of a `C^n` function at a point and a constant is `C^n` at this
+point. -/
+@[fun_prop]
+theorem ContDiffAt.smul_const {f : E → A} {x : E} (hf : ContDiffAt 𝕜 n f x) (v : F) :
+    ContDiffAt 𝕜 n (fun y => f y • v) x := by
+  rw [← contDiffWithinAt_univ] at *; exact hf.smul_const v
+
 /-- The scalar multiplication of a constant and a `C^n` function is `C^n`. -/
 @[fun_prop]
 theorem ContDiff.const_smul {f : E → F} (c : R) (hf : ContDiff 𝕜 n f) :
     ContDiff 𝕜 n fun y => c • f y :=
   (contDiff_const_smul c).comp hf
 
-/-- The scalar multiplication of a constant and a `C^n` on a domain is `C^n`. -/
+/-- The scalar multiplication of a `C^n` function and a constant is `C^n`. -/
+@[fun_prop]
+theorem ContDiff.smul_const {f : E → A} (hf : ContDiff 𝕜 n f) (v : F) :
+    ContDiff 𝕜 n fun y => f y • v :=
+  (contDiff_smul_const v).comp hf
+
+/-- The scalar multiplication of a constant and a `C^n` function on a domain is `C^n`. -/
 @[fun_prop]
 theorem ContDiffOn.const_smul {s : Set E} {f : E → F} (c : R) (hf : ContDiffOn 𝕜 n f s) :
     ContDiffOn 𝕜 n (fun y => c • f y) s := fun x hx => (hf x hx).const_smul c
 
-variable {i : ℕ} {a : R}
+/-- The scalar multiplication of a `C^n` function on a domain and a constant is `C^n`. -/
+@[fun_prop]
+theorem ContDiffOn.smul_const {s : Set E} {f : E → A} (hf : ContDiffOn 𝕜 n f s) (v : F) :
+    ContDiffOn 𝕜 n (fun y => f y • v) s := fun x hx => (hf x hx).smul_const v
+
+variable {i : ℕ} {a : R} {v : F}
 
 theorem iteratedFDerivWithin_const_smul_apply (hf : ContDiffWithinAt 𝕜 i f s x)
     (hu : UniqueDiffOn 𝕜 s) (hx : x ∈ s) :
     iteratedFDerivWithin 𝕜 i (a • f) s x = a • iteratedFDerivWithin 𝕜 i f s x :=
   (a • (1 : F →L[𝕜] F)).iteratedFDerivWithin_comp_left hf hu hx le_rfl
+
+theorem iteratedFDerivWithin_smul_const_apply {f : E → A} (hf : ContDiffWithinAt 𝕜 i f s x)
+    (hu : UniqueDiffOn 𝕜 s) (hx : x ∈ s) :
+    iteratedFDerivWithin 𝕜 i (fun y ↦ f y • v) s x =
+      ((ContinuousLinearMap.id 𝕜 A).smulRight v).compContinuousMultilinearMap
+        (iteratedFDerivWithin 𝕜 i f s x) :=
+  (ContinuousLinearMap.id 𝕜 A).smulRight v |>.iteratedFDerivWithin_comp_left hf hu hx le_rfl
 
 theorem iteratedFDeriv_const_smul_apply (hf : ContDiffAt 𝕜 i f x) :
     iteratedFDeriv 𝕜 i (a • f) x = a • iteratedFDeriv 𝕜 i f x :=
@@ -586,6 +628,12 @@ theorem iteratedFDeriv_const_smul_apply (hf : ContDiffAt 𝕜 i f x) :
 theorem iteratedFDeriv_const_smul_apply' (hf : ContDiffAt 𝕜 i f x) :
     iteratedFDeriv 𝕜 i (fun x ↦ a • f x) x = a • iteratedFDeriv 𝕜 i f x :=
   iteratedFDeriv_const_smul_apply hf
+
+theorem iteratedFDeriv_smul_const_apply {f : E → A} (hf : ContDiffAt 𝕜 i f x) :
+    iteratedFDeriv 𝕜 i (fun y ↦ f y • v) x =
+      ((ContinuousLinearMap.id 𝕜 A).smulRight v).compContinuousMultilinearMap
+        (iteratedFDeriv 𝕜 i f x) :=
+  (ContinuousLinearMap.id 𝕜 A).smulRight v |>.iteratedFDeriv_comp_left hf le_rfl
 
 end ConstSMul
 
@@ -670,8 +718,6 @@ theorem contDiffAt_ringInverse [HasSummableGeomSeries R] (x : Rˣ) :
   have := AnalyticOnNhd.contDiffOn (analyticOnNhd_inverse (𝕜 := 𝕜) (A := R)) (n := n)
     Units.isOpen.uniqueDiffOn x x.isUnit
   exact this.contDiffAt (Units.isOpen.mem_nhds x.isUnit)
-
-@[deprecated (since := "2025-04-22")] alias contDiffAt_ring_inverse := contDiffAt_ringInverse
 
 variable {𝕜' : Type*} [NormedField 𝕜'] [NormedAlgebra 𝕜 𝕜']
 
@@ -773,6 +819,7 @@ section FunctionInverse
 
 open ContinuousLinearMap
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `f` is a local homeomorphism and the point `a` is in its target,
 and if `f` is `n` times continuously differentiable at `f.symm a`,
 and if the derivative at `f.symm a` is a continuous linear equivalence,

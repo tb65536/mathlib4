@@ -3,12 +3,16 @@ Copyright (c) 2025 Junyan Xu. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Junyan Xu
 -/
-import Mathlib.LinearAlgebra.TensorProduct.Pi
-import Mathlib.LinearAlgebra.TensorProduct.RightExactness
-import Mathlib.RingTheory.Ideal.Quotient.Operations
+module
+
+public import Mathlib.LinearAlgebra.TensorProduct.Pi
+public import Mathlib.LinearAlgebra.TensorProduct.RightExactness
+public import Mathlib.RingTheory.Ideal.Quotient.Operations
 
 /-! # Module version of Chinese remainder theorem
 -/
+
+public section
 
 open Function
 
@@ -20,6 +24,7 @@ namespace Ideal
 
 open TensorProduct LinearMap
 
+set_option backward.isDefEq.respectTransparency false in
 lemma pi_mkQ_rTensor [Fintype ι] [DecidableEq ι] :
     (LinearMap.pi fun i ↦ (I i).mkQ).rTensor M = (piLeft ..).symm.toLinearMap ∘ₗ
       .pi (fun i ↦ TensorProduct.mk R (R ⧸ I i) M 1) ∘ₗ TensorProduct.lid R M := by
@@ -38,6 +43,7 @@ theorem pi_tensorProductMk_quotient_surjective :
   classical rw [pi_mkQ_rTensor] at this
   simpa using this
 
+set_option backward.isDefEq.respectTransparency false in
 /-- A form of Chinese remainder theorem for modules, part II: if ideals `Iᵢ` of `R` are pairwise
 coprime, then for any `R`-module `M`, the kernel of `M → Πᵢ (R ⧸ Iᵢ) ⊗[R] M` equals `(⋂ᵢ Iᵢ) • M`.
 -/

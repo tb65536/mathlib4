@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patience Ablett, Kevin Buzzard, Harald Carlens, Wayne Ng Kwing King, Michael Schlößer,
   Justus Springer, Andrew Yang, Jujian Zhang
 -/
-import Mathlib.Algebra.Order.BigOperators.Ring.Finset
-import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Basic
-import Mathlib.AlgebraicGeometry.ValuativeCriterion
+module
+
+public import Mathlib.Algebra.Order.BigOperators.Ring.Finset
+public import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Basic
+public import Mathlib.AlgebraicGeometry.ValuativeCriterion
 
 /-!
 # Properness of `Proj A`
@@ -17,6 +19,8 @@ We show that `Proj 𝒜` is proper over `Spec 𝒜₀`.
 This contribution was created as part of the Durham Computational Algebraic Geometry Workshop
 
 -/
+
+@[expose] public section
 
 namespace AlgebraicGeometry.Proj
 
@@ -29,6 +33,7 @@ open Scheme CategoryTheory Limits pullback HomogeneousLocalization
 
 section IsSeparated
 
+set_option backward.isDefEq.respectTransparency false in
 lemma lift_awayMapₐ_awayMapₐ_surjective {d e : ℕ} {f : A} (hf : f ∈ 𝒜 d)
     {g : A} (hg : g ∈ 𝒜 e) {x : A} (hx : x = f * g) (hd : 0 < d) :
     Function.Surjective
@@ -73,6 +78,7 @@ lemma lift_awayMapₐ_awayMapₐ_surjective {d e : ℕ} {f : A} (hf : f ∈ 𝒜
   · simp only [hx, add_tsub_cancel_right]
     ring
 
+set_option backward.isDefEq.respectTransparency false in
 open TensorProduct in
 instance isSeparated : IsSeparated (toSpecZero 𝒜) := by
   refine ⟨IsZariskiLocalAtTarget.of_openCover (Pullback.openCoverOfLeftRight
@@ -127,6 +133,7 @@ end IsSeparated
 
 section LocallyOfFiniteType
 
+set_option backward.isDefEq.respectTransparency false in
 instance [Algebra.FiniteType (𝒜 0) A] : LocallyOfFiniteType (Proj.toSpecZero 𝒜) := by
   obtain ⟨x, hx, hx'⟩ := GradedAlgebra.exists_finset_adjoin_eq_top_and_homogeneous_ne_zero 𝒜
   choose d hd hxd using hx'
@@ -142,6 +149,7 @@ end LocallyOfFiniteType
 
 section QuasiCompact
 
+set_option backward.isDefEq.respectTransparency false in
 instance [Algebra.FiniteType (𝒜 0) A] : QuasiCompact (Proj.toSpecZero 𝒜) := by
   rw [HasAffineProperty.iff_of_isAffine (P := @QuasiCompact)]
   obtain ⟨x, hx, hx'⟩ := GradedAlgebra.exists_finset_adjoin_eq_top_and_homogeneous_ne_zero 𝒜
@@ -160,6 +168,7 @@ end QuasiCompact
 
 section UniversallyClosed
 
+set_option backward.isDefEq.respectTransparency false in
 open ValuationRing in
 /--
 Let `𝒜` be a graded ring generated over `𝒜₀` by finitely many homogeneous elements.
@@ -302,6 +311,7 @@ theorem valuativeCriterion_existence_aux
               Finset.univ.prod_erase_mul d (h := Finset.mem_univ _),
               mul_comm _ a, mul_right_comm]
 
+set_option backward.isDefEq.respectTransparency false in
 @[stacks 01MF]
 lemma valuativeCriterion_existence [Algebra.FiniteType (𝒜 0) A] :
     ValuativeCriterion.Existence (Proj.toSpecZero 𝒜) := by
@@ -352,12 +362,14 @@ lemma valuativeCriterion_existence [Algebra.FiniteType (𝒜 0) A] :
       ← RingHom.comp_apply, hφ]
     exact congr($(H.symm) x)
 
+set_option backward.isDefEq.respectTransparency false in
 instance [Algebra.FiniteType (𝒜 0) A] : UniversallyClosed (Proj.toSpecZero 𝒜) := by
   rw [UniversallyClosed.eq_valuativeCriterion]
   exact ⟨valuativeCriterion_existence 𝒜, inferInstance⟩
 
 end UniversallyClosed
 
+set_option backward.isDefEq.respectTransparency false in
 instance [Algebra.FiniteType (𝒜 0) A] : IsProper (Proj.toSpecZero 𝒜) where
 
 end AlgebraicGeometry.Proj

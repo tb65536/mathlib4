@@ -3,8 +3,10 @@ Copyright (c) 2023 Dagur Asgeirsson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Dagur Asgeirsson
 -/
-import Mathlib.LinearAlgebra.LinearIndependent.Basic
-import Mathlib.Topology.Category.Profinite.Nobeling.Basic
+module
+
+public import Mathlib.LinearAlgebra.LinearIndependent.Basic
+public import Mathlib.Topology.Category.Profinite.Nobeling.Basic
 
 /-!
 # The zero and limit cases in the induction for Nöbeling's theorem
@@ -18,6 +20,8 @@ For the overall proof outline see `Mathlib/Topology/Category/Profinite/Nobeling/
 
 - [scholze2019condensed], Theorem 5.4.
 -/
+
+@[expose] public section
 
 universe u
 
@@ -59,6 +63,7 @@ theorem Products.isGood_nil {I} [LinearOrder I] :
   intro h
   simp [Products.eval, Products.nil] at h
 
+set_option backward.isDefEq.respectTransparency false in
 theorem Products.span_nil_eq_top {I} [LinearOrder I] :
     Submodule.span ℤ (eval ({fun _ ↦ false} : Set (I → Bool)) '' {nil}) = ⊤ := by
   rw [Set.image_singleton, eq_top_iff]

@@ -3,8 +3,10 @@ Copyright (c) 2022 Yaël Dillies, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Bhavik Mehta
 -/
-import Mathlib.Algebra.Order.Ring.Canonical
-import Mathlib.Order.Partition.Equipartition
+module
+
+public import Mathlib.Algebra.Order.Ring.Canonical
+public import Mathlib.Order.Partition.Equipartition
 
 /-!
 # Equitabilising a partition
@@ -26,6 +28,8 @@ This file allows to blow partitions up into parts of controlled size. Given a pa
 [Yaël Dillies, Bhavik Mehta, *Formalising Szemerédi’s Regularity Lemma in Lean*][srl_itp]
 -/
 
+@[expose] public section
+
 
 open Finset Nat
 
@@ -33,6 +37,7 @@ namespace Finpartition
 
 variable {α : Type*} [DecidableEq α] {s t : Finset α} {m n a b : ℕ} {P : Finpartition s}
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Given a partition `P` of `s`, as well as a proof that `a * m + b * (m + 1) = #s`, we can
 find a new partition `Q` of `s` where each part has size `m` or `m + 1`, every part of `P` is the
 union of parts of `Q` plus at most `m` extra elements, there are `b` parts of size `m + 1` and

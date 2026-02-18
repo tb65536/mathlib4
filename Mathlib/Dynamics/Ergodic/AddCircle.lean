@@ -3,12 +3,14 @@ Copyright (c) 2022 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import Mathlib.Algebra.Order.Ring.Abs
-import Mathlib.Dynamics.FixedPoints.Prufer
-import Mathlib.Dynamics.Ergodic.Ergodic
-import Mathlib.MeasureTheory.Covering.DensityTheorem
-import Mathlib.MeasureTheory.Group.AddCircle
-import Mathlib.MeasureTheory.Measure.Haar.Unique
+module
+
+public import Mathlib.Algebra.Order.Ring.Abs
+public import Mathlib.Dynamics.FixedPoints.Prufer
+public import Mathlib.Dynamics.Ergodic.Ergodic
+public import Mathlib.MeasureTheory.Covering.DensityTheorem
+public import Mathlib.MeasureTheory.Group.AddCircle
+public import Mathlib.MeasureTheory.Measure.Haar.Unique
 
 /-!
 # Ergodic maps of the additive circle
@@ -27,6 +29,8 @@ This file contains proofs of ergodicity for maps of the additive circle.
   self map `y ↦ n • y + x` on the additive circle is ergodic (w.r.t. the Haar measure).
 
 -/
+
+public section
 
 
 open Set Function MeasureTheory MeasureTheory.Measure Filter Metric
@@ -120,6 +124,7 @@ theorem ergodic_zsmul {n : ℤ} (hn : 1 < |n|) : Ergodic fun y : AddCircle T => 
 theorem ergodic_nsmul {n : ℕ} (hn : 1 < n) : Ergodic fun y : AddCircle T => n • y :=
   ergodic_zsmul (by simp [hn] : 1 < |(n : ℤ)|)
 
+set_option backward.isDefEq.respectTransparency false in
 theorem ergodic_zsmul_add (x : AddCircle T) {n : ℤ} (h : 1 < |n|) : Ergodic fun y => n • y + x := by
   set f : AddCircle T → AddCircle T := fun y => n • y + x
   let e : AddCircle T ≃ᵐ AddCircle T := MeasurableEquiv.addLeft (DivisibleBy.div x <| n - 1)

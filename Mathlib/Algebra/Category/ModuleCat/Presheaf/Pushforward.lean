@@ -3,7 +3,9 @@ Copyright (c) 2024 Joël Riou. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joël Riou
 -/
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.ChangeOfRings
+module
+
+public import Mathlib.Algebra.Category.ModuleCat.Presheaf.ChangeOfRings
 
 /-!
 # Pushforward of presheaves of modules
@@ -19,6 +21,8 @@ we show that they interact with the composition of morphisms similarly as pseudo
 
 -/
 
+@[expose] public section
+
 universe v v₁ v₂ v₃ v₄ u₁ u₂ u₃ u₄ u
 
 open CategoryTheory Functor
@@ -30,6 +34,7 @@ namespace PresheafOfModules
 
 variable (F : C ⥤ D)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Implementation of `pushforward₀`. -/
 @[simps]
 def pushforward₀_obj (R : Dᵒᵖ ⥤ RingCat.{u}) (M : PresheafOfModules R) :
@@ -47,6 +52,7 @@ def pushforward₀_obj (R : Dᵒᵖ ⥤ RingCat.{u}) (M : PresheafOfModules R) :
         (@LinearMap.ext _ _ _ _ _ _ _ _ (_) (_) _ _ _ (fun x => ?_))
       exact (M.congr_map_apply (F.op.map_comp f g) x).trans (by simp) }
 
+set_option backward.isDefEq.respectTransparency false in
 /-- The pushforward functor on presheaves of modules for a functor `F : C ⥤ D` and
 `R : Dᵒᵖ ⥤ RingCat`. On the underlying presheaves of abelian groups, it is induced
 by the precomposition with `F.op`. -/

@@ -3,10 +3,12 @@ Copyright (c) 2022 Michael Stoll. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael Geißer, Michael Stoll
 -/
-import Mathlib.NumberTheory.Real.Irrational
-import Mathlib.RingTheory.Coprime.Lemmas
-import Mathlib.RingTheory.Int.Basic
-import Mathlib.Tactic.Basic
+module
+
+public import Mathlib.NumberTheory.Real.Irrational
+public import Mathlib.RingTheory.Coprime.Lemmas
+public import Mathlib.RingTheory.Int.Basic
+public import Mathlib.Tactic.Basic
 
 /-!
 # Diophantine Approximation
@@ -47,7 +49,7 @@ Both statements are combined to give an equivalence,
 There are two versions of Legendre's Theorem. One, `Real.exists_rat_eq_convergent`, uses
 `Real.convergent`, a simple recursive definition of the convergents that is also defined
 in this file, whereas the other, `Real.exists_convs_eq_rat` defined in the file
-`Mathlib/NumberTheory/DiophantineApproximation/ContinuedFraction.lean`, uses
+`Mathlib/NumberTheory/DiophantineApproximation/ContinuedFractions.lean`, uses
 `GenContFract.convs` of `GenContFract.of ξ`.
 
 ## Implementation notes
@@ -67,6 +69,8 @@ fractions is much more extensive than the English one.)
 
 Diophantine approximation, Dirichlet's approximation theorem, continued fraction
 -/
+
+@[expose] public section
 
 
 namespace Real
@@ -167,6 +171,7 @@ i.e., fractions `x/y` in lowest terms such that `|ξ - x/y| < 1/y^2`.
 
 open Set
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Given any rational approximation `q` to the irrational real number `ξ`, there is
 a good rational approximation `q'` such that `|ξ - q'| < |ξ - q|`. -/
 theorem exists_rat_abs_sub_lt_and_lt_of_irrational {ξ : ℝ} (hξ : Irrational ξ) (q : ℚ) :
@@ -215,6 +220,7 @@ approximations.
 
 open Set
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `ξ` is rational, then the good rational approximations to `ξ` have bounded
 numerator and denominator. -/
 theorem den_le_and_le_num_le_of_sub_lt_one_div_den_sq {ξ q : ℚ}
@@ -273,10 +279,11 @@ end Rat
 theorem Real.infinite_rat_abs_sub_lt_one_div_den_sq_iff_irrational (ξ : ℝ) :
     {q : ℚ | |ξ - q| < 1 / (q.den : ℝ) ^ 2}.Infinite ↔ Irrational ξ := by
   refine
-    ⟨fun h => (irrational_iff_ne_rational ξ).mpr fun a b _ H => Set.not_infinite.mpr ?_ h,
+    ⟨fun h => (irrational_iff_ne_rational ξ).mpr fun a b _ => ?_,
       Real.infinite_rat_abs_sub_lt_one_div_den_sq_of_irrational⟩
+  contrapose! h
   convert Rat.finite_rat_abs_sub_lt_one_div_den_sq ((a : ℚ) / b) with q
-  rw [H, (by (push_cast; rfl) : (1 : ℝ) / (q.den : ℝ) ^ 2 = (1 / (q.den : ℚ) ^ 2 : ℚ))]
+  rw [h, (by (push_cast; rfl) : (1 : ℝ) / (q.den : ℝ) ^ 2 = (1 / (q.den : ℚ) ^ 2 : ℚ))]
   norm_cast
 
 /-!
@@ -330,6 +337,7 @@ theorem convergent_succ (ξ : ℝ) (n : ℕ) :
     ξ.convergent (n + 1) = ⌊ξ⌋ + ((fract ξ)⁻¹.convergent n)⁻¹ :=
   rfl
 
+set_option backward.isDefEq.respectTransparency false in
 /-- All convergents of `0` are zero. -/
 @[simp]
 theorem convergent_of_zero (n : ℕ) : convergent 0 n = 0 := by
@@ -338,6 +346,7 @@ theorem convergent_of_zero (n : ℕ) : convergent 0 n = 0 := by
   | succ n ih =>
     simp only [ih, convergent_succ, floor_zero, cast_zero, fract_zero, add_zero, inv_zero]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `ξ` is an integer, all its convergents equal `ξ`. -/
 @[simp]
 theorem convergent_of_int {ξ : ℤ} (n : ℕ) : convergent ξ n = ξ := by
@@ -368,7 +377,7 @@ def ContfracLegendre.Ass (ξ : ℝ) (u v : ℤ) : Prop :=
 -- ### Auxiliary lemmas
 -- This saves a few lines below, as it is frequently needed.
 private theorem aux₀ {v : ℤ} (hv : 0 < v) : (0 : ℝ) < v ∧ (0 : ℝ) < 2 * v - 1 :=
-  ⟨cast_pos.mpr hv, by norm_cast; cutsat⟩
+  ⟨cast_pos.mpr hv, by norm_cast; lia⟩
 
 -- In the following, we assume that `ass ξ u v` holds and `v ≥ 2`.
 variable {ξ : ℝ} {u v : ℤ}
@@ -391,10 +400,11 @@ private theorem aux₁ : 0 < fract ξ := by
     norm_cast
     rw [← zero_add (1 : ℤ), add_one_le_iff, abs_pos, sub_ne_zero]
     rintro rfl
-    cases isUnit_iff.mp (isCoprime_self.mp (IsCoprime.mul_left_iff.mp hcop).2) <;> omega
+    cases isUnit_iff.mp (isCoprime_self.mp (IsCoprime.mul_left_iff.mp hcop).2) <;> lia
   norm_cast at H
   linarith only [hv, H]
 
+set_option backward.isDefEq.respectTransparency false in
 -- An auxiliary lemma for the inductive step.
 private theorem aux₂ : 0 < u - ⌊ξ⌋ * v ∧ u - ⌊ξ⌋ * v < v := by
   obtain ⟨hcop, _, h⟩ := h
@@ -429,6 +439,7 @@ private theorem aux₂ : 0 < u - ⌊ξ⌋ * v ∧ u - ⌊ξ⌋ * v < v := by
       simp only [isCoprime_zero_left, isCoprime_self, isUnit_iff] at huv_cop
       rcases huv_cop with huv_cop | huv_cop <;> linarith only [hv, huv_cop]
 
+set_option backward.isDefEq.respectTransparency false in
 -- The key step: the relevant inequality persists in the inductive step.
 private theorem aux₃ :
     |(fract ξ)⁻¹ - v / (u - ⌊ξ⌋ * v)| < (((u : ℝ) - ⌊ξ⌋ * v) * (2 * (u - ⌊ξ⌋ * v) - 1))⁻¹ := by
@@ -526,6 +537,7 @@ theorem exists_rat_eq_convergent' {v : ℕ} (h : ContfracLegendre.Ass ξ u v) :
       (mod_cast toNat_of_nonneg huv₀.le : ((u - ⌊ξ⌋ * v).toNat : ℚ) = u - ⌊ξ⌋ * v),
       cast_natCast, inv_div, sub_div, mul_div_cancel_right₀ _ Hv, add_sub_cancel]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- The main result, *Legendre's Theorem* on rational approximation:
 if `ξ` is a real number and `q` is a rational number such that `|ξ - q| < 1/(2*q.den^2)`,
 then `q` is a convergent of the continued fraction expansion of `ξ`.

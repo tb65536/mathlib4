@@ -3,7 +3,9 @@ Copyright (c) 2025 Rémy Degenne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rémy Degenne
 -/
-import Mathlib.MeasureTheory.Measure.Portmanteau
+module
+
+public import Mathlib.MeasureTheory.Measure.Portmanteau
 
 /-!
 # Convergence in distribution
@@ -42,6 +44,8 @@ and convergence in distribution.
 
 -/
 
+@[expose] public section
+
 open Filter
 open scoped Topology
 
@@ -79,6 +83,7 @@ lemma tendstoInDistribution_of_isEmpty [IsEmpty E] :
     simp only [Subsingleton.elim _ (0 : Measure E)]
     exact tendsto_const_nhds
 
+set_option backward.isDefEq.respectTransparency false in
 lemma tendstoInDistribution_unique [HasOuterApproxClosed E] [BorelSpace E]
     (X : ι → Ω → E) {Z W : Ω → E} [l.NeBot]
     (h1 : TendstoInDistribution X l Z μ) (h2 : TendstoInDistribution X l W μ) :
@@ -107,6 +112,7 @@ end TendstoInDistribution
 
 variable [SeminormedAddCommGroup E] [SecondCountableTopology E] [BorelSpace E]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Let `X, Y` be two sequences of measurable functions such that `X n` converges in distribution
 to `Z`, and `Y n - X n` converges in probability to `0`.
 Then `Y n` converges in distribution to `Z`. -/

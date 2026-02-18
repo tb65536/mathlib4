@@ -4,14 +4,18 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes, Abhimanyu Pallavi Sudhir, Jean Lo, Calle Sönne, Sébastien Gouëzel,
   Rémy Degenne, David Loeffler
 -/
-import Mathlib.Analysis.SpecialFunctions.Pow.Complex
-import Mathlib.Data.Nat.NthRoot.Defs
-import Qq
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Pow.Complex
+public meta import Mathlib.Data.Nat.NthRoot.Defs
+public import Qq
 
 /-! # Power function on `ℝ`
 
 We construct the power functions `x ^ y`, where `x` and `y` are real numbers.
 -/
+
+@[expose] public section
 
 
 noncomputable section
@@ -102,6 +106,8 @@ theorem rpow_def_of_neg {x : ℝ} (hx : x < 0) (y : ℝ) : x ^ y = exp (log x * 
   · rw [Complex.ofReal_eq_zero]
     exact ne_of_lt hx
 
+-- simp is called on three goals at once (leaving one), with different simp sets
+set_option linter.flexible false in
 theorem rpow_def_of_nonpos {x : ℝ} (hx : x ≤ 0) (y : ℝ) :
     x ^ y = if x = 0 then if y = 0 then 1 else 0 else exp (log x * y) * cos (y * π) := by
   split_ifs with h <;> simp [rpow_def, *]; exact rpow_def_of_neg (lt_of_le_of_ne hx h) _
@@ -114,6 +120,9 @@ theorem rpow_pos_of_pos {x : ℝ} (hx : 0 < x) (y : ℝ) : 0 < x ^ y := by
 theorem rpow_zero (x : ℝ) : x ^ (0 : ℝ) = 1 := by simp [rpow_def]
 
 theorem rpow_zero_pos (x : ℝ) : 0 < x ^ (0 : ℝ) := by simp
+
+@[simp]
+theorem pi_rpow_zero {α : Type*} (f : α → ℝ) : f ^ (0 : ℝ) = 1 := by ext; simp
 
 @[simp]
 theorem zero_rpow {x : ℝ} (h : x ≠ 0) : (0 : ℝ) ^ x = 0 := by simp [rpow_def, *]
@@ -279,6 +288,7 @@ theorem ofReal_cpow_of_nonpos {x : ℝ} (hx : x ≤ 0) (y : ℂ) :
     log, norm_neg, arg_ofReal_of_neg hlt, ← ofReal_neg, arg_ofReal_of_nonneg (neg_nonneg.2 hx),
     ofReal_zero, zero_mul, add_zero]
 
+set_option backward.isDefEq.respectTransparency false in
 lemma cpow_ofReal (x : ℂ) (y : ℝ) :
     x ^ (y : ℂ) = ↑(‖x‖ ^ y) * (Real.cos (arg x * y) + Real.sin (arg x * y) * I) := by
   rcases eq_or_ne x 0 with rfl | hx
@@ -300,6 +310,7 @@ theorem norm_cpow_of_ne_zero {z : ℂ} (hz : z ≠ 0) (w : ℂ) :
   rw [cpow_def_of_ne_zero hz, norm_exp, mul_re, log_re, log_im, Real.exp_sub,
     Real.rpow_def_of_pos (norm_pos_iff.mpr hz)]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem norm_cpow_of_imp {z w : ℂ} (h : z = 0 → w.re = 0 → w = 0) :
     ‖z ^ w‖ = ‖z‖ ^ w.re / Real.exp (arg z * im w) := by
   rcases ne_or_eq z 0 with (hz | rfl) <;> [exact norm_cpow_of_ne_zero hz w; rw [norm_zero]]
@@ -308,6 +319,7 @@ theorem norm_cpow_of_imp {z w : ℂ} (h : z = 0 → w.re = 0 → w = 0) :
   · rw [Real.zero_rpow hw, zero_div, zero_cpow, norm_zero]
     exact ne_of_apply_ne re hw
 
+set_option backward.isDefEq.respectTransparency false in
 theorem norm_cpow_le (z w : ℂ) : ‖z ^ w‖ ≤ ‖z‖ ^ w.re / Real.exp (arg z * im w) := by
   by_cases! h : z = 0 → w.re = 0 → w = 0
   · exact (norm_cpow_of_imp h).le
@@ -362,7 +374,7 @@ open Lean Meta Qq
 /-- Extension for the `positivity` tactic: exponentiation by a real number is positive (namely 1)
 when the exponent is zero. The other cases are done in `evalRpow`. -/
 @[positivity (_ : ℝ) ^ (0 : ℝ)]
-def evalRpowZero : PositivityExt where eval {u α} _ _ e := do
+meta def evalRpowZero : PositivityExt where eval {u α} _ _ e := do
   match u, α, e with
   | 0, ~q(ℝ), ~q($a ^ (0 : ℝ)) =>
     assertInstancesCommute
@@ -372,7 +384,7 @@ def evalRpowZero : PositivityExt where eval {u α} _ _ e := do
 /-- Extension for the `positivity` tactic: exponentiation by a real number is nonnegative when
 the base is nonnegative and positive when the base is positive. -/
 @[positivity (_ : ℝ) ^ (_ : ℝ)]
-def evalRpow : PositivityExt where eval {u α} _zα _pα e := do
+meta def evalRpow : PositivityExt where eval {u α} _zα _pα e := do
   match u, α, e with
   | 0, ~q(ℝ), ~q($a ^ ($b : ℝ)) =>
     let ra ← core q(inferInstance) q(inferInstance) a
@@ -458,6 +470,8 @@ theorem rpow_two (x : ℝ) : x ^ (2 : ℝ) = x ^ 2 := by
 theorem rpow_neg_one (x : ℝ) : x ^ (-1 : ℝ) = x⁻¹ := by
   rw [rpow_neg_eq_inv_rpow, rpow_one]
 
+-- TODO: fix non-terminal simp (acting on three goals, with different simp sets, leaving two)
+set_option linter.flexible false in
 theorem mul_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) : (x * y) ^ z = x ^ z * y ^ z := by
   iterate 2 rw [Real.rpow_def_of_nonneg]; split_ifs with h_ifs <;> simp_all
   · rw [log_mul ‹_› ‹_›, add_mul, exp_add, rpow_def_of_pos (hy.lt_of_ne' ‹_›)]
@@ -469,6 +483,9 @@ theorem inv_rpow (hx : 0 ≤ x) (y : ℝ) : x⁻¹ ^ y = (x ^ y)⁻¹ := by
 theorem div_rpow (hx : 0 ≤ x) (hy : 0 ≤ y) (z : ℝ) : (x / y) ^ z = x ^ z / y ^ z := by
   simp only [div_eq_mul_inv, mul_rpow hx (inv_nonneg.2 hy), inv_rpow hy]
 
+@[push low] /- Lower priority than `log_pow` and `log_zpow`.
+This is because otherwise the `pull` tactic will use `log_rpow` in places where it should
+use `log_pow` or `log_zpow`. -/
 theorem log_rpow {x : ℝ} (hx : 0 < x) (y : ℝ) : log (x ^ y) = y * log x := by
   apply exp_injective
   rw [exp_log (rpow_pos_of_pos hx y), ← exp_log hx, mul_comm, rpow_def_of_pos (exp_pos (log x)) y]
@@ -512,6 +529,7 @@ in `Mathlib/Analysis/SpecialFunctions/Pow/NNReal.lean` instead. -/
 -/
 
 
+set_option backward.isDefEq.respectTransparency false in
 @[gcongr, bound]
 theorem rpow_lt_rpow (hx : 0 ≤ x) (hxy : x < y) (hz : 0 < z) : x ^ z < y ^ z := by
   rw [le_iff_eq_or_lt] at hx; rcases hx with hx | hx
@@ -587,6 +605,7 @@ theorem rpow_inv_le_iff_of_neg (hx : 0 < x) (hy : 0 < y) (hz : z < 0) :
     x ^ z⁻¹ ≤ y ↔ y ^ z ≤ x := by
   rw [← rpow_le_rpow_iff_of_neg hy _ hz, rpow_inv_rpow _ hz.ne] <;> positivity
 
+set_option backward.isDefEq.respectTransparency false in
 theorem rpow_lt_rpow_of_exponent_lt (hx : 1 < x) (hyz : y < z) : x ^ y < x ^ z := by
   repeat' rw [rpow_def_of_pos (lt_trans zero_lt_one hx)]
   rw [exp_lt_exp]; exact mul_lt_mul_of_pos_left hyz (log_pos hx)
@@ -610,6 +629,7 @@ theorem antitoneOn_rpow_Ioi_of_exponent_nonpos {r : ℝ} (hr : r ≤ 0) :
     AntitoneOn (fun (x : ℝ) => x ^ r) (Set.Ioi 0) :=
   fun _ ha _ _ hab => rpow_le_rpow_of_nonpos ha hab hr
 
+set_option backward.isDefEq.respectTransparency false in
 @[simp]
 theorem rpow_le_rpow_left_iff (hx : 1 < x) : x ^ y ≤ x ^ z ↔ y ≤ z := by
   have x_pos : 0 < x := lt_trans zero_lt_one hx
@@ -686,6 +706,7 @@ theorem rpow_lt_one_iff' {x y : ℝ} (hx : 0 ≤ x) (hy : 0 < y) :
     x ^ y < 1 ↔ x < 1 := by
   rw [← Real.rpow_lt_rpow_iff hx zero_le_one hy, Real.one_rpow]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem one_lt_rpow_iff_of_pos (hx : 0 < x) : 1 < x ^ y ↔ 1 < x ∧ 0 < y ∨ x < 1 ∧ y < 0 := by
   rw [rpow_def_of_pos hx, one_lt_exp_iff, mul_pos_iff, log_pos_iff hx.le, log_neg_iff hx]
 
@@ -946,6 +967,7 @@ lemma norm_natCast_cpow_le_norm_natCast_cpow_iff {n : ℕ} (hn : 1 < n) {w z : �
   simp_rw [norm_natCast_cpow_of_pos (Nat.zero_lt_of_lt hn),
     Real.rpow_le_rpow_left_iff (Nat.one_lt_cast.mpr hn)]
 
+set_option backward.isDefEq.respectTransparency false in
 lemma norm_log_natCast_le_rpow_div (n : ℕ) {ε : ℝ} (hε : 0 < ε) : ‖log n‖ ≤ n ^ ε / ε := by
   rcases n.eq_zero_or_pos with rfl | h
   · rw [Nat.cast_zero, Nat.cast_zero, log_zero, norm_zero, Real.zero_rpow hε.ne', zero_div]
@@ -1035,7 +1057,7 @@ theorem IsNat.rpow_eq_pow {b : ℝ} {n : ℕ} (h : IsNat b n) (a : ℝ) : a ^ b 
 
 theorem IsInt.rpow_eq_inv_pow {b : ℝ} {n : ℕ} (h : IsInt b (.negOfNat n)) (a : ℝ) :
     a ^ b = (a ^ n)⁻¹ := by
-  rw [h.1, Real.rpow_intCast, Int.negOfNat_eq, zpow_neg, Int.ofNat_eq_coe, zpow_natCast]
+  rw [h.1, Real.rpow_intCast, Int.negOfNat_eq, zpow_neg, Int.ofNat_eq_natCast, zpow_natCast]
 
 @[deprecated IsNat.rpow_eq_pow (since := "2025-10-21")]
 theorem isNat_rpow_pos {a b : ℝ} {nb ne : ℕ}
@@ -1128,7 +1150,7 @@ returns a tuple of
 
 Fails if `na` is not a `db`th power of a natural number.
 -/
-def proveIsNatRPowIsNNRat
+meta def proveIsNatRPowIsNNRat
     (a : Q(ℝ)) (na : Q(ℕ)) (pa : Q(IsNat $a $na))
     (b : Q(ℝ)) (nb db : Q(ℕ)) (pb : Q(IsNNRat $b $nb $db)) :
     MetaM (ℕ × Σ r : Q(ℕ), Q(IsNat ($a ^ $b) $r)) := do
@@ -1148,7 +1170,7 @@ except for the case `a < 0`, `b` isn't integer.
 TODO: simplify terms like  `(-a : ℝ) ^ (b / 3 : ℝ)` and `(-a : ℝ) ^ (b / 2 : ℝ)` too,
 possibly after first considering changing the junk value. -/
 @[norm_num (_ : ℝ) ^ (_ : ℝ)]
-def evalRPow : NormNumExt where eval {u αR} e := do
+meta def evalRPow : NormNumExt where eval {u αR} e := do
   match u, αR, e with
   | 0, ~q(ℝ), ~q(($a : ℝ)^($b : ℝ)) =>
     match ← derive b with

@@ -3,11 +3,13 @@ Copyright (c) 2023 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import Mathlib.Topology.Algebra.Module.Multilinear.Bounded
-import Mathlib.Topology.Algebra.Module.UniformConvergence
-import Mathlib.Topology.Algebra.SeparationQuotient.Section
-import Mathlib.Topology.Hom.ContinuousEvalConst
-import Mathlib.Topology.Algebra.InfiniteSum.Basic
+module
+
+public import Mathlib.Topology.Algebra.Module.Multilinear.Bounded
+public import Mathlib.Topology.Algebra.Module.UniformConvergence
+public import Mathlib.Topology.Algebra.SeparationQuotient.Section
+public import Mathlib.Topology.Hom.ContinuousEvalConst
+public import Mathlib.Topology.Algebra.InfiniteSum.Basic
 
 /-!
 # Topology on continuous multilinear maps
@@ -17,6 +19,8 @@ on `ContinuousMultilinearMap 𝕜 E F`,
 where `E i` is a family of vector spaces over `𝕜` with topologies
 and `F` is a topological vector space.
 -/
+
+@[expose] public section
 
 open Bornology Function Set Topology
 open scoped UniformConvergence Filter
@@ -148,6 +152,7 @@ variable (𝕜' : Type*) [NontriviallyNormedField 𝕜'] [NormedAlgebra 𝕜' �
   [∀ i, Module 𝕜' (E i)] [∀ i, IsScalarTower 𝕜' 𝕜 (E i)] [Module 𝕜' F] [IsScalarTower 𝕜' 𝕜 F]
   [∀ i, ContinuousSMul 𝕜 (E i)]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isUniformEmbedding_restrictScalars :
     IsUniformEmbedding
       (restrictScalars 𝕜' : ContinuousMultilinearMap 𝕜 E F → ContinuousMultilinearMap 𝕜' E F) := by

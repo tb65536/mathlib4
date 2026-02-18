@@ -3,9 +3,11 @@ Copyright (c) 2023 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import Mathlib.LinearAlgebra.Trace
-import Mathlib.LinearAlgebra.FreeModule.PID
-import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
+module
+
+public import Mathlib.LinearAlgebra.Trace
+public import Mathlib.LinearAlgebra.FreeModule.PID
+public import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 
 /-!
 # Linear maps of modules with coefficients in a principal ideal domain
@@ -21,11 +23,14 @@ algebra import hierarchy have to depend on the theory of PIDs.
 
 -/
 
+public section
+
 namespace LinearMap
 
 variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
   [Module.Finite R M] [Module.Free R M]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If a linear endomorphism of a (finite, free) module `M` takes values in a submodule `p ⊆ M`,
 then the trace of its restriction to `p` is equal to its trace on `M`. -/
 lemma trace_restrict_eq_of_forall_mem [IsDomain R] [IsPrincipalIdealRing R]

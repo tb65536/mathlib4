@@ -3,9 +3,12 @@ Copyright (c) 2025 Rémy Degenne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rémy Degenne
 -/
-import Mathlib.Analysis.LocallyConvex.ContinuousOfBounded
-import Mathlib.MeasureTheory.Constructions.BorelSpace.ContinuousLinearMap
-import Mathlib.Probability.Moments.Variance
+module
+
+public import Mathlib.Analysis.LocallyConvex.ContinuousOfBounded
+public import Mathlib.LinearAlgebra.BilinearForm.Properties
+public import Mathlib.MeasureTheory.Constructions.BorelSpace.ContinuousLinearMap
+public import Mathlib.Probability.Moments.Variance
 
 /-!
 # Covariance in Banach spaces
@@ -35,6 +38,8 @@ Let `μ` be a finite measure on a normed space `E` with the Borel σ-algebra. We
 The hypothesis that `μ` has a second moment is written as `MemLp id 2 μ` in the code.
 
 -/
+
+@[expose] public section
 
 
 open MeasureTheory ProbabilityTheory Complex NormedSpace
@@ -81,7 +86,7 @@ lemma norm_toLpₗ_le [OpensMeasurableSpace E] (L : StrongDual 𝕜 E) :
   by_cases hp_top : p = ∞
   · simp only [hp_top, StrongDual.toLpₗ_apply h_Lp, Lp.norm_toLp, eLpNorm_exponent_top] at h_Lp ⊢
     simp only [eLpNormEssSup, id_eq]
-    suffices (essSup (fun x ↦ ‖L x‖ₑ) μ).toReal ≤ (essSup (fun x ↦ ‖L‖ₑ *‖x‖ₑ) μ).toReal by
+    suffices (essSup (fun x ↦ ‖L x‖ₑ) μ).toReal ≤ (essSup (fun x ↦ ‖L‖ₑ * ‖x‖ₑ) μ).toReal by
       rwa [ENNReal.essSup_const_mul, ENNReal.toReal_mul, toReal_enorm] at this
     gcongr
     · rw [ENNReal.essSup_const_mul]
@@ -94,10 +99,10 @@ lemma norm_toLpₗ_le [OpensMeasurableSpace E] (L : StrongDual 𝕜 E) :
     simp only [ENNReal.toReal_mul]
     rw [← ENNReal.toReal_rpow, Real.mul_rpow (by positivity) (by positivity),
       ← Real.rpow_mul (by positivity), mul_inv_cancel₀ h0.ne', Real.rpow_one, toReal_enorm]
-    rw [eLpNorm_eq_lintegral_rpow_enorm (by simp [hp]) hp_top, ENNReal.toReal_rpow]
+    rw [eLpNorm_eq_lintegral_rpow_enorm_toReal (by simp [hp]) hp_top, ENNReal.toReal_rpow]
     simp
   rw [StrongDual.toLpₗ_apply h_Lp, Lp.norm_toLp,
-    eLpNorm_eq_lintegral_rpow_enorm (by simp [hp]) hp_top]
+    eLpNorm_eq_lintegral_rpow_enorm_toReal (by simp [hp]) hp_top]
   simp only [one_div]
   refine ENNReal.toReal_le_of_le_ofReal (by positivity) ?_
   suffices ∫⁻ x, ‖L x‖ₑ ^ p.toReal ∂μ ≤ ‖L‖ₑ ^ p.toReal * ∫⁻ x, ‖x‖ₑ ^ p.toReal ∂μ by
@@ -106,7 +111,7 @@ lemma norm_toLpₗ_le [OpensMeasurableSpace E] (L : StrongDual 𝕜 E) :
     rwa [ENNReal.ofReal_toReal]
     refine ENNReal.mul_ne_top (by simp) ?_
     have h := h_Lp.eLpNorm_ne_top
-    rw [eLpNorm_eq_lintegral_rpow_enorm (by simp [hp]) hp_top] at h
+    rw [eLpNorm_eq_lintegral_rpow_enorm_toReal (by simp [hp]) hp_top] at h
     simpa [h0] using h
   calc ∫⁻ x, ‖L x‖ₑ ^ p.toReal ∂μ
   _ ≤ ∫⁻ x, ‖L‖ₑ ^ p.toReal * ‖x‖ₑ ^ p.toReal ∂μ := by
@@ -169,6 +174,7 @@ def uncenteredCovarianceBilinDual (μ : Measure E) : StrongDual ℝ E →L[ℝ] 
 @[deprecated (since := "2025-10-10")] alias uncenteredCovarianceBilin :=
   uncenteredCovarianceBilinDual
 
+set_option backward.isDefEq.respectTransparency false in
 lemma uncenteredCovarianceBilinDual_apply (h : MemLp id 2 μ) (L₁ L₂ : StrongDual ℝ E) :
     uncenteredCovarianceBilinDual μ L₁ L₂ = ∫ x, L₁ x * L₂ x ∂μ := by
   simp only [uncenteredCovarianceBilinDual, ContinuousLinearMap.bilinearComp_apply,
@@ -198,6 +204,7 @@ lemma uncenteredCovarianceBilinDual_zero : uncenteredCovarianceBilinDual (0 : Me
 @[deprecated (since := "2025-10-10")] alias uncenteredCovarianceBilin_zero :=
   uncenteredCovarianceBilinDual_zero
 
+set_option backward.isDefEq.respectTransparency false in
 lemma norm_uncenteredCovarianceBilinDual_le (L₁ L₂ : StrongDual ℝ E) :
     ‖uncenteredCovarianceBilinDual μ L₁ L₂‖ ≤ ‖L₁‖ * ‖L₂‖ * ∫ x, ‖x‖ ^ 2 ∂μ := by
   by_cases h : MemLp id 2 μ
@@ -283,7 +290,7 @@ lemma _root_.MeasureTheory.memLp_id_of_self_sub_integral {p : ℝ≥0∞}
     _ ≤ 2 * ‖c‖ ^ (p - 1 : ℝ) * ‖y‖ + 2 ^ (p : ℝ) * ‖y - c‖ ^ (p : ℝ) := by
       gcongr
       positivity
-  · calc ‖c‖ ^ (p : ℝ )
+  · calc ‖c‖ ^ (p : ℝ)
     _ = ‖c‖ ^ ((p - 1) + 1 : ℝ) := by abel_nf
     _ = ‖c‖ ^ (p - 1 : ℝ) * ‖c‖ := by rw [Real.rpow_add (by positivity), Real.rpow_one]
     _ ≤ ‖c‖ ^ (p - 1 : ℝ) * (2 * ‖y‖) := by gcongr; linarith
@@ -324,6 +331,10 @@ lemma covarianceBilinDual_self_nonneg (L : StrongDual ℝ E) : 0 ≤ covarianceB
     exact real_inner_self_nonneg
   · simp [h]
 
+lemma isPosSemidef_covarianceBilinDual : (covarianceBilinDual μ).toBilinForm.IsPosSemidef where
+  eq := covarianceBilinDual_comm
+  nonneg := covarianceBilinDual_self_nonneg
+
 variable [CompleteSpace E] [IsFiniteMeasure μ]
 
 lemma covarianceBilinDual_apply (h : MemLp id 2 μ) (L₁ L₂ : StrongDual ℝ E) :
@@ -349,9 +360,6 @@ lemma covarianceBilinDual_eq_covariance (h : MemLp id 2 μ) (L₁ L₂ : StrongD
 lemma covarianceBilinDual_self_eq_variance (h : MemLp id 2 μ) (L : StrongDual ℝ E) :
     covarianceBilinDual μ L L = Var[L; μ] := by
   rw [covarianceBilinDual_eq_covariance h, covariance_self (by fun_prop)]
-
-@[deprecated (since := "2025-07-16")] alias covarianceBilin_same_eq_variance :=
-  covarianceBilinDual_self_eq_variance
 
 end Covariance
 

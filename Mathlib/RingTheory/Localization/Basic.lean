@@ -3,13 +3,15 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Mario Carneiro, Johan Commelin, Amelia Livingston, Anne Baanen
 -/
-import Mathlib.Algebra.Algebra.Tower
-import Mathlib.Algebra.Field.IsField
-import Mathlib.Algebra.GroupWithZero.NonZeroDivisors
-import Mathlib.Data.Finite.Prod
-import Mathlib.GroupTheory.MonoidLocalization.MonoidWithZero
-import Mathlib.RingTheory.Localization.Defs
-import Mathlib.RingTheory.OreLocalization.Ring
+module
+
+public import Mathlib.Algebra.Algebra.Tower
+public import Mathlib.Algebra.Field.IsField
+public import Mathlib.Algebra.GroupWithZero.NonZeroDivisors
+public import Mathlib.Data.Finite.Prod
+public import Mathlib.GroupTheory.MonoidLocalization.MonoidWithZero
+public import Mathlib.RingTheory.Localization.Defs
+public import Mathlib.RingTheory.OreLocalization.Ring
 
 /-!
 # Localizations of commutative rings
@@ -68,6 +70,8 @@ localization, ring localization, commutative ring localization, characteristic p
 commutative ring, field of fractions
 -/
 
+@[expose] public section
+
 assert_not_exists Ideal
 
 open Function
@@ -84,6 +88,7 @@ noncomputable abbrev mapPiEvalRingHom :
     Localization (S.comap <| Pi.evalRingHom R i) →+* Localization S :=
   map (T := S) _ (Pi.evalRingHom R i) le_rfl
 
+set_option backward.isDefEq.respectTransparency false in
 open Function in
 theorem mapPiEvalRingHom_bijective : Bijective (mapPiEvalRingHom S) := by
   let T := S.comap (Pi.evalRingHom R i)
@@ -286,7 +291,7 @@ noncomputable def atUnits (H : M ≤ IsUnit.submonoid R) : R ≃ₐ[R] S := by
     obtain ⟨u, hu⟩ := H s.prop
     use x * u.inv
     dsimp [Algebra.ofId, RingHom.toFun_eq_coe, AlgHom.coe_mks]
-    rw [RingHom.map_mul, ← eq, ← hu, mul_assoc, ← RingHom.map_mul]
+    rw [map_mul, ← eq, ← hu, mul_assoc, ← map_mul]
     simp
 
 end at_units
@@ -299,7 +304,7 @@ variable (M N)
 
 theorem isLocalization_of_algEquiv [Algebra R P] [IsLocalization M S] (h : S ≃ₐ[R] P) :
     IsLocalization M P := by
-  constructor
+  constructor; constructor
   · intro y
     convert (IsLocalization.map_units S y).map h.toAlgHom.toRingHom.toMonoidHom
     exact (h.commutes y).symm
@@ -458,6 +463,7 @@ end Localization
 
 open IsLocalization
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `R` is a field, then localizing at a submonoid not containing `0` adds no new elements. -/
 theorem IsField.localization_map_bijective {R Rₘ : Type*} [CommRing R] [CommRing Rₘ]
     {M : Submonoid R} (hM : (0 : R) ∉ M) (hR : IsField R) [Algebra R Rₘ] [IsLocalization M Rₘ] :

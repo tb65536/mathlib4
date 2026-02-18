@@ -3,12 +3,14 @@ Copyright (c) 2021 Jujian Zhang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jujian Zhang, Eric Wieser
 -/
-import Mathlib.LinearAlgebra.Finsupp.SumProd
-import Mathlib.RingTheory.GradedAlgebra.Basic
-import Mathlib.RingTheory.Ideal.Basic
-import Mathlib.RingTheory.Ideal.BigOperators
-import Mathlib.RingTheory.Ideal.Maps
-import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
+module
+
+public import Mathlib.LinearAlgebra.Finsupp.SumProd
+public import Mathlib.RingTheory.GradedAlgebra.Basic
+public import Mathlib.RingTheory.Ideal.Basic
+public import Mathlib.RingTheory.Ideal.BigOperators
+public import Mathlib.RingTheory.Ideal.Maps
+public import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
 
 /-!
 # Homogeneous ideals of a graded algebra
@@ -40,6 +42,8 @@ to `Ideal.IsHomogeneous.iff_exists` as quickly as possible.
 
 graded algebra, homogeneous
 -/
+
+@[expose] public section
 
 
 open SetLike DirectSum Set
@@ -81,6 +85,8 @@ theorem HomogeneousIdeal.toIdeal_injective :
 
 instance HomogeneousIdeal.setLike : SetLike (HomogeneousIdeal 𝒜) A :=
   HomogeneousSubmodule.setLike 𝒜 𝒜
+
+instance : PartialOrder (HomogeneousIdeal 𝒜) := .ofSetLike (HomogeneousIdeal 𝒜) A
 
 @[ext]
 theorem HomogeneousIdeal.ext {I J : HomogeneousIdeal 𝒜} (h : I.toIdeal = J.toIdeal) : I = J :=
@@ -144,6 +150,7 @@ theorem Ideal.mul_homogeneous_element_mem_of_mem
   · exact I.mul_mem_left _ hx₂
   · exact I.zero_mem
 
+set_option backward.isDefEq.respectTransparency false in
 theorem Ideal.homogeneous_span (s : Set A) (h : ∀ x ∈ s, SetLike.IsHomogeneousElem 𝒜 x) :
     (Ideal.span s).IsHomogeneous 𝒜 := by
   rintro i r hr
@@ -281,9 +288,6 @@ variable {𝒜}
 
 namespace HomogeneousIdeal
 
-instance : PartialOrder (HomogeneousIdeal 𝒜) :=
-  SetLike.instPartialOrder
-
 instance : Top (HomogeneousIdeal 𝒜) :=
   ⟨⟨⊤, Ideal.IsHomogeneous.top 𝒜⟩⟩
 
@@ -369,8 +373,8 @@ theorem eq_bot_iff (I : HomogeneousIdeal 𝒜) : I = ⊥ ↔ I.toIdeal = ⊥ :=
   toIdeal_injective.eq_iff.symm
 
 instance completeLattice : CompleteLattice (HomogeneousIdeal 𝒜) :=
-  toIdeal_injective.completeLattice _ toIdeal_sup toIdeal_inf toIdeal_sSup toIdeal_sInf toIdeal_top
-    toIdeal_bot
+  toIdeal_injective.completeLattice _ .rfl .rfl toIdeal_sup toIdeal_inf toIdeal_sSup toIdeal_sInf
+    toIdeal_top toIdeal_bot
 
 instance : Add (HomogeneousIdeal 𝒜) :=
   ⟨(· ⊔ ·)⟩
@@ -572,7 +576,7 @@ def irrelevant : HomogeneousIdeal 𝒜 :=
     · rw [h, hr, decompose_zero, zero_apply, ZeroMemClass.coe_zero]
     · rw [decompose_of_mem_ne 𝒜 (SetLike.coe_mem _) h]⟩
 
-local notation 𝒜"₊" => irrelevant 𝒜
+local notation 𝒜 "₊" => irrelevant 𝒜
 
 @[simp]
 theorem mem_irrelevant_iff (a : A) :

@@ -3,15 +3,19 @@ Copyright (c) 2014 Microsoft Corporation. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import Mathlib.Algebra.Order.Ring.Cast
-import Mathlib.Data.Int.Cast.Lemmas
-import Mathlib.Data.Num.Lemmas
+module
+
+public import Mathlib.Algebra.Order.Ring.Cast
+public import Mathlib.Data.Int.Cast.Lemmas
+public import Mathlib.Data.Num.Lemmas
 
 /-!
 # Properties of the `ZNum` representation of integers
 
 This file was split from `Mathlib/Data/Num/Lemmas.lean` to keep the former under 1500 lines.
 -/
+
+@[expose] public section
 
 open Int
 
@@ -153,6 +157,7 @@ theorem cast_to_znum : ∀ n : PosNum, (n : ZNum) = ZNum.pos n
       have := congr_arg ZNum.bit1 (cast_to_znum p)
       rwa [← ZNum.bit1_of_bit1] at this
 
+set_option backward.isDefEq.respectTransparency false in
 theorem cast_sub' [AddGroupWithOne α] : ∀ m n : PosNum, (sub' m n : α) = m - n
   | a, 1 => by
     rw [sub'_one, Num.cast_toZNum, ← Num.cast_to_nat, pred'_to_nat, ← Nat.sub_one]
@@ -428,14 +433,11 @@ instance addMonoidWithOne : AddMonoidWithOne ZNum :=
 
 -- The next theorems are declared outside of the instance to prevent timeouts.
 
+set_option backward.privateInPublic true in
 private theorem mul_comm : ∀ (a b : ZNum), a * b = b * a := by transfer
 
-private theorem add_le_add_left : ∀ (a b : ZNum), a ≤ b → ∀ (c : ZNum), c + a ≤ c + b := by
-  intro a b h c
-  revert h
-  transfer_rw
-  exact fun h => _root_.add_le_add_left h c
-
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 instance commRing : CommRing ZNum :=
   { ZNum.addCommGroup, ZNum.addMonoidWithOne with
     mul_assoc a b c := by transfer
@@ -457,8 +459,8 @@ instance nontrivial : Nontrivial ZNum :=
 instance zeroLEOneClass : ZeroLEOneClass ZNum :=
   { zero_le_one := by decide }
 
-instance isOrderedAddMonoid : IsOrderedAddMonoid ZNum :=
-  { add_le_add_left := add_le_add_left }
+instance isOrderedAddMonoid : IsOrderedAddMonoid ZNum where
+  add_le_add_left a b h c := by revert h; transfer_rw; intro h; gcongr
 
 instance isStrictOrderedRing : IsStrictOrderedRing ZNum :=
   .of_mul_pos fun a b ↦ by
@@ -514,6 +516,7 @@ end ZNum
 
 namespace PosNum
 
+set_option backward.isDefEq.respectTransparency false in
 theorem divMod_to_nat_aux {n d : PosNum} {q r : Num} (h₁ : (r : ℕ) + d * ((q : ℕ) + q) = n)
     (h₂ : (r : ℕ) < 2 * d) :
     ((divModAux d q r).2 + d * (divModAux d q r).1 : ℕ) = ↑n ∧ ((divModAux d q r).2 : ℕ) < d := by
@@ -548,7 +551,7 @@ theorem divMod_to_nat (d n : PosNum) :
     simp only at IH ⊢
     apply divMod_to_nat_aux <;> simp only [Num.cast_bit1, cast_bit1]
     · rw [← two_mul, ← two_mul, add_right_comm, mul_left_comm, ← mul_add, IH.1]
-    · omega
+    · lia
   | bit0 n IH =>
     unfold divMod
     -- Porting note: `cases'` didn't rewrite at `this`, so `revert` & `intro` are required.
@@ -599,6 +602,7 @@ theorem mod_to_nat : ∀ n d, ((n % d : Num) : ℕ) = n % d
   | pos _, 0 => (Nat.mod_zero _).symm
   | pos _, pos _ => PosNum.mod'_to_nat _ _
 
+set_option backward.isDefEq.respectTransparency false in
 theorem gcd_to_nat_aux :
     ∀ {n} {a b : Num}, a ≤ b → (a * b).natSize ≤ n → (gcdAux n a b : ℕ) = Nat.gcd a b
   | 0, 0, _, _ab, _h => (Nat.gcd_zero_left _).symm

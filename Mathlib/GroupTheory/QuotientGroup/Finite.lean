@@ -4,14 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kevin Buzzard, Patrick Massot
 -/
 -- This file is to a certain extent based on `quotient_module.lean` by Johannes Hölzl.
+module
 
-import Mathlib.Algebra.Group.Subgroup.Finite
-import Mathlib.Data.Finite.Prod
-import Mathlib.GroupTheory.QuotientGroup.Basic
+public import Mathlib.Algebra.Group.Subgroup.Finite
+public import Mathlib.Data.Finite.Prod
+public import Mathlib.GroupTheory.QuotientGroup.Basic
 
 /-!
 # Deducing finiteness of a group.
 -/
+
+@[expose] public section
 
 open Function QuotientGroup Subgroup
 open scoped Pointwise
@@ -38,6 +41,7 @@ noncomputable def fintypeOfKerLeRange (h : g.ker ≤ f.range) : Fintype G :=
 noncomputable def fintypeOfKerEqRange (h : g.ker = f.range) : Fintype G :=
   fintypeOfKerLeRange _ _ h.le
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `ker(G →* H)` and `H` are finite, then `G` is finite. -/
 @[to_additive /-- If `ker(G →+ H)` and `H` are finite, then `G` is finite. -/]
 noncomputable def fintypeOfKerOfCodom [Fintype g.ker] : Fintype G :=

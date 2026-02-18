@@ -3,12 +3,11 @@ Copyright (c) 2025 Xavier Roblot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Xavier Roblot
 -/
-import Mathlib.Algebra.BigOperators.Ring.Nat
-import Mathlib.NumberTheory.LSeries.AbstractFuncEq
-import Mathlib.NumberTheory.LSeries.SumCoeff
-import Mathlib.NumberTheory.NumberField.CanonicalEmbedding.NormEqOne
-import Mathlib.NumberTheory.NumberField.Discriminant.Different
-import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
+module
+
+public import Mathlib.Algebra.BigOperators.Ring.Nat
+public import Mathlib.NumberTheory.LSeries.SumCoeff
+public import Mathlib.NumberTheory.NumberField.Ideal.Asymptotics
 
 /-!
 # The Dedekind zeta function of a number field
@@ -29,48 +28,7 @@ In this file, we define and prove results about the Dedekind zeta function of a 
 Generalize the construction of the Dedekind zeta function.
 -/
 
-namespace NumberField.Dedekind
-
-open NumberField.Units mixedEmbedding mixedEmbedding.fundamentalCone dirichletUnitTheorem
-
-open scoped nonZeroDivisors
-
-variable {K : Type*} [Field K] [NumberField K]
-
--- or perhaps just plug in a lattice? and then dual lattice w.r.t. trace form gives function eq'n.
-noncomputable def theta (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) (t : ℝ) : ℂ := sorry
-
--- takes in fundamental domain (e.g., `logMap '' normEqOne K`)
-noncomputable def f (F : Set (logSpace K)) (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) (t : ℝ) : ℂ :=
-  (∫ x in F, theta a sorry) / torsionOrder K
-
-noncomputable def invIdeal (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) : (FractionalIdeal (𝓞 K)⁰ K)ˣ :=
-  (a * Units.mk0 (differentIdeal ℤ (𝓞 K) : FractionalIdeal (𝓞 K)⁰ K)
-    (by simp [differentIdeal_ne_bot]))⁻¹
-
-#check differentIdeal ℤ (𝓞 K)
-
-noncomputable def dedekindFEPair (a : (FractionalIdeal (𝓞 K)⁰ K)ˣ) : WeakFEPair ℂ where
-  f := f (logMap '' normEqOne K) a -- R → ℂ
-  g := f (- logMap '' normEqOne K) (invIdeal a) -- ℝ → ℂ
-  k := 1 / 2 -- weight, exponent in functional equation (ℝ)
-  ε := 1 -- root number (ℂ)
-  f₀ := 2 ^ (Module.finrank ℚ K - 1) * regulator K / torsionOrder K -- constant term at ∞ (E)
-  g₀ := sorry -- constant term at ∞ (E)
-  hf_int := sorry -- proof of integrability on (0,∞)
-  hg_int := sorry -- proof of integrability on (0,∞)
-  hk := by positivity -- 0 < k
-  hε := one_ne_zero -- ε ≠ 0
-  h_feq := sorry -- f (1 / x) = (ε * ↑(x ^ k)) • g x
-  hf_top := sorry -- decay at ∞
-  hg_top := sorry -- decay at ∞
-
--- f - f₀ has mellin transform Λ (see `hasMellin`)
--- functional_equation for Λ is `P.Λ (P.k - s) = P.ε • P.symm.Λ s`
-/- So just define the WeakFEPair, define completed Dedekind zeta function as Mellin transform,
-  define Dedekind zeta function from that, and only afterwards prove the L-series formula? -/
-
-end NumberField.Dedekind
+@[expose] public section
 
 variable (K : Type*) [Field K] [NumberField K]
 

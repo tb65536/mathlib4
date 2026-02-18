@@ -3,12 +3,14 @@ Copyright (c) 2022 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel
 -/
-import Mathlib.Probability.IdentDistrib
-import Mathlib.Probability.Independence.Integrable
-import Mathlib.MeasureTheory.Integral.DominatedConvergence
-import Mathlib.Analysis.SpecificLimits.FloorPow
-import Mathlib.Analysis.PSeries
-import Mathlib.Analysis.Asymptotics.SpecificAsymptotics
+module
+
+public import Mathlib.Probability.IdentDistrib
+public import Mathlib.Probability.Independence.Integrable
+public import Mathlib.MeasureTheory.Integral.DominatedConvergence
+public import Mathlib.Analysis.SpecificLimits.FloorPow
+public import Mathlib.Analysis.PSeries
+public import Mathlib.Analysis.Asymptotics.SpecificAsymptotics
 
 /-!
 # The strong law of large numbers
@@ -52,6 +54,8 @@ random variables. Let `Yₙ` be the truncation of `Xₙ` up to `n`. We claim tha
 * To generalize it to all indices, we use the fact that `∑_{i=0}^{n-1} Xᵢ` is nondecreasing and
   that, if `c` is close enough to `1`, the gap between `c^k` and `c^(k+1)` is small.
 -/
+
+@[expose] public section
 
 
 noncomputable section
@@ -263,7 +267,7 @@ theorem sum_prob_mem_Ioc_le {X : Ω → ℝ} (hint : Integrable X) (hnonneg : 0 
         gcongr
         rw [intervalIntegral.integral_of_le (Nat.cast_nonneg _)]
         simp only [integral_const, measureReal_restrict_apply', measurableSet_Ioc, Set.univ_inter,
-          Algebra.id.smul_eq_mul, mul_one]
+          smul_eq_mul, mul_one]
         rw [← ENNReal.toReal_one]
         exact ENNReal.toReal_mono ENNReal.one_ne_top prob_le_one
   have B : ∀ a b, ℙ {ω | X ω ∈ Set.Ioc a b} = ENNReal.ofReal (∫ _ in Set.Ioc a b, (1 : ℝ) ∂ρ) := by
@@ -306,6 +310,7 @@ theorem tsum_prob_mem_Ioi_lt_top {X : Ω → ℝ} (hint : Integrable X) (hnonneg
   filter_upwards [Ici_mem_atTop K] with N hN
   exact sum_prob_mem_Ioc_le hint hnonneg hN
 
+set_option backward.isDefEq.respectTransparency false in
 theorem sum_variance_truncation_le {X : Ω → ℝ} (hint : Integrable X) (hnonneg : 0 ≤ X) (K : ℕ) :
     ∑ j ∈ range K, ((j : ℝ) ^ 2)⁻¹ * 𝔼[truncation X j ^ 2] ≤ 2 * 𝔼[X] := by
   set Y := fun n : ℕ => truncation X n
@@ -339,10 +344,8 @@ theorem sum_variance_truncation_le {X : Ω → ℝ} (hint : Integrable X) (hnonn
       rw [← intervalIntegral.integral_const_mul, intervalIntegral.integral_of_le Ik,
         intervalIntegral.integral_of_le Ik]
       refine setIntegral_mono_on ?_ ?_ measurableSet_Ioc fun x hx => ?_
-      · apply Continuous.integrableOn_Ioc
-        exact continuous_const.mul (continuous_pow 2)
-      · apply Continuous.integrableOn_Ioc
-        exact continuous_const.mul continuous_id'
+      · apply Continuous.integrableOn_Ioc (by fun_prop)
+      · apply Continuous.integrableOn_Ioc (by fun_prop)
       · calc
           2 / (↑k + 1) * x ^ 2 = x / (k + 1) * (2 * x) := by ring
           _ ≤ 1 * (2 * x) := by
@@ -588,6 +591,7 @@ theorem strong_law_aux7 :
 
 end StrongLawNonneg
 
+set_option backward.isDefEq.respectTransparency false in
 /-- **Strong law of large numbers**, almost sure version: if `X n` is a sequence of independent
 identically distributed integrable real-valued random variables, then `∑ i ∈ range n, X i / n`
 converges almost surely to `𝔼[X 0]`. We give here the strong version, due to Etemadi, that only
@@ -625,7 +629,7 @@ theorem strong_law_ae_real {Ω : Type*} {m : MeasurableSpace Ω} {μ : Measure �
   convert hωpos.sub hωneg using 2
   · simp only [pos, neg, ← sub_div, ← sum_sub_distrib, max_zero_sub_max_neg_zero_eq_self,
       Function.comp_apply]
-  · simp only [pos, neg, ← integral_sub hint.pos_part hint.neg_part,
+  · simp +instances only [pos, neg, ← integral_sub hint.pos_part hint.neg_part,
       max_zero_sub_max_neg_zero_eq_self, Function.comp_apply, mΩ]
 
 end StrongLawAeReal
@@ -688,6 +692,7 @@ lemma strong_law_ae_simpleFunc_comp (X : ℕ → Ω → E) (h' : Measurable (X 0
 
 variable [BorelSpace E]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Preliminary lemma for the strong law of large numbers for vector-valued random variables,
 assuming measurability in addition to integrability. This is weakened to ae measurability in
 the full version `ProbabilityTheory.strong_law_ae`. -/
@@ -751,7 +756,7 @@ lemma strong_law_ae_of_measurable
   -- consider `n` large enough for which the above convergences have taken place within `δ`.
   have I : ∀ᶠ n in atTop, (∑ i ∈ range n, ‖(X i - Y k i) ω‖) / n < δ :=
     (tendsto_order.1 (h'ω k)).2 δ hk
-  have J : ∀ᶠ (n : ℕ) in atTop, ‖(n : ℝ) ⁻¹ • (∑ i ∈ range n, Y k i ω) - μ[Y k 0]‖ < δ := by
+  have J : ∀ᶠ (n : ℕ) in atTop, ‖(n : ℝ)⁻¹ • (∑ i ∈ range n, Y k i ω) - μ[Y k 0]‖ < δ := by
     specialize hω k
     rw [tendsto_iff_norm_sub_tendsto_zero] at hω
     exact (tendsto_order.1 hω).2 δ δpos

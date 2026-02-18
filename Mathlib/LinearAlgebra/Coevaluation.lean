@@ -3,7 +3,9 @@ Copyright (c) 2021 Jakob von Raumer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jakob von Raumer
 -/
-import Mathlib.LinearAlgebra.Contraction
+module
+
+public import Mathlib.LinearAlgebra.Contraction
 
 /-!
 # The coevaluation map on finite-dimensional vector spaces
@@ -19,6 +21,8 @@ coevaluation, dual module, tensor product
 
 * Prove that this is independent of the choice of basis on `V`.
 -/
+
+@[expose] public section
 
 
 noncomputable section
@@ -41,6 +45,7 @@ def coevaluation : K →ₗ[K] V ⊗[K] Module.Dual K V :=
   (Basis.singleton Unit K).constr K fun _ =>
     ∑ i : Basis.ofVectorSpaceIndex K V, bV i ⊗ₜ[K] bV.coord i
 
+set_option backward.isDefEq.respectTransparency false in
 theorem coevaluation_apply_one :
     (coevaluation K V) (1 : K) =
       let bV := Basis.ofVectorSpace K V

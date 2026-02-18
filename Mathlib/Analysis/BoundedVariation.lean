@@ -3,10 +3,12 @@ Copyright (c) 2022 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel
 -/
-import Mathlib.Analysis.Calculus.FDeriv.Equiv
-import Mathlib.Analysis.Calculus.FDeriv.Prod
-import Mathlib.Analysis.Calculus.Monotone
-import Mathlib.Topology.EMetricSpace.BoundedVariation
+module
+
+public import Mathlib.Analysis.Calculus.FDeriv.Equiv
+public import Mathlib.Analysis.Calculus.FDeriv.Prod
+public import Mathlib.Analysis.Calculus.Monotone
+public import Mathlib.Topology.EMetricSpace.BoundedVariation
 
 /-!
 # Almost everywhere differentiability of functions with locally bounded variation
@@ -28,6 +30,8 @@ are also differentiable almost everywhere.
 We also give several variations around these results.
 
 -/
+
+public section
 
 open scoped NNReal Topology
 open Set MeasureTheory Filter
@@ -85,6 +89,7 @@ theorem _root_.BoundedVariationOn.ae_differentiableAt_of_mem_uIcc {f : ℝ → V
   exact (hx₁ hx₄).differentiableAt
     (Icc_mem_nhds (lt_of_le_of_ne hx₄.left hx₂.symm) (lt_of_le_of_ne hx₄.right hx₃))
 
+set_option backward.isDefEq.respectTransparency false in
 /-- A real function into a finite-dimensional real vector space with bounded variation on a set
 is differentiable almost everywhere in this set. -/
 theorem ae_differentiableWithinAt {f : ℝ → V} {s : Set ℝ} (h : LocallyBoundedVariationOn f s)

@@ -3,11 +3,12 @@ Copyright (c) 2024 Joël Riou. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joël Riou
 -/
+module
 
-import Mathlib.CategoryTheory.Closed.FunctorCategory.Basic
-import Mathlib.CategoryTheory.Localization.Monoidal.Braided
-import Mathlib.CategoryTheory.Sites.Equivalence
-import Mathlib.CategoryTheory.Sites.SheafHom
+public import Mathlib.CategoryTheory.Monoidal.Closed.FunctorCategory.Basic
+public import Mathlib.CategoryTheory.Localization.Monoidal.Braided
+public import Mathlib.CategoryTheory.Sites.Equivalence
+public import Mathlib.CategoryTheory.Sites.SheafHom
 
 /-!
 # Monoidal category structure on categories of sheaves
@@ -29,6 +30,8 @@ chosen finite products.
 
 -/
 
+@[expose] public section
+
 universe v₁ v₂ v₃ u₁ u₂ u₃
 
 namespace CategoryTheory
@@ -42,6 +45,7 @@ namespace Presheaf
 
 variable [MonoidalClosed A]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Relation between `functorEnrichedHom` and `presheafHom`. -/
 noncomputable def functorEnrichedHomCoyonedaObjEquiv (M : A) (F G : Cᵒᵖ ⥤ A)
     [HasFunctorEnrichedHom A F G] (X : C) :
@@ -67,7 +71,7 @@ noncomputable def functorEnrichedHomCoyonedaObjEquiv (M : A) (F G : Cᵒᵖ ⥤ 
       congr 1
       let α : Over.mk j'.hom.unop ⟶ Over.mk j.hom.unop := Over.homMk φ.right.unop
         (Quiver.Hom.op_inj (by simp))
-      simpa using (g.naturality α.op).symm )
+      simpa using (g.naturality α.op).symm)
   left_inv f := by
     dsimp
     ext j
@@ -81,6 +85,7 @@ noncomputable def functorEnrichedHomCoyonedaObjEquiv (M : A) (F G : Cᵒᵖ ⥤ 
     simp only [uncurry_curry, end_.lift_π]
     rfl
 
+set_option backward.isDefEq.respectTransparency false in
 lemma functorEnrichedHomCoyonedaObjEquiv_naturality
     {M : A} {F G : Cᵒᵖ ⥤ A} {X Y : C} (f : X ⟶ Y)
     [HasFunctorEnrichedHom A F G]
@@ -123,6 +128,7 @@ variable [MonoidalClosed A]
 
 open MonoidalClosed.FunctorCategory
 
+set_option backward.isDefEq.respectTransparency false in
 lemma whiskerLeft {G₁ G₂ : Cᵒᵖ ⥤ A} {g : G₁ ⟶ G₂} (hg : J.W g) (F : Cᵒᵖ ⥤ A) :
     J.W (F ◁ g) := fun H h ↦ by
   have := hg _ (Presheaf.isSheaf_functorEnrichedHom F H h)
@@ -155,6 +161,7 @@ variable (J A)
 /-- The monoidal category structure on `Sheaf J A` that is obtained
 by localization of the monoidal category structure on the category
 of presheaves. -/
+@[instance_reducible]
 noncomputable def monoidalCategory [(J.W (A := A)).IsMonoidal] [HasWeakSheafify J A] :
     MonoidalCategory (Sheaf J A) :=
   inferInstanceAs (MonoidalCategory

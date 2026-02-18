@@ -3,10 +3,12 @@ Copyright (c) 2025 David Kurniadi Angdinata. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: David Kurniadi Angdinata
 -/
-import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Formula
-import Mathlib.LinearAlgebra.FreeModule.Norm
-import Mathlib.RingTheory.ClassGroup
-import Mathlib.RingTheory.Polynomial.UniqueFactorization
+module
+
+public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Formula
+public import Mathlib.LinearAlgebra.FreeModule.Norm
+public import Mathlib.RingTheory.ClassGroup
+public import Mathlib.RingTheory.Polynomial.UniqueFactorization
 
 /-!
 # Nonsingular points and the group law in affine coordinates
@@ -61,6 +63,8 @@ This file defines the group law on nonsingular points `W⟮F⟯` in affine coord
 
 elliptic curve, affine, point, group law, class group
 -/
+
+@[expose] public section
 
 open FractionalIdeal (coeIdeal_mul)
 
@@ -126,7 +130,7 @@ lemma basis_apply (n : Fin 2) :
   classical
   nontriviality R
   rw [CoordinateRing.basis, Or.by_cases, dif_neg <| not_subsingleton R, Basis.reindex_apply,
-    PowerBasis.basis_eq_pow, finCongr_symm_apply, Fin.coe_cast]
+    PowerBasis.basis_eq_pow, finCongr_symm_apply, Fin.val_cast]
 
 @[simp]
 lemma basis_zero : CoordinateRing.basis W' 0 = 1 := by
@@ -272,6 +276,8 @@ lemma XYIdeal_eq₁ (x y ℓ : R) : XYIdeal W' x (C y) = XYIdeal W' x (linePolyn
   C_simp
   ring1
 
+-- Non-terminal simp, used to be field_simp
+set_option linter.flexible false in
 -- see https://github.com/leanprover-community/mathlib4/issues/29041
 set_option linter.unusedSimpArgs false in
 lemma XYIdeal_eq₂ [DecidableEq F] {x₁ x₂ y₁ y₂ : F} (h₁ : W.Equation x₁ y₁) (h₂ : W.Equation x₂ y₂)
@@ -369,7 +375,8 @@ lemma XYIdeal_mul_XYIdeal [DecidableEq F] {x₁ x₂ y₁ y₂ : F}
 /-- The non-zero fractional ideal `⟨X - x, Y - y⟩` of `F(W)` for some `x` and `y` in `F`. -/
 noncomputable def XYIdeal' {x y : F} (h : W.Nonsingular x y) :
     (FractionalIdeal W.CoordinateRing⁰ W.FunctionField)ˣ :=
-  Units.mkOfMulEqOne _ _ <| by
+  Units.mkOfMulEqOne (XYIdeal W x (C y)) (XYIdeal W x (C <| W.negY x y) *
+      (XIdeal W x : FractionalIdeal W.CoordinateRing⁰ W.FunctionField)⁻¹) <| by
     rw [← mul_assoc, ← coeIdeal_mul, mul_comm <| XYIdeal W .., XYIdeal_neg_mul h, XIdeal,
       FractionalIdeal.coe_ideal_span_singleton_mul_inv W.FunctionField <| XClass_ne_zero x]
 
@@ -393,6 +400,7 @@ lemma mk_XYIdeal'_mul_mk_XYIdeal' [DecidableEq F] {x₁ x₂ y₁ y₂ : F} (h�
 
 /-! ## Norms on the affine coordinate ring -/
 
+set_option backward.isDefEq.respectTransparency false in
 lemma norm_smul_basis (p q : R[X]) : Algebra.norm R[X] (p • (1 : W'.CoordinateRing) + q • mk W' Y) =
     p ^ 2 - p * q * (C W'.a₁ * X + C W'.a₃) -
       q ^ 2 * (X ^ 3 + C W'.a₂ * X ^ 2 + C W'.a₄ * X + C W'.a₆) := by
@@ -631,14 +639,18 @@ lemma toClass_injective : Function.Injective <| toClass (W := W) := by
   · exact zero_add 0
   · exact CoordinateRing.mk_XYIdeal'_neg_mul h
 
+instance : AddCommSemigroup W.Point where
+  add_comm _ _ := toClass_injective <| by simp only [map_add, add_comm]
+  add_assoc _ _ _ := toClass_injective <| by simp only [map_add, add_assoc]
+
 instance : AddCommGroup W.Point where
-  nsmul := nsmulRec
-  zsmul := zsmulRec
+  nsmul := nsmulBinRec
+  nsmul_succ := nsmulBinRec_succ
+  zsmul := zsmulRec nsmulBinRec
+  zsmul_succ' := nsmulBinRec_succ
   zero_add := zero_add
   add_zero := add_zero
   neg_add_cancel _ := by rw [add_eq_zero]
-  add_comm _ _ := toClass_injective <| by simp only [map_add, add_comm]
-  add_assoc _ _ _ := toClass_injective <| by simp only [map_add, add_assoc]
 
 /-! ## Maps and base changes -/
 
@@ -646,6 +658,7 @@ variable [Algebra R S] [Algebra R F] [Algebra S F] [IsScalarTower R S F] [Algebr
   [IsScalarTower R S K] [Algebra R L] [Algebra S L] [IsScalarTower R S L] (f : F →ₐ[S] K)
   (g : K →ₐ[S] L)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- The group homomorphism from `W⟮F⟯` to `W⟮K⟯` induced by an algebra homomorphism `f : F →ₐ[S] K`,
 where `W` is defined over a subring of a ring `S`, and `F` and `K` are field extensions of `S`. -/
 noncomputable def map : W'⟮F⟯ →+ W'⟮K⟯ where

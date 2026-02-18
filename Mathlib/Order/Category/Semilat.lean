@@ -3,8 +3,10 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import Mathlib.Order.Category.PartOrd
-import Mathlib.Order.Hom.BoundedLattice
+module
+
+public import Mathlib.Order.Category.PartOrd
+public import Mathlib.Order.Hom.BoundedLattice
 
 /-!
 # The categories of semilattices
@@ -16,6 +18,8 @@ element and inf-semilattices with a top element.
 
 * [nLab, *semilattice*](https://ncatlab.org/nlab/show/semilattice)
 -/
+
+@[expose] public section
 
 
 universe u
@@ -116,6 +120,7 @@ end SemilatInfCat
 
 namespace SemilatSupCat
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Constructs an isomorphism of lattices from an order isomorphism between them. -/
 @[simps]
 def Iso.mk {α β : SemilatSupCat.{u}} (e : α ≃o β) : α ≅ β where
@@ -134,11 +139,12 @@ end SemilatSupCat
 
 namespace SemilatInfCat
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Constructs an isomorphism of lattices from an order isomorphism between them. -/
 @[simps]
 def Iso.mk {α β : SemilatInfCat.{u}} (e : α ≃o β) : α ≅ β where
   hom := (e : InfTopHom _ _)
-  inv := (e.symm :  InfTopHom _ _)
+  inv := (e.symm : InfTopHom _ _)
   hom_inv_id := by ext; exact e.symm_apply_apply _
   inv_hom_id := by ext; exact e.apply_symm_apply _
 

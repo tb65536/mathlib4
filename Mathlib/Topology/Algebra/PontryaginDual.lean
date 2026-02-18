@@ -3,9 +3,10 @@ Copyright (c) 2022 Thomas Browning. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Thomas Browning
 -/
-import Mathlib.Analysis.SpecialFunctions.Complex.Circle
-import Mathlib.MeasureTheory.Group.Integral
-import Mathlib.Topology.Algebra.Group.CompactOpen
+module
+
+public import Mathlib.Analysis.SpecialFunctions.Complex.Circle
+public import Mathlib.Topology.Algebra.Group.CompactOpen
 
 /-!
 # Pontryagin dual
@@ -20,6 +21,8 @@ isomorphic to its double dual.
 
 * `PontryaginDual A`: The group of continuous homomorphisms `A →* Circle`.
 -/
+
+@[expose] public section
 
 open Pointwise Function
 

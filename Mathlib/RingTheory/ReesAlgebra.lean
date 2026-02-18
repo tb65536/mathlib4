@@ -3,8 +3,10 @@ Copyright (c) 2022 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andrew Yang
 -/
-import Mathlib.RingTheory.Ideal.BigOperators
-import Mathlib.RingTheory.FiniteType
+module
+
+public import Mathlib.RingTheory.Ideal.BigOperators
+public import Mathlib.RingTheory.FiniteType
 
 /-!
 
@@ -22,6 +24,8 @@ blowup in the future.
 implies that the rees algebra over a Noetherian ring is still Noetherian.
 
 -/
+
+@[expose] public section
 
 
 universe u v
@@ -115,5 +119,6 @@ theorem reesAlgebra.fg (hI : I.FG) : (reesAlgebra I).FG := by
 instance [IsNoetherianRing R] : Algebra.FiniteType R (reesAlgebra I) :=
   ⟨(reesAlgebra I).fg_top.mpr (reesAlgebra.fg <| IsNoetherian.noetherian I)⟩
 
+set_option backward.isDefEq.respectTransparency false in
 instance [IsNoetherianRing R] : IsNoetherianRing (reesAlgebra I) :=
   Algebra.FiniteType.isNoetherianRing R _

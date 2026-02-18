@@ -3,8 +3,10 @@ Copyright (c) 2024 Calle Sönne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Calle Sönne, Paul Lezeau
 -/
-import Mathlib.CategoryTheory.FiberedCategory.Fiber
-import Mathlib.CategoryTheory.FiberedCategory.Fibered
+module
+
+public import Mathlib.CategoryTheory.FiberedCategory.Fiber
+public import Mathlib.CategoryTheory.FiberedCategory.Fibered
 
 /-!
 
@@ -48,6 +50,8 @@ analogously to the standard fibers.
 
 -/
 
+@[expose] public section
+
 universe v₃ u₃ v₂ u₂ v₁ u₁
 
 open CategoryTheory Functor Category IsCartesian IsHomLift Fiber
@@ -84,7 +88,7 @@ section
 
 variable (p : 𝒳 ⥤ 𝒮) [HasFibers p] (S : 𝒮)
 
-attribute [instance] category
+attribute [instance_reducible, instance] category
 
 /-- The induced functor from `Fib p S` to the standard fiber. -/
 @[simps!]
@@ -100,7 +104,7 @@ lemma inducedFunctor_comp : ι S = (inducedFunctor p S) ⋙ fiberInclusion :=
 
 instance : Functor.IsEquivalence (inducedFunctor p S) := equiv S
 
-instance : Functor.Faithful (ι (p:=p) S) :=
+instance : Functor.Faithful (ι (p := p) S) :=
   Functor.Faithful.of_iso (inducedFunctor.natIso p S).symm
 
 end
@@ -131,6 +135,7 @@ noncomputable def Fib.homMk {S : 𝒮} {a b : Fib p S} (φ : (ι S).obj a ⟶ (�
     [IsHomLift p (𝟙 S) φ] : a ⟶ b :=
   (inducedFunctor _ S).preimage (Fiber.homMk p S φ)
 
+set_option backward.isDefEq.respectTransparency false in
 @[simp]
 lemma Fib.map_homMk {S : 𝒮} {a b : Fib p S} (φ : (ι S).obj a ⟶ (ι S).obj b)
     [IsHomLift p (𝟙 S) φ] : (ι S).map (homMk φ) = φ := by
@@ -176,6 +181,7 @@ noncomputable def pullbackMap : (ι R).obj (mkPullback f ha) ⟶ a :=
   (Fib.mkIsoSelf (domain_eq p f (IsPreFibered.pullbackMap ha f))).hom ≫
     (IsPreFibered.pullbackMap ha f)
 
+set_option backward.isDefEq.respectTransparency false in
 instance pullbackMap.isCartesian : IsCartesian p f (pullbackMap f ha) := by
   conv in f => rw [← id_comp f]
   simp only [id_comp, pullbackMap]

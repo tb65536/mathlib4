@@ -3,11 +3,13 @@ Copyright (c) 2020 Zhouhang Zhou. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Zhouhang Zhou, Yury Kudryashov
 -/
-import Mathlib.Combinatorics.Enumerative.InclusionExclusion
-import Mathlib.MeasureTheory.Function.LocallyIntegrable
-import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.Topology.ContinuousMap.Compact
-import Mathlib.Topology.MetricSpace.ThickenedIndicator
+module
+
+public import Mathlib.Combinatorics.Enumerative.InclusionExclusion
+public import Mathlib.MeasureTheory.Function.LocallyIntegrable
+public import Mathlib.MeasureTheory.Integral.Bochner.Basic
+public import Mathlib.Topology.ContinuousMap.Compact
+public import Mathlib.Topology.MetricSpace.ThickenedIndicator
 
 /-!
 # Set integral
@@ -37,6 +39,8 @@ Note that the set notations are defined in the file
 `Mathlib/MeasureTheory/Integral/Bochner/Basic.lean`,
 but we reference them here because all theorems about set integrals are in this file.
 -/
+
+@[expose] public section
 
 assert_not_exists InnerProductSpace
 
@@ -134,17 +138,21 @@ theorem setIntegral_univ : ∫ x in univ, f x ∂μ = ∫ x, f x ∂μ := by rw 
 
 theorem integral_add_compl₀ (hs : NullMeasurableSet s μ) (hfi : Integrable f μ) :
     ∫ x in s, f x ∂μ + ∫ x in sᶜ, f x ∂μ = ∫ x, f x ∂μ := by
-  rw [
-    ← integral_union_ae disjoint_compl_right.aedisjoint hs.compl hfi.integrableOn hfi.integrableOn,
-    union_compl_self, setIntegral_univ]
+  have := integral_union_ae disjoint_compl_right.aedisjoint
+    hs.compl hfi.integrableOn hfi.integrableOn
+  rw [← this, union_compl_self, setIntegral_univ]
 
 theorem integral_add_compl (hs : MeasurableSet s) (hfi : Integrable f μ) :
     ∫ x in s, f x ∂μ + ∫ x in sᶜ, f x ∂μ = ∫ x, f x ∂μ :=
   integral_add_compl₀ hs.nullMeasurableSet hfi
 
-theorem setIntegral_compl (hs : MeasurableSet s) (hfi : Integrable f μ) :
+theorem setIntegral_compl₀ (hs : NullMeasurableSet s μ) (hfi : Integrable f μ) :
     ∫ x in sᶜ, f x ∂μ = ∫ x, f x ∂μ - ∫ x in s, f x ∂μ := by
-  rw [← integral_add_compl (μ := μ) hs hfi, add_sub_cancel_left]
+  rw [← integral_add_compl₀ (μ := μ) hs hfi, add_sub_cancel_left]
+
+theorem setIntegral_compl (hs : MeasurableSet s) (hfi : Integrable f μ) :
+    ∫ x in sᶜ, f x ∂μ = ∫ x, f x ∂μ - ∫ x in s, f x ∂μ :=
+  setIntegral_compl₀ hs.nullMeasurableSet hfi
 
 /-- For a function `f` and a measurable set `s`, the integral of `indicator s f`
 over the whole space is equal to `∫ x in s, f x ∂μ` defined as `∫ x, f x ∂(μ.restrict s)`. -/
@@ -187,7 +195,7 @@ theorem integral_biUnion_eq_sum_powerset {ι : Type*} {t : Finset ι} {s : ι �
   simp_rw [← integral_smul, ← integral_indicator (Finset.measurableSet_biUnion _ hs)]
   have A (u) (hu : u ∈ t.powerset.filter (·.Nonempty)) : MeasurableSet (⋂ i ∈ u, s i) := by
     refine u.measurableSet_biInter fun i hi ↦ hs i ?_
-    aesop
+    grind
   have : ∑ x ∈ t.powerset with x.Nonempty, ∫ (a : X) in ⋂ i ∈ x, s i, (-1 : ℝ) ^ (#x + 1) • f a ∂μ
       = ∑ x ∈ t.powerset with x.Nonempty, ∫ a, indicator (⋂ i ∈ x, s i)
         (fun a ↦ (-1 : ℝ) ^ (#x + 1) • f a) a ∂μ := by
@@ -604,7 +612,7 @@ theorem setIntegral_gt_gt {R : ℝ} {f : X → ℝ} (hR : 0 ≤ R)
     exact le_of_lt hx
   rw [← sub_pos, ← smul_eq_mul, ← setIntegral_const, ← integral_sub hfint this,
     setIntegral_pos_iff_support_of_nonneg_ae]
-  · rw [← zero_lt_iff] at hμ
+  · rw [← pos_iff_ne_zero] at hμ
     rwa [Set.inter_eq_self_of_subset_right]
     exact fun x hx => Ne.symm (ne_of_lt <| sub_pos.2 hx)
   · rw [Pi.zero_def, EventuallyLE, ae_restrict_iff₀]
@@ -685,8 +693,19 @@ end NormedAddCommGroup
 section Mono
 
 variable [NormedAddCommGroup E] [NormedSpace ℝ E] [PartialOrder E]
-    [IsOrderedAddMonoid E] [IsOrderedModule ℝ E] [OrderClosedTopology E]
+    [IsOrderedAddMonoid E] [IsOrderedModule ℝ E]
     {μ : Measure X} {f g : X → E} {s t : Set X}
+
+theorem setIntegral_mono_set [OrderClosedTopology E] (hfi : IntegrableOn f t μ)
+    (hf : 0 ≤ᵐ[μ.restrict t] f) (hst : s ≤ᵐ[μ] t) :
+    ∫ x in s, f x ∂μ ≤ ∫ x in t, f x ∂μ :=
+  integral_mono_measure (Measure.restrict_mono_ae hst) hf hfi
+
+theorem setIntegral_le_integral [OrderClosedTopology E] (hfi : Integrable f μ) (hf : 0 ≤ᵐ[μ] f) :
+    ∫ x in s, f x ∂μ ≤ ∫ x, f x ∂μ :=
+  integral_mono_measure (Measure.restrict_le_self) hf hfi
+
+variable [ClosedIciTopology E]
 
 section
 variable (hf : IntegrableOn f s μ) (hg : IntegrableOn g s μ)
@@ -731,14 +750,6 @@ theorem setIntegral_mono (h : f ≤ g) : ∫ x in s, f x ∂μ ≤ ∫ x in s, g
   integral_mono hf hg h
 
 end
-
-theorem setIntegral_mono_set (hfi : IntegrableOn f t μ) (hf : 0 ≤ᵐ[μ.restrict t] f)
-    (hst : s ≤ᵐ[μ] t) : ∫ x in s, f x ∂μ ≤ ∫ x in t, f x ∂μ :=
-  integral_mono_measure (Measure.restrict_mono_ae hst) hf hfi
-
-theorem setIntegral_le_integral (hfi : Integrable f μ) (hf : 0 ≤ᵐ[μ] f) :
-    ∫ x in s, f x ∂μ ≤ ∫ x, f x ∂μ :=
-  integral_mono_measure (Measure.restrict_le_self) hf hfi
 
 theorem setIntegral_ge_of_const_le [CompleteSpace E] {c : E} (hs : MeasurableSet s) (hμs : μ s ≠ ∞)
     (hf : ∀ x ∈ s, c ≤ f x) (hfint : IntegrableOn (fun x : X => f x) s μ) :
@@ -839,6 +850,7 @@ section IntegrableUnion
 
 variable {ι : Type*} [Countable ι] {μ : Measure X} [NormedAddCommGroup E]
 
+set_option backward.isDefEq.respectTransparency false in
 theorem integrableOn_iUnion_of_summable_integral_norm {f : X → E} {s : ι → Set X}
     (hi : ∀ i : ι, IntegrableOn f (s i) μ)
     (h : Summable fun i : ι => ∫ x : X in s i, ‖f x‖ ∂μ) : IntegrableOn f (iUnion s) μ := by
@@ -1033,7 +1045,7 @@ theorem Integrable.simpleFunc_mul (g : SimpleFunc X ℝ) (hf : Integrable f μ) 
   have : Set.indicator s (Function.const X c) * f = s.indicator (c • f) := by
     ext1 x
     by_cases hx : x ∈ s
-    · simp only [hx, Pi.mul_apply, Set.indicator_of_mem, Pi.smul_apply, Algebra.id.smul_eq_mul,
+    · simp only [hx, Pi.mul_apply, Set.indicator_of_mem, Pi.smul_apply, smul_eq_mul,
         ← Function.const_def]
     · simp only [hx, Pi.mul_apply, Set.indicator_of_notMem, not_false_iff, zero_mul]
   rw [this, integrable_indicator_iff hs]
@@ -1076,6 +1088,7 @@ theorem continuous_parametric_integral_of_continuous
   · exact integrableOn_const hs.measure_ne_top
   · filter_upwards using (by fun_prop)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Consider a parameterized integral `x ↦ ∫ y, L (g y) (f x y)` where `L` is bilinear,
 `g` is locally integrable and `f` is continuous and uniformly compactly supported. Then the
 integral depends continuously on `x`. -/

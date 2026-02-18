@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Sébastien Gouëzel, Zhouhang Zhou, Reid Barton,
 Anatole Dedecker
 -/
-import Mathlib.Logic.Equiv.Fin.Basic
-import Mathlib.Topology.UniformSpace.UniformEmbedding
-import Mathlib.Topology.UniformSpace.Pi
+module
+
+public import Mathlib.Logic.Equiv.Fin.Basic
+public import Mathlib.Topology.UniformSpace.UniformEmbedding
+public import Mathlib.Topology.UniformSpace.Pi
 
 /-!
 # Uniform isomorphisms
@@ -20,6 +22,8 @@ directions uniformly continuous. We denote uniform isomorphisms with the notatio
   This type can be denoted using the following notation: `α ≃ᵤ β`.
 
 -/
+
+@[expose] public section
 
 
 open Set Filter
@@ -269,14 +273,16 @@ def prodAssoc : (α × β) × γ ≃ᵤ α × β × γ where
 
 /-- `α × {*}` is uniformly isomorphic to `α`. -/
 @[simps! -fullyApplied apply]
-def prodPunit : α × PUnit ≃ᵤ α where
+def prodPUnit : α × PUnit ≃ᵤ α where
   toEquiv := Equiv.prodPUnit α
   uniformContinuous_toFun := uniformContinuous_fst
   uniformContinuous_invFun := uniformContinuous_id.prodMk uniformContinuous_const
 
+@[deprecated (since := "2026-02-08")] alias prodPunit := prodPUnit
+
 /-- `{*} × α` is uniformly isomorphic to `α`. -/
 def punitProd : PUnit × α ≃ᵤ α :=
-  (prodComm _ _).trans (prodPunit _)
+  (prodComm _ _).trans (prodPUnit _)
 
 @[simp]
 theorem coe_punitProd : ⇑(punitProd α) = Prod.snd :=

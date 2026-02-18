@@ -3,7 +3,9 @@ Copyright (c) 2019 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen, Eric Wieser
 -/
-import Mathlib.LinearAlgebra.Matrix.ConjTranspose
+module
+
+public import Mathlib.LinearAlgebra.Matrix.ConjTranspose
 
 /-!
 # Row and column matrices
@@ -18,6 +20,8 @@ This file provides results about row and column matrices.
 * `Matrix.updateCol M j c`: update the `j`th column of `M` to `c`
 
 -/
+
+@[expose] public section
 
 variable {l m n o : Type*}
 
@@ -176,6 +180,7 @@ theorem replicateRow_mul_replicateCol_apply [Fintype m] [Mul α] [AddCommMonoid 
     (i j) : (replicateRow ι v * replicateCol ι w) i j = v ⬝ᵥ w :=
   rfl
 
+set_option backward.isDefEq.respectTransparency false in
 @[simp]
 theorem diag_replicateCol_mul_replicateRow [Mul α] [AddCommMonoid α] [Unique ι] (a b : n → α) :
     diag (replicateCol ι a * replicateRow ι b) = a * b := by
@@ -184,6 +189,7 @@ theorem diag_replicateCol_mul_replicateRow [Mul α] [AddCommMonoid α] [Unique �
 
 variable (ι)
 
+set_option backward.isDefEq.respectTransparency false in
 theorem vecMulVec_eq [Mul α] [AddCommMonoid α] [Unique ι] (w : m → α) (v : n → α) :
     vecMulVec w v = replicateCol ι w * replicateRow ι v := by
   ext
@@ -446,6 +452,7 @@ theorem single_mul_eq_updateRow_zero
     single i j r * B = updateRow 0 i (r • B.row j) := by
   rw [single_eq_updateRow_zero, updateRow_mul, Matrix.zero_mul, single_vecMul]
 
+set_option backward.isDefEq.respectTransparency false in
 @[simp]
 theorem updateRow_zero_mul_updateCol_zero
     [DecidableEq l] [DecidableEq n] [Fintype m] [NonUnitalNonAssocSemiring α]

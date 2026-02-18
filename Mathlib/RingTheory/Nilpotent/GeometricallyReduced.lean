@@ -3,8 +3,10 @@ Copyright (c) 2025 Dion Leijnse. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Dion Leijnse
 -/
-import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
-import Mathlib.RingTheory.Flat.Basic
+module
+
+public import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
+public import Mathlib.RingTheory.Flat.Basic
 
 /-!
 # Geometrically reduced algebras
@@ -29,6 +31,8 @@ if the tensor product `AlgebraicClosure k ⊗[k] A` is reduced.
 
 -/
 
+@[expose] public section
+
 open TensorProduct
 
 noncomputable section
@@ -45,23 +49,27 @@ class IsGeometricallyReduced (k A : Type*) [Field k] [Ring A] [Algebra k A] : Pr
 
 attribute [instance] IsGeometricallyReduced.isReduced_algebraicClosure_tensorProduct
 
+set_option backward.isDefEq.respectTransparency false in
 instance (k A K : Type*) [Field k] [Ring A] [Algebra k A] [Field K] [Algebra k K]
     [Algebra.IsAlgebraic k K] [IsGeometricallyReduced k A] : IsReduced (K ⊗[k] A) :=
   isReduced_of_injective
     (Algebra.TensorProduct.map ((IsAlgClosed.lift : K →ₐ[k] AlgebraicClosure k)) 1)
     (Module.Flat.rTensor_preserves_injective_linearMap _ (RingHom.injective _))
 
+set_option backward.isDefEq.respectTransparency false in
 lemma IsGeometricallyReduced.of_injective {B : Type*} [Ring B] [Algebra k B] (f : A →ₐ[k] B)
     (hf : Function.Injective f) [IsGeometricallyReduced k B] : IsGeometricallyReduced k A :=
   ⟨isReduced_of_injective (Algebra.TensorProduct.map 1 f)
     (Module.Flat.lTensor_preserves_injective_linearMap _ hf)⟩
 
+set_option backward.isDefEq.respectTransparency false in
 variable (k) in
 theorem isReduced_of_isGeometricallyReduced [IsGeometricallyReduced k A] : IsReduced A :=
   isReduced_of_injective
     (Algebra.TensorProduct.includeRight : A →ₐ[k] (AlgebraicClosure k) ⊗[k] A)
     (Algebra.TensorProduct.includeRight_injective <| FaithfulSMul.algebraMap_injective _ _)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If all finitely generated subalgebras of `A` are geometrically reduced, then `A` is
   geometrically reduced. -/
 @[stacks 030T]

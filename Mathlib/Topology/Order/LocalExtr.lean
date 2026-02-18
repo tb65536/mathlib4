@@ -3,8 +3,10 @@ Copyright (c) 2019 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import Mathlib.Order.Filter.Extr
-import Mathlib.Topology.ContinuousOn
+module
+
+public import Mathlib.Order.Filter.Extr
+public import Mathlib.Topology.ContinuousOn
 
 /-!
 # Local extrema of functions on topological spaces
@@ -29,6 +31,8 @@ Here is the list of statements specific to these two types of filters:
 * `Is[Local]*On.isLocal*` : if we have `IsLocal*On f s a` and `s ∈ 𝓝 a`, then we have
   `IsLocal* f a`.
 -/
+
+@[expose] public section
 
 
 universe u v w x
@@ -151,6 +155,7 @@ theorem IsLocalMinOn.not_nhds_le_map [TopologicalSpace β] (hf : IsLocalMinOn f 
   let ⟨_y, hy⟩ := (this.and self_mem_nhdsWithin).exists
   hy.1.not_gt hy.2
 
+set_option backward.isDefEq.respectTransparency false in
 theorem IsLocalMaxOn.not_nhds_le_map [TopologicalSpace β] (hf : IsLocalMaxOn f s a)
     [NeBot (𝓝[>] f a)] : ¬𝓝 (f a) ≤ map f (𝓝[s] a) :=
   @IsLocalMinOn.not_nhds_le_map α βᵒᵈ _ _ _ _ _ ‹_› hf ‹_›

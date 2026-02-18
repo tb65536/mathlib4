@@ -3,18 +3,20 @@ Copyright (c) 2021 Chris Hughes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes
 -/
-import Mathlib.Algebra.Group.Units.Opposite
-import Mathlib.Algebra.Regular.Opposite
-import Mathlib.Data.SetLike.Fintype
-import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
-import Mathlib.Order.Filter.EventuallyConst
-import Mathlib.RingTheory.Ideal.Prod
-import Mathlib.RingTheory.Ideal.Quotient.Operations
-import Mathlib.RingTheory.Jacobson.Semiprimary
-import Mathlib.RingTheory.Nilpotent.Lemmas
-import Mathlib.RingTheory.Noetherian.Defs
-import Mathlib.RingTheory.Spectrum.Maximal.Basic
-import Mathlib.RingTheory.Spectrum.Prime.Basic
+module
+
+public import Mathlib.Algebra.Group.Units.Opposite
+public import Mathlib.Algebra.Regular.Opposite
+public import Mathlib.Data.SetLike.Fintype
+public import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
+public import Mathlib.Order.Filter.EventuallyConst
+public import Mathlib.RingTheory.Ideal.Prod
+public import Mathlib.RingTheory.Ideal.Quotient.Operations
+public import Mathlib.RingTheory.Jacobson.Semiprimary
+public import Mathlib.RingTheory.Nilpotent.Lemmas
+public import Mathlib.RingTheory.Noetherian.Defs
+public import Mathlib.RingTheory.Spectrum.Maximal.Basic
+public import Mathlib.RingTheory.Spectrum.Prime.Basic
 
 /-!
 # Artinian rings and modules
@@ -59,6 +61,8 @@ Let `R` be a ring and let `M` and `P` be `R`-modules. Let `N` be an `R`-submodul
 Artinian, artinian, Artinian ring, Artinian module, artinian ring, artinian module
 
 -/
+
+@[expose] public section
 
 open Set Filter Pointwise
 
@@ -113,7 +117,7 @@ theorem isArtinian_of_surjective_algebraMap {S : Type*} [CommSemiring S] [Algebr
   apply (OrderEmbedding.wellFoundedLT (β := Submodule R M))
   refine ⟨⟨?_, ?_⟩, ?_⟩
   · intro N
-    refine {toAddSubmonoid := N.toAddSubmonoid, smul_mem' := ?_}
+    refine { toAddSubmonoid := N.toAddSubmonoid, smul_mem' := ?_ }
     intro c x hx
     obtain ⟨r, rfl⟩ := H c
     suffices r • x ∈ N by simpa [Algebra.algebraMap_eq_smul_one, smul_assoc]
@@ -140,25 +144,8 @@ lemma isArtinian_of_finite [Finite M] : IsArtinian R M :=
 open Submodule
 
 theorem IsArtinian.finite_of_linearIndependent [Nontrivial R] [h : IsArtinian R M] {s : Set M}
-    (hs : LinearIndependent R ((↑) : s → M)) : s.Finite := by
-  refine by_contradiction fun hf ↦ (RelEmbedding.wellFounded_iff_isEmpty.1 h.wf).elim' ?_
-  have f : ℕ ↪ s := Set.Infinite.natEmbedding s hf
-  have : ∀ n, (↑) ∘ f '' { m | n ≤ m } ⊆ s := by
-    rintro n x ⟨y, _, rfl⟩
-    exact (f y).2
-  have : ∀ a b : ℕ, a ≤ b ↔
-      span R (Subtype.val ∘ f '' { m | b ≤ m }) ≤ span R (Subtype.val ∘ f '' { m | a ≤ m }) := by
-    intro a b
-    rw [span_le_span_iff hs (this b) (this a),
-      Set.image_subset_image_iff (Subtype.coe_injective.comp f.injective), Set.subset_def]
-    simp only [Set.mem_setOf_eq]
-    exact ⟨fun hab x ↦ hab.trans, (· _ le_rfl)⟩
-  exact ⟨⟨fun n ↦ span R (Subtype.val ∘ f '' { m | n ≤ m }), fun x y ↦ by
-    rw [le_antisymm_iff, ← this y x, ← this x y]
-    exact fun ⟨h₁, h₂⟩ ↦ le_antisymm_iff.2 ⟨h₂, h₁⟩⟩, by
-    intro a b
-    conv_rhs => rw [GT.gt, lt_iff_le_not_ge, this, this, ← lt_iff_le_not_ge]
-    rfl⟩
+    (hs : LinearIndependent R ((↑) : s → M)) : s.Finite :=
+  WellFoundedLT.finite_of_iSupIndep hs.iSupIndep_span_singleton fun i _ ↦ hs.ne_zero i (by simp_all)
 
 /-- A module is Artinian iff every nonempty set of submodules has a minimal submodule among them. -/
 theorem set_has_minimal_iff_artinian :
@@ -226,6 +213,13 @@ theorem disjoint_partial_infs_eventually_top (f : ℕ → Submodule R M)
 
 end IsArtinian
 
+lemma IsArtinian.subsingleton_of_injective [IsArtinian R N] {f : P × N →ₗ[R] N}
+    (inj : Function.Injective f) : Subsingleton P :=
+  subsingleton_of_forall_eq 0 fun p ↦
+    have ⟨_, eq⟩ := IsArtinian.surjective_of_injective_endomorphism (f ∘ₗ .inr ..)
+      (inj.comp (Prod.mk_right_injective _)) (f (p, 0))
+    congr($(inj eq).1).symm
+
 namespace LinearMap
 
 variable [IsArtinian R M]
@@ -253,6 +247,7 @@ instance isArtinian_of_quotient_of_artinian
     (N : Submodule R M) [IsArtinian R M] : IsArtinian R (M ⧸ N) :=
   isArtinian_of_surjective M (Submodule.mkQ N) (Submodule.Quotient.mk_surjective N)
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isArtinian_of_range_eq_ker [IsArtinian R M] [IsArtinian R P] (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (h : LinearMap.range f = LinearMap.ker g) : IsArtinian R N :=
   wellFounded_lt_exact_sequence (LinearMap.range f)
@@ -264,6 +259,7 @@ theorem isArtinian_of_range_eq_ker [IsArtinian R M] [IsArtinian R P] (f : M →�
     (by simp [Submodule.map_comap_eq, inf_comm, Submodule.range_liftQ])
     (by simp [Submodule.comap_map_eq, h])
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isArtinian_iff_submodule_quotient (S : Submodule R P) :
     IsArtinian R P ↔ IsArtinian R S ∧ IsArtinian R (P ⧸ S) := by
   refine ⟨fun h ↦ ⟨inferInstance, inferInstance⟩, fun ⟨_, _⟩ ↦ ?_⟩
@@ -273,6 +269,7 @@ theorem isArtinian_iff_submodule_quotient (S : Submodule R P) :
 instance isArtinian_prod [IsArtinian R M] [IsArtinian R P] : IsArtinian R (M × P) :=
   isArtinian_of_range_eq_ker (LinearMap.inl R M P) (LinearMap.snd R M P) (LinearMap.range_inl R M P)
 
+set_option backward.isDefEq.respectTransparency false in
 instance isArtinian_sup (M₁ M₂ : Submodule R P) [IsArtinian R M₁] [IsArtinian R M₂] :
     IsArtinian R ↥(M₁ ⊔ M₂) := by
   have := isArtinian_range (M₁.subtype.coprod M₂.subtype)
@@ -426,6 +423,12 @@ theorem Ring.isArtinian_of_zero_eq_one {R} [Semiring R] (h01 : (0 : R) = 1) : Is
 instance (R) [Ring R] [IsArtinianRing R] (I : Ideal R) [I.IsTwoSided] : IsArtinianRing (R ⧸ I) :=
   isArtinian_of_tower R inferInstance
 
+instance (priority := low) (R) [Semiring R] [IsArtinianRing R] : IsDedekindFiniteMonoid R where
+  mul_eq_one_symm {a b} hab := by
+    have ⟨c, hca⟩ := IsArtinian.surjective_of_injective_endomorphism
+      (.toSpanSingleton R R a) (isRightRegular_of_mul_eq_one hab) 1
+    rwa [← left_inv_eq_right_inv hca hab]
+
 open Submodule Function
 
 instance isArtinian_of_fg_of_artinian' {R M} [Ring R] [AddCommGroup M] [Module R M]
@@ -433,6 +436,7 @@ instance isArtinian_of_fg_of_artinian' {R M} [Ring R] [AddCommGroup M] [Module R
   have ⟨_, _, h⟩ := Module.Finite.exists_fin' R M
   isArtinian_of_surjective _ _ h
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isArtinian_of_fg_of_artinian {R M} [Ring R] [AddCommGroup M] [Module R M]
     (N : Submodule R M) [IsArtinianRing R] (hN : N.FG) : IsArtinian R N := by
   rw [← Module.Finite.iff_fg] at hN; infer_instance
@@ -441,9 +445,11 @@ theorem IsArtinianRing.of_finite (R S) [Ring R] [Ring S] [Module R S] [IsScalarT
     [IsArtinianRing R] [Module.Finite R S] : IsArtinianRing S :=
   isArtinian_of_tower R isArtinian_of_fg_of_artinian'
 
+set_option backward.isDefEq.respectTransparency false in
 instance (n R) [Fintype n] [DecidableEq n] [Ring R] [IsNoetherianRing R] :
     IsNoetherianRing (Matrix n n R) := .of_finite R _
 
+set_option backward.isDefEq.respectTransparency false in
 instance (n R) [Fintype n] [DecidableEq n] [Ring R] [IsArtinianRing R] :
     IsArtinianRing (Matrix n n R) := .of_finite R _
 
@@ -620,7 +626,7 @@ instance : Finite (PrimeSpectrum R) :=
   .of_equiv _ (PrimeSpectrum.equivSubtype _).symm.toEquiv
 
 /-- A temporary field instance on the quotients by maximal ideals. -/
-@[local instance] noncomputable def fieldOfSubtypeIsMaximal
+@[instance_reducible, local instance] noncomputable def fieldOfSubtypeIsMaximal
     (I : MaximalSpectrum R) : Field (R ⧸ I.asIdeal) :=
   Ideal.Quotient.field I.asIdeal
 
@@ -638,10 +644,12 @@ noncomputable def quotNilradicalEquivPi :
 
 /-- A reduced commutative Artinian ring is isomorphic to a finite product of fields,
 namely the quotients by the maximal ideals. -/
-noncomputable def equivPi [IsReduced R] : R ≃+* ∀ I : MaximalSpectrum R, R ⧸ I.asIdeal :=
-  .trans (.symm <| .quotientBot R) <| .trans
+noncomputable def equivPi [IsReduced R] : R ≃ₐ[R] ∀ I : MaximalSpectrum R, R ⧸ I.asIdeal where
+  __ := RingEquiv.trans (.symm <| .quotientBot R) <| .trans
     (Ideal.quotEquivOfEq (nilradical_eq_zero R).symm) (quotNilradicalEquivPi R)
+  commutes' _ := rfl
 
+set_option backward.isDefEq.respectTransparency false in
 theorem isSemisimpleRing_of_isReduced [IsReduced R] : IsSemisimpleRing R :=
   (equivPi R).symm.isSemisimpleRing
 

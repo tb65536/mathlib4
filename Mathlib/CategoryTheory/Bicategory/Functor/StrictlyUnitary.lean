@@ -3,7 +3,9 @@ Copyright (c) 2025 Robin Carlier. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Robin Carlier
 -/
-import Mathlib.CategoryTheory.Bicategory.Functor.Pseudofunctor
+module
+
+public import Mathlib.CategoryTheory.Bicategory.Functor.Pseudofunctor
 
 /-!
 # Strictly unitary lax functors and pseudofunctors
@@ -17,7 +19,7 @@ unit 2-morphism `F.obj (𝟙 _) → 𝟙 (F.obj _)` is the identity 2-morphism i
 by this equality.
 
 A pseudofunctor is called *strictly unitary* (or a *normal homomorphism*) if it
-satisfies the same condition (i.e its "underlying" lax functor is strictly
+satisfies the same condition (i.e. its "underlying" lax functor is strictly
 unitary).
 
 ## References
@@ -33,6 +35,8 @@ bicategories, strictly unitary pseudofunctors and icons.
 * Construct the 2-nerve of a bicategory using pseudo-composable arrows
 
 -/
+
+@[expose] public section
 
 namespace CategoryTheory
 
@@ -152,6 +156,7 @@ def id : StrictlyUnitaryLaxFunctor B B where
   map_id _ := rfl
   mapId_eq_eqToHom _ := rfl
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition of `StrictlyUnitaryLaxFunctor`. -/
 @[simps!]
 def comp (F : StrictlyUnitaryLaxFunctor B C)
@@ -166,6 +171,7 @@ def comp (F : StrictlyUnitaryLaxFunctor B C)
 section
 attribute [local ext] StrictlyUnitaryLaxFunctor
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition of `StrictlyUnitaryLaxFunctor` is strictly right unitary -/
 lemma comp_id (F : StrictlyUnitaryLaxFunctor B C) :
     F.comp (.id C) = F := by
@@ -176,6 +182,7 @@ lemma comp_id (F : StrictlyUnitaryLaxFunctor B C) :
     ext
     simp
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition of `StrictlyUnitaryLaxFunctor` is strictly left unitary -/
 lemma id_comp (F : StrictlyUnitaryLaxFunctor B C) :
     (StrictlyUnitaryLaxFunctor.id B).comp F = F := by
@@ -186,6 +193,7 @@ lemma id_comp (F : StrictlyUnitaryLaxFunctor B C) :
     ext
     simp
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition of `StrictlyUnitaryLaxFunctor` is strictly associative -/
 lemma comp_assoc {E : Type u₄} [Bicategory.{w₄, v₄} E]
     (F : StrictlyUnitaryLaxFunctor B C) (G : StrictlyUnitaryLaxFunctor C D)
@@ -291,6 +299,7 @@ def mk' (S : StrictlyUnitaryPseudofunctorCore B C) :
   map₂_whisker_right η f := by
     simpa using S.map₂_whisker_right η f
 
+set_option backward.isDefEq.respectTransparency false in
 /-- By forgetting the inverse to `mapComp`, a `StrictlyUnitaryPseudofunctor`
 is a `StrictlyUnitaryLaxFunctor`. -/
 def toStrictlyUnitaryLaxFunctor (F : StrictlyUnitaryPseudofunctor B C) :
@@ -336,6 +345,7 @@ def id : StrictlyUnitaryPseudofunctor B B where
   map_id _ := rfl
   mapId_eq_eqToIso _ := rfl
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Composition of `StrictlyUnitaryPseudofunctor`. -/
 @[simps!]
 def comp (F : StrictlyUnitaryPseudofunctor B C)

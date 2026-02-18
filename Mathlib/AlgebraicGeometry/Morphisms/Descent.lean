@@ -3,9 +3,11 @@ Copyright (c) 2025 Christian Merten. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Christian Merten
 -/
-import Mathlib.AlgebraicGeometry.Morphisms.AffineAnd
-import Mathlib.AlgebraicGeometry.Morphisms.LocalIso
-import Mathlib.CategoryTheory.MorphismProperty.Descent
+module
+
+public import Mathlib.AlgebraicGeometry.Morphisms.AffineAnd
+public import Mathlib.AlgebraicGeometry.Morphisms.LocalIso
+public import Mathlib.CategoryTheory.MorphismProperty.Descent
 
 /-!
 # Descent of morphism properties
@@ -28,6 +30,8 @@ that `P` descends along `P'` from a codescent property of ring homomorphisms.
 
 -/
 
+public section
+
 universe u v
 
 open TensorProduct CategoryTheory Limits
@@ -36,6 +40,7 @@ namespace AlgebraicGeometry
 
 variable (P P' : MorphismProperty Scheme.{u})
 
+set_option backward.isDefEq.respectTransparency false in
 /--
 If `P` is local at the source, every quasi-compact scheme is dominated by an
 affine scheme via `p : Y ⟶ X` such that `p` satisfies `P`.
@@ -56,6 +61,7 @@ lemma Scheme.exists_hom_isAffine_of_isZariskiLocalAtSource (X : Scheme.{u}) [Com
 alias Scheme.exists_hom_isAffine_of_isLocalAtSource :=
   Scheme.exists_hom_isAffine_of_isZariskiLocalAtSource
 
+set_option backward.isDefEq.respectTransparency false in
 /-- If `P` is local at the target, to show `P` descends along `P'` we may assume
 the base to be affine. -/
 lemma IsZariskiLocalAtTarget.descendsAlong [IsZariskiLocalAtTarget P] [P'.IsStableUnderBaseChange]

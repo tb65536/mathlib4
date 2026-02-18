@@ -3,9 +3,11 @@ Copyright (c) 2024 Iván Renison, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Iván Renison, Bhavik Mehta
 -/
-import Mathlib.Algebra.Group.Fin.Basic
-import Mathlib.Combinatorics.SimpleGraph.Hasse
-import Mathlib.Algebra.Group.Pointwise.Set.Basic
+module
+
+public import Mathlib.Algebra.Group.Fin.Basic
+public import Mathlib.Combinatorics.SimpleGraph.Hasse
+public import Mathlib.Algebra.Group.Pointwise.Set.Basic
 
 /-!
 # Definition of circulant graphs
@@ -19,6 +21,8 @@ are adjacent if and only if `u - v ∈ s` or `v - u ∈ s`. The elements of `s` 
 * `SimpleGraph.circulantGraph s`: the circulant graph over `G` with jumps `s`.
 * `SimpleGraph.cycleGraph n`: the cycle graph over `Fin n`.
 -/
+
+@[expose] public section
 
 namespace SimpleGraph
 
@@ -115,6 +119,7 @@ theorem cycleGraph_degree_three_le {n : ℕ} {v : Fin (n + 3)} :
   simp only [ne_eq, sub_eq_iff_eq_add, add_assoc v, left_eq_add]
   exact ne_of_beq_false rfl
 
+set_option backward.isDefEq.respectTransparency false in
 theorem pathGraph_le_cycleGraph {n : ℕ} : pathGraph n ≤ cycleGraph n := by
   match n with
   | 0 | 1 => simp
@@ -132,6 +137,7 @@ theorem cycleGraph_preconnected {n : ℕ} : (cycleGraph n).Preconnected :=
 theorem cycleGraph_connected {n : ℕ} : (cycleGraph (n + 1)).Connected :=
   (pathGraph_connected n).mono pathGraph_le_cycleGraph
 
+set_option backward.privateInPublic true in
 private def cycleGraph_EulerianCircuit_cons (n : ℕ) :
     ∀ m : Fin (n + 3), (cycleGraph (n + 3)).Walk m 0
   | ⟨0, h⟩ => Walk.nil
@@ -140,6 +146,9 @@ private def cycleGraph_EulerianCircuit_cons (n : ℕ) :
       simp [cycleGraph_adj, Fin.ext_iff, Fin.sub_val_of_le]
     Walk.cons hadj (cycleGraph_EulerianCircuit_cons n ⟨m, Nat.lt_of_succ_lt h⟩)
 
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Eulerian trail of `cycleGraph (n + 3)` -/
 def cycleGraph_EulerianCircuit (n : ℕ) : (cycleGraph (n + 3)).Walk 0 0 :=
   have hadj : (cycleGraph (n + 3)).Adj 0 (Fin.last (n + 2)) := by
