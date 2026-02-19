@@ -217,24 +217,45 @@ section nontrivialZeros
 def DedekindZeta.nontrivialZeros : Set ℂ :=
   {s : ℂ | s.re ∈ Set.Icc 0 1 ∧ dedekindZeta K s = 0}
 
+def GeneralizedRiemannHypothesis : Prop :=
+  ∀ s, dedekindZeta K s = 0 → 0 < s.re → s.re < 1 → s = 1/2
+
 end nontrivialZeros
 
 section Odlyzko
 
-open Real Complex
+open Complex Real
 
-theorem tada (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
-    HasSum (fun s : DedekindZeta.nontrivialZeros K ↦ Φ s)
-    (2 * Φ 0 +
-      (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t)) := by
+open scoped ComplexOrder
+
+-- this uses the residue theorem and the functional equation:
+theorem tada (Φ : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ s)
+    (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
+    0 ≤ 2 * Φ 1 + (2 * π)⁻¹ *
+      ∫ t : ℝ, 2 * logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) := by
   sorry
 
--- actually, assume positivity on all nontrivial zeros and immediately prove inequality
--- this should avoid hairy convergence issues
-theorem contourIntegral_eq (Φ : ℂ → ℂ) (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
-    (2 * π)⁻¹ * ∫ t : ℝ, logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) =
-      - Φ 0 - Φ 1 + 0 := by
-  sorry
+noncomputable def Φ (F : ℂ → ℂ) (s : ℂ) := ∫ x : ℝ, F x * Complex.exp ((s - 2⁻¹) * x)
+
+theorem Φ_def (F : ℂ → ℂ) (s : ℂ) : Φ F s = ∫ x : ℝ, F x * Complex.exp ((s - 2⁻¹) * x) :=
+  rfl
+
+theorem Φ_eq (F : ℂ → ℂ) (hF : Function.Even F) (s : ℂ) :
+    Φ F s = ∫ x : ℝ, F x * Complex.cosh ((s - 2⁻¹) * x) := by
+  rw [Function.Even] at hF
+  simp_rw [Complex.cosh, add_div, mul_add]
+  rw [MeasureTheory.integral_add]
+  · rw [add_comm, ← MeasureTheory.integral_neg_eq_self]
+    simp_rw [ofReal_neg, hF, mul_neg, neg_neg]
+    rw [← two_mul]
+    simp_rw [mul_div, MeasureTheory.integral_div]
+    rw [mul_div]
+    rw [mul_div_cancel_left₀, Φ_def]
+    exact two_ne_zero
+  · -- integrability, follows from extra assumptions on F
+    sorry
+  · -- integrability, follows from extra assumptions on F
+    sorry
 
 end Odlyzko
 
