@@ -229,18 +229,31 @@ open Complex Real
 open scoped ComplexOrder
 
 -- this uses the residue theorem and the functional equation:
-theorem tada (Φ : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ s)
+theorem tada1 (Φ : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ s)
     (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
     0 ≤ 2 * Φ 1 + (2 * π)⁻¹ *
       ∫ t : ℝ, 2 * logDeriv (completedDedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) := by
   sorry
 
+theorem tada2 (Φ : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ s)
+    (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
+    0 ≤ 2 * Φ 1 + (2 * π)⁻¹ * (∫ t : ℝ, (log |discr K| +
+      nrRealPlaces K * (((2⁻¹ + I * t) / 2).digamma - (2⁻¹ + I * t).digamma + (2 : ℝ).log) +
+        Module.finrank ℚ K * (((2⁻¹ + I * t) / 2).digamma - (2 * π).log)) * Φ (2⁻¹ + I * t)) +
+    (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (dedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) := by
+  have := tada1 K Φ hΦ0 hΦ1 ε hε
+  -- rw with `two_mul_logDeriv_completedDedekindZeta`
+  -- split the integral
+  -- shift the contour now that the nontrivial zeros are gone
+  sorry
+
 noncomputable def Φ (F : ℂ → ℂ) (s : ℂ) := ∫ x : ℝ, F x * Complex.exp ((s - 2⁻¹) * x)
 
-theorem Φ_def (F : ℂ → ℂ) (s : ℂ) : Φ F s = ∫ x : ℝ, F x * Complex.exp ((s - 2⁻¹) * x) :=
+theorem Φ_eq_integral_exp (F : ℂ → ℂ) (s : ℂ) :
+    Φ F s = ∫ x : ℝ, F x * Complex.exp ((s - 2⁻¹) * x) :=
   rfl
 
-theorem Φ_eq (F : ℂ → ℂ) (hF : Function.Even F) (s : ℂ) :
+theorem Φ_eq_integral_cosh (F : ℂ → ℂ) (hF : Function.Even F) (s : ℂ) :
     Φ F s = ∫ x : ℝ, F x * Complex.cosh ((s - 2⁻¹) * x) := by
   rw [Function.Even] at hF
   simp_rw [Complex.cosh, add_div, mul_add]
@@ -250,12 +263,54 @@ theorem Φ_eq (F : ℂ → ℂ) (hF : Function.Even F) (s : ℂ) :
     rw [← two_mul]
     simp_rw [mul_div, MeasureTheory.integral_div]
     rw [mul_div]
-    rw [mul_div_cancel_left₀, Φ_def]
+    rw [mul_div_cancel_left₀, Φ_eq_integral_exp]
     exact two_ne_zero
   · -- integrability, follows from extra assumptions on F
     sorry
   · -- integrability, follows from extra assumptions on F
     sorry
+
+theorem tada3 (F : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ F s)
+    (hΦ1 : ∀ s, Φ F (1 - s) = Φ F s) (ε : ℝ) (hε : 0 < ε) :
+    0 ≤ 2 * Φ F 1 + (2 * π)⁻¹ * (∫ t : ℝ, (log |discr K| +
+      nrRealPlaces K * (((2⁻¹ + I * t) / 2).digamma - (2⁻¹ + I * t).digamma + (2 : ℝ).log) +
+        Module.finrank ℚ K * (((2⁻¹ + I * t) / 2).digamma - (2 * π).log)) * Φ F (2⁻¹ + I * t)) +
+    (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (dedekindZeta K) (1 + ε + I * t) * Φ F (1 + ε + I * t) := by
+  have := tada1 K Φ hΦ0 hΦ1 ε hε
+  -- rw with `two_mul_logDeriv_completedDedekindZeta`
+  -- split the integral
+  -- shift the contour now that the nontrivial zeros are gone
+  sorry
+
+noncomputable def φ (F : ℂ → ℂ) (t : ℂ) := Φ F (2⁻¹ + I * t)
+
+theorem φ_def (F : ℂ → ℂ) (t : ℂ) : φ F t = Φ F (2⁻¹ + I * t) := rfl
+
+theorem φ_eq_integral_exp (F : ℂ → ℂ) (t : ℂ) :
+    φ F t = ∫ x : ℝ, F x * Complex.exp (I * t * x) := by
+  rw [φ_def, Φ_eq_integral_exp, add_sub_cancel_left]
+
+theorem φ_eq_integral_cosh (F : ℂ → ℂ) (hF : Function.Even F) (t : ℂ) :
+    φ F t = ∫ x : ℝ, F x * Complex.cosh (I * t * x) := by
+  rw [φ_def, Φ_eq_integral_cosh F hF, add_sub_cancel_left]
+
+theorem tada3 (Φ : ℂ → ℂ) (hΦ0 : ∀ s ∈ DedekindZeta.nontrivialZeros K, 0 ≤ Φ s)
+    (hΦ1 : ∀ s, Φ (1 - s) = Φ s) (ε : ℝ) (hε : 0 < ε) :
+    0 ≤ 2 * Φ 1 + (2 * π)⁻¹ * (∫ t : ℝ, (log |discr K| +
+      nrRealPlaces K * (((2⁻¹ + I * t) / 2).digamma - (2⁻¹ + I * t).digamma + (2 : ℝ).log) +
+        Module.finrank ℚ K * (((2⁻¹ + I * t) / 2).digamma - (2 * π).log)) * Φ (2⁻¹ + I * t)) +
+    (2 * π)⁻¹ * ∫ t : ℝ, 2 * logDeriv (dedekindZeta K) (1 + ε + I * t) * Φ (1 + ε + I * t) := by
+  have := tada1 K Φ hΦ0 hΦ1 ε hε
+  -- rw with `two_mul_logDeriv_completedDedekindZeta`
+  -- split the integral
+  -- shift the contour now that the nontrivial zeros are gone
+  sorry
+
+
+theorem integral_phi (F : ℂ → ℂ) (hF0 : F 0 = 1) (ε : ℝ) (hε : 0 < ε) :
+    (2 * π)⁻¹ * ∫ t : ℝ, Φ F (2⁻¹ + I * t) = 1 := by
+  simp_rw [Φ]
+  sorry
 
 end Odlyzko
 
