@@ -162,15 +162,6 @@ def Ideal.connectedComponentOfZero
     · exact isConnected_connectedComponent.image _ key.continuousOn
     · exact ⟨0, mem_connectedComponent, mul_zero c⟩
 
--- PRed
-theorem subsingleton_of_connected_totallyDisconnected
-    {α : Type*} [TopologicalSpace α] [ConnectedSpace α] [TotallyDisconnectedSpace α] :
-    Subsingleton α := by
-  refine ⟨fun a b ↦ ?_⟩
-  rw [← Set.singleton_eq_singleton_iff,
-    ← connectedComponent_eq_singleton, ← connectedComponent_eq_singleton,
-    PreconnectedSpace.connectedComponent_eq_univ, PreconnectedSpace.connectedComponent_eq_univ]
-
 /-- A connected compact Hausdorff vector space over `𝔽_p` is trivial.
 This might sound easy, but it might require existence of continuous characters.
 Here's a proof, using existence of continuous characters:
@@ -226,7 +217,7 @@ noncomputable def Group.rootable
   have : ConnectedSpace (A ⧸ f.range) :=
     QuotientGroup.mk_surjective.connectedSpace QuotientGroup.continuous_mk
   rw [← MonoidHom.range_eq_top, ← QuotientGroup.subsingleton_iff]
-  exact subsingleton_of_connected_totallyDisconnected
+  exact subsingleton_of_preconnected_totallyDisconnected
 
 /-- A connected compact Hausdorff abelian topological group does not admit a nontrivial compact
 group of automorphisms. -/
