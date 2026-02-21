@@ -82,11 +82,6 @@ theorem ContinuousLinearMap.rayleighQuotient_apply_neg {𝕜 E : Type*} [RCLike 
     rayleighQuotient T (-x) = rayleighQuotient T x := by
   simp [rayleighQuotient, reApplyInnerSelf_apply]
 
--- PRed
-theorem resolventSet_neg (R : Type*) {A : Type*} [CommRing R] [Ring A] [Algebra R A] (a : A) :
-    resolventSet R (-a) = -resolventSet R a := by
-  simp_rw [Set.ext_iff, Set.mem_neg, spectrum.mem_resolventSet_iff, sub_neg_eq_add, map_neg,
-    ← neg_add', IsUnit.neg_iff, implies_true]
 
 section spectral
 
