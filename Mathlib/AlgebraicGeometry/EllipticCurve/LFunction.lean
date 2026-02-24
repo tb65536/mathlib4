@@ -27,6 +27,7 @@ In this file, we define the L-function of an elliptic curve.
 
 namespace ArithmeticFunction
 
+/-- Given a choice of left inverse `a` of `f 1`, this is the Dirichlet inverse of `f`. -/
 def dirichletInverseAuxFun {R : Type*} [Ring R] (f : ℕ → R) (a : R) (n : ℕ) : R :=
   if n = 0 then 0
   else if n = 1 then a
@@ -52,6 +53,8 @@ theorem dirichletInverseAuxFun_apply_ne {R : Type*} [Ring R] (f : ℕ → R) (a 
   conv_rhs => rw [← Finset.sum_attach]
   simp
 
+
+/-- Given a choice of left inverse `a` of `f 1`, this is the Dirichlet inverse of `f`. -/
 @[simp]
 def dirichletInverseAux {R : Type*} [Ring R] (f : ℕ → R) (a : R) : ArithmeticFunction R :=
   ⟨dirichletInverseAuxFun f a, dirichletInverseAuxFun_apply_zero f a⟩
@@ -83,15 +86,49 @@ theorem isUnit_iff_isUnit_apply_one {R : Type*} [CommRing R] (f : ArithmeticFunc
     refine ⟨⟨f.val 1, f⁻¹.val 1, ?_, ?_⟩, rfl⟩
     · rw [← ArithmeticFunction.mul_apply_one, Units.mul_inv, one_one]
     · rw [← ArithmeticFunction.mul_apply_one, Units.inv_mul, one_one]
-  · rintro ⟨a, ha⟩
-    sorry
+  · simpa using Nonempty.map (dirichletInverse f)
+
+end ArithmeticFunction
+
+namespace ArithmeticFunction
+
+/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
+For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ) = 1 - p⁻ˢ`. -/
+def ofPolynomial {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.eval 0 = 1) (q : ℕ) :
+    ArithmeticFunction R := by
+  sorry
+
+/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)⁻¹`.
+For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹`. -/
+def ofPolynomialInv {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.eval 0 = 1) (q : ℕ) :
+    ArithmeticFunction R := by
+  sorry
+
+def ofPolynomialProd {R : Type*} [CommRing R] (f : Polynomial R)
 
 end ArithmeticFunction
 
 namespace WeierstrassCurve
 
-variable {R K : Type*} [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
-  [Field K] [Algebra R K] [IsFractionRing R K] (W : WeierstrassCurve K) [IsMinimal R W]
+open NumberField
+
+variable {K : Type*} [Field K] [NumberField K] (W : WeierstrassCurve K)
+
+/-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
+* `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
+* `fₚ = 1 - T` if `E` has split multiplicative reduction at `p`,
+* `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
+* `fₚ = 1` if `E` has additive reduction at `p`.
+-/
+noncomputable def localPolynomial (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) : Polynomial ℤ :=
+  sorry
+
+noncomputable def localLFactorAux (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) :
+    ArithmeticFunction ℤ :=
+  fun n ↦ if
+
+noncomputable def Lpfunction (p k : ℕ) :=
+  sorry
 
 /-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
 * `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
@@ -100,6 +137,6 @@ variable {R K : Type*} [CommRing R] [IsDomain R] [IsDiscreteValuationRing R]
 * `fₚ = 1` if `E` has additive reduction at `p`.
 -/
 noncomputable def Lfunction (s : ℂ) :=
-  LSeries (fun n ↦ sorry) s
+  LSeries (fun n ↦ n.factorization.prod fun p k ↦ Lpfunction p k) s
 
 end WeierstrassCurve
