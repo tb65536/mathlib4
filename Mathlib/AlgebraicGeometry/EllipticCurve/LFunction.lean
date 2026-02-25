@@ -28,56 +28,51 @@ In this file, we define the L-function of an elliptic curve.
 namespace ArithmeticFunction
 
 /-- Given a choice of left inverse `a` of `f 1`, this is the Dirichlet inverse of `f`. -/
-def dirichletInverseAuxFun {R : Type*} [Ring R] (f : ℕ → R) (a : R) (n : ℕ) : R :=
+def dirichletInverseFun {R : Type*} [Ring R] (f : ℕ → R) (hf : Invertible (f 1)) (n : ℕ) : R :=
   if n = 0 then 0
-  else if n = 1 then a
-  else - a * ∑ d : n.properDivisors,
+  else if n = 1 then ⅟(f 1)
+  else - ⅟(f 1) * ∑ d : n.properDivisors,
     have : d < n := (Nat.mem_properDivisors.mp d.2).2
-    f (n / d) * dirichletInverseAuxFun f a d
+    f (n / d) * dirichletInverseFun f hf d
 
-theorem dirichletInverseAuxFun_apply_zero {R : Type*} [Ring R] (f : ℕ → R) (a : R) :
-    dirichletInverseAuxFun f a 0 = 0 := by
-  rw [dirichletInverseAuxFun, if_pos rfl]
-
-@[simp]
-theorem dirichletInverseAuxFun_apply_one {R : Type*} [Ring R] (f : ℕ → R) (a : R) :
-    dirichletInverseAuxFun f a 1 = a := by
-  rw [dirichletInverseAuxFun, if_neg one_ne_zero, if_pos rfl]
+theorem dirichletInverseFun_apply_zero {R : Type*} [Ring R] (f : ℕ → R) (hf : Invertible (f 1)) :
+    dirichletInverseFun f hf 0 = 0 := by
+  rw [dirichletInverseFun, if_pos rfl]
 
 @[simp]
-theorem dirichletInverseAuxFun_apply_ne {R : Type*} [Ring R] (f : ℕ → R) (a : R) (n : ℕ)
-    (hn0 : n ≠ 0) (hn1 : n ≠ 1) :
-    dirichletInverseAuxFun f a n =
-      - a * ∑ d ∈ n.properDivisors, f (n / d) * dirichletInverseAuxFun f a d := by
-  rw [dirichletInverseAuxFun, if_neg hn0, if_neg hn1]
-  conv_rhs => rw [← Finset.sum_attach]
-  simp
+theorem dirichletInverseFun_apply_one {R : Type*} [Ring R] (f : ℕ → R) (hf : Invertible (f 1)) :
+    dirichletInverseFun f hf 1 = ⅟(f 1) := by
+  rw [dirichletInverseFun, if_neg one_ne_zero, if_pos rfl]
 
+@[simp]
+theorem dirichletInverseFun_apply_ne {R : Type*} [Ring R] (f : ℕ → R) (hf : Invertible (f 1))
+    (n : ℕ) (hn0 : n ≠ 0) (hn1 : n ≠ 1) :
+    dirichletInverseFun f hf n =
+      - ⅟(f 1) * ∑ d ∈ n.properDivisors, f (n / d) * dirichletInverseFun f hf d := by
+  rw [dirichletInverseFun, if_neg hn0, if_neg hn1]
+  conv_rhs => rw [← Finset.sum_attach, Finset.attach_eq_univ]
 
 /-- Given a choice of left inverse `a` of `f 1`, this is the Dirichlet inverse of `f`. -/
 @[simp]
-def dirichletInverseAux {R : Type*} [Ring R] (f : ℕ → R) (a : R) : ArithmeticFunction R :=
-  ⟨dirichletInverseAuxFun f a, dirichletInverseAuxFun_apply_zero f a⟩
+def dirichletInverse {R : Type*} [Ring R] (f : ℕ → R) (hf : Invertible (f 1)) :
+    ArithmeticFunction R :=
+  ⟨dirichletInverseFun f hf, dirichletInverseFun_apply_zero f hf⟩
 
-theorem self_mul_dirichletInverseAux {R : Type*} [Ring R] {f : ArithmeticFunction R} {a : R}
-    (ha : f 1 * a = 1) : f * dirichletInverseAux f a = 1 := by
+theorem self_mul_dirichletInverse {R : Type*} [Ring R] (f : ArithmeticFunction R)
+    (hf : Invertible (f 1)) : f * dirichletInverse f hf = 1 := by
   ext n
-  rw [dirichletInverseAux, mul_apply, coe_mk]
-  rw [Nat.sum_divisorsAntidiagonal' (fun x y ↦ f x * dirichletInverseAuxFun f a y)]
   by_cases hn0 : n = 0
   · simp [hn0]
   by_cases hn1 : n = 1
-  · simpa [hn1]
-  have hn0' : 0 < n := Nat.pos_of_ne_zero hn0
-  rw [← Nat.cons_self_properDivisors hn0, Finset.sum_cons, Nat.div_self hn0']
-  rw [dirichletInverseAuxFun_apply_ne f a n hn0 hn1, ← mul_assoc, mul_neg, ha, neg_one_mul,
-    neg_add_cancel, one_apply_ne hn1]
+  · simp [hn1]
+  rw [dirichletInverse, mul_apply, coe_mk,
+    Nat.sum_divisorsAntidiagonal' fun x y ↦ f x * dirichletInverseFun f hf y,
+    ← Nat.cons_self_properDivisors hn0]
+  simp [hn0, hn1, pos_of_ne_zero]
 
-def dirichletInverse {R : Type*} [CommRing R] (f : ArithmeticFunction R) (hf : Invertible (f 1)) :
-    Invertible f where
-  invOf := dirichletInverseAux f ⅟(f 1)
-  invOf_mul_self := by rw [mul_comm, self_mul_dirichletInverseAux hf.mul_invOf_self]
-  mul_invOf_self := by rw [self_mul_dirichletInverseAux hf.mul_invOf_self]
+theorem dirichletInverse_mul_self {R : Type*} [CommRing R] (f : ArithmeticFunction R)
+    (hf : Invertible (f 1)) : dirichletInverse f hf * f = 1 := by
+  rw [mul_comm, self_mul_dirichletInverse]
 
 theorem isUnit_iff_isUnit_apply_one {R : Type*} [CommRing R] (f : ArithmeticFunction R) :
     IsUnit f ↔ IsUnit (f 1) := by
@@ -86,23 +81,43 @@ theorem isUnit_iff_isUnit_apply_one {R : Type*} [CommRing R] (f : ArithmeticFunc
     refine ⟨⟨f.val 1, f⁻¹.val 1, ?_, ?_⟩, rfl⟩
     · rw [← ArithmeticFunction.mul_apply_one, Units.mul_inv, one_one]
     · rw [← ArithmeticFunction.mul_apply_one, Units.inv_mul, one_one]
-  · simpa using Nonempty.map (dirichletInverse f)
+  · suffices Invertible (f 1) → Invertible f by simpa using Nonempty.map this
+    exact fun hf ↦ ⟨_, dirichletInverse_mul_self f hf, self_mul_dirichletInverse f hf⟩
 
 end ArithmeticFunction
 
 namespace ArithmeticFunction
 
+variable {R : Type*} [CommRing R] (f : Polynomial R) (q : ℕ)
+
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
-For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ) = 1 - p⁻ˢ`. -/
-def ofPolynomial {R : Type*} [CommRing R] (f : Polynomial R) (q : ℕ) :
-    ArithmeticFunction R := by
-  sorry
+For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ) = 1 - p⁻ˢ`.
+
+If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use a junk value of `1`. -/
+noncomputable def ofPolynomial : ArithmeticFunction R :=
+  if hq : 1 < q then ⟨Function.extend (q ^ ·) f.coeff 0, by simp [Nat.ne_zero_of_lt hq]⟩ else 1
+
+theorem ofPolynomial_apply (hq : 1 < q) (n : ℕ) :
+    ofPolynomial f q n = Function.extend (q ^ ·) f.coeff 0 n := by
+  rw [ofPolynomial, dif_pos hq, coe_mk]
+
+theorem ofPolynomial_apply_zero : ofPolynomial f q 0 = 0 := by
+  simp
+
+theorem ofPolynomial_apply_one (hq : 1 < q) : ofPolynomial f q 1 = f.coeff 0 := by
+  rw [ofPolynomial_apply f q hq, ← pow_zero q, (Nat.pow_right_injective hq).extend_apply]
+
+theorem ofPolynomial_apply_one' (hf : f.coeff 0 = 1) : ofPolynomial f q 1 = 1 := by
+  by_cases hq : 1 < q
+  · exact (ofPolynomial_apply_one f q hq).trans hf
+  · rw [ofPolynomial, dif_neg hq, one_one]
 
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)⁻¹`.
 For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹ = 1 + p⁻ˢ + p⁻²ˢ + ...`. -/
-def ofPolynomialInv {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.eval 0 = 1) (q : ℕ) :
+noncomputable def ofPolynomialInv
+    {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.coeff 0 = 1) (q : ℕ) :
     ArithmeticFunction R :=
-  (dirichletInverse (ofPolynomial f q) sorry).invOf
+  dirichletInverse (ofPolynomial f q) (invertibleOne.copy _ (ofPolynomial_apply_one' f q hf))
 
 def ofPolynomialProd {R : Type*} [CommRing R] {ι : Type*} (f : ι → Polynomial R) : False := sorry
 
