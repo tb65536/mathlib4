@@ -94,17 +94,17 @@ namespace ArithmeticFunction
 
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
 For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ) = 1 - p⁻ˢ`. -/
-def ofPolynomial {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.eval 0 = 1) (q : ℕ) :
+def ofPolynomial {R : Type*} [CommRing R] (f : Polynomial R) (q : ℕ) :
     ArithmeticFunction R := by
   sorry
 
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)⁻¹`.
-For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹`. -/
+For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹ = 1 + p⁻ˢ + p⁻²ˢ + ...`. -/
 def ofPolynomialInv {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.eval 0 = 1) (q : ℕ) :
-    ArithmeticFunction R := by
-  sorry
+    ArithmeticFunction R :=
+  (dirichletInverse (ofPolynomial f q) sorry).invOf
 
-def ofPolynomialProd {R : Type*} [CommRing R] (f : Polynomial R)
+def ofPolynomialProd {R : Type*} [CommRing R] {ι : Type*} (f : ι → Polynomial R) : False := sorry
 
 end ArithmeticFunction
 
