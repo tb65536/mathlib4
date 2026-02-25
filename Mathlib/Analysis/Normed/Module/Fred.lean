@@ -15,6 +15,7 @@ open InnerProductSpace RCLike
 
 variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
 
+-- ready to merge
 theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
     ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
   set M := ⨆ x, |T.rayleighQuotient x|
@@ -53,35 +54,6 @@ theorem ContinuousLinearMap.isHomeomorph_of_isUnit
     left_inv x := by rw [← mul_apply, Units.inv_mul, one_apply]
     right_inv x := by rw [← mul_apply, Units.mul_inv, one_apply] }
   exact f.isHomeomorph
-
--- PRed
-@[simp]
-theorem ContinuousLinearMap.rayleighQuotient_zero_apply
-    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (x : E) :
-    rayleighQuotient (0 : E →L[𝕜] E) x = 0 := by
-  simp [reApplyInnerSelf_apply]
-
--- PRed
-@[simp]
-theorem ContinuousLinearMap.rayleighQuotient_apply_zero
-    {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) :
-    rayleighQuotient T 0 = 0 := by
-  simp [reApplyInnerSelf_apply]
-
--- PRed
-@[simp]
-theorem ContinuousLinearMap.rayleighQuotient_neg_apply {𝕜 E : Type*} [RCLike 𝕜]
-    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    rayleighQuotient (-T) x = -rayleighQuotient T x := by
-  simp [rayleighQuotient, reApplyInnerSelf_apply, neg_div]
-
--- PRed
-@[simp]
-theorem ContinuousLinearMap.rayleighQuotient_apply_neg {𝕜 E : Type*} [RCLike 𝕜]
-    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E) (x : E) :
-    rayleighQuotient T (-x) = rayleighQuotient T x := by
-  simp [rayleighQuotient, reApplyInnerSelf_apply]
-
 
 section spectral
 
