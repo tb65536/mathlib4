@@ -8,6 +8,7 @@ module
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
 public import Mathlib.NumberTheory.ArithmeticFunction.Moebius
 public import Mathlib.NumberTheory.LSeries.SumCoeff
+public import Mathlib.RingTheory.Ideal.Norm.AbsNorm
 
 /-!
 # The L-function of an elliptic curve
@@ -114,12 +115,14 @@ theorem ofPolynomial_apply_one' (hf : f.coeff 0 = 1) : ofPolynomial f q 1 = 1 :=
 
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)⁻¹`.
 For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹ = 1 + p⁻ˢ + p⁻²ˢ + ...`. -/
-noncomputable def ofPolynomialInv
-    {R : Type*} [CommRing R] (f : Polynomial R) (hf : f.coeff 0 = 1) (q : ℕ) :
+noncomputable def ofPolynomialInv (hf : f.coeff 0 = 1) :
     ArithmeticFunction R :=
   dirichletInverse (ofPolynomial f q) (invertibleOne.copy _ (ofPolynomial_apply_one' f q hf))
 
-def ofPolynomialProd {R : Type*} [CommRing R] {ι : Type*} (f : ι → Polynomial R) : False := sorry
+/-- The arithmetic function corresponding to the Euler product `∏ f(q⁻ˢ)⁻¹`. -/
+def eulerProduct {R : Type*} [CommRing R] {ι : Type*} (f : ι → Polynomial R) (q : ι → ℕ)
+    (h : Filter.Tendsto q Filter.cofinite Filter.atTop) : ArithmeticFunction R :=
+  sorry
 
 end ArithmeticFunction
 
@@ -127,7 +130,7 @@ namespace WeierstrassCurve
 
 open NumberField
 
-variable {K : Type*} [Field K] [NumberField K] (W : WeierstrassCurve K)
+variable {K : Type*} [Field K] [NumberField K]
 
 /-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
 * `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
@@ -135,15 +138,25 @@ variable {K : Type*} [Field K] [NumberField K] (W : WeierstrassCurve K)
 * `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
 * `fₚ = 1` if `E` has additive reduction at `p`.
 -/
-noncomputable def localPolynomial (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) : Polynomial ℤ :=
+noncomputable def localPolynomial (W : WeierstrassCurve K)
+  (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) : Polynomial ℤ :=
   sorry
 
-noncomputable def localLFactorAux (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) :
-    ArithmeticFunction ℤ :=
-  fun n ↦ if
+-- can we generalize the hypotheses of `Ideal.finite_setOf_absNorm_le`?
+theorem foobar {S : Type u_1} [CommRing S] [Nontrivial S] [IsDedekindDomain S] [Module.Free ℤ S]
+  [Module.Finite ℤ S] [CharZero S] : Filter.Tendsto
+  (fun p : IsDedekindDomain.HeightOneSpectrum S ↦ p.asIdeal.absNorm) Filter.cofinite Filter.atTop := by
+  rw [Filter.tendsto_atTop]
+  intro B
+  rw [Filter.eventually_cofinite]
+  refine ((Ideal.finite_setOf_absNorm_le B).preimage
+    (f := IsDedekindDomain.HeightOneSpectrum.asIdeal) (Function.Injective.injOn ?_)).subset ?_
+  · exact fun _ _ ↦ IsDedekindDomain.HeightOneSpectrum.ext
+  · grind
 
-noncomputable def Lpfunction (p k : ℕ) :=
-  sorry
+noncomputable def L (W : WeierstrassCurve K) : ArithmeticFunction ℤ :=
+  ArithmeticFunction.eulerProduct W.localPolynomial
+    (fun p ↦ p.asIdeal.absNorm) foobar
 
 /-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
 * `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
@@ -151,7 +164,7 @@ noncomputable def Lpfunction (p k : ℕ) :=
 * `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
 * `fₚ = 1` if `E` has additive reduction at `p`.
 -/
-noncomputable def Lfunction (s : ℂ) :=
-  LSeries (fun n ↦ n.factorization.prod fun p k ↦ Lpfunction p k) s
+noncomputable def Lfunction (W : WeierstrassCurve K) (s : ℂ) :=
+  LSeries (fun n ↦ W.L n) s
 
 end WeierstrassCurve
