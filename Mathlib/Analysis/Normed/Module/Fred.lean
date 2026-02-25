@@ -9,39 +9,6 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
-namespace ContinuousLinearMap
-
-open InnerProductSpace RCLike
-
-variable {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] (T : E →L[𝕜] E)
-
--- ready to merge
-theorem norm_eq_iSup_rayleighQuotient (hT : T.IsSymmetric) :
-    ‖T‖ = ⨆ x, |T.rayleighQuotient x| := by
-  set M := ⨆ x, |T.rayleighQuotient x|
-  have nonneg : 0 ≤ M := le_ciSup_of_le T.bddAbove_rayleighQuotient 0 (abs_nonneg _)
-  replace hM x : |re ⟪T x, x⟫_𝕜| ≤ M * ‖x‖ ^ 2 := by
-    have hM : |T.rayleighQuotient x| ≤ M := le_ciSup T.bddAbove_rayleighQuotient x
-    by_cases hx : 0 < ‖x‖ ^ 2
-    · rwa [rayleighQuotient, abs_div, abs_sq, reApplyInnerSelf, div_le_iff₀ hx] at hM
-    · simp_all
-  refine le_antisymm ?_ (ciSup_le T.rayleighQuotient_le_norm)
-  refine opNorm_le_of_unit_norm nonneg fun x hx ↦ ?_
-  have key x y (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) : |re ⟪T x, y⟫_𝕜| ≤ M := by
-    transitivity M * (‖x + y‖ ^ 2 + ‖x - y‖ ^ 2) / 4
-    · have key := congrArg re (add_conj ⟪T x, y⟫_𝕜)
-      rw [map_add, conj_inner_symm, ← coe_coe, ← hT, coe_coe, re_mul_ofReal, ofNat_re] at key
-      grind [inner_add_left, inner_add_right, inner_sub_left, inner_sub_right]
-    · rw [parallelogram_law_with_norm 𝕜 x y, hx, hy]
-      grind
-  by_cases hTx : ‖T x‖ = 0
-  · rwa [hTx]
-  specialize key x (((‖T x‖⁻¹ : ℝ) : 𝕜) • T x) hx (by simp [norm_smul, hTx])
-  rwa [inner_smul_right, re_ofReal_mul, ← norm_sq_eq_re_inner,
-    inv_mul_eq_div, sq, mul_self_div_self, abs_norm] at key
-
-end ContinuousLinearMap
-
 -- PRed
 theorem ContinuousLinearMap.isHomeomorph_of_isUnit
     {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
