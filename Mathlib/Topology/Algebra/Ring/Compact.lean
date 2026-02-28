@@ -148,20 +148,6 @@ end IsDedekindDomain
 
 section CompactHausdorff
 
--- PRed
-open Pointwise in
-def Ideal.connectedComponentOfZero
-    (R : Type*) [Ring R] [TopologicalSpace R] [IsTopologicalRing R] : Ideal R where
-  __ := AddSubgroup.connectedComponentOfZero R
-  smul_mem' := by
-    intro c x h
-    let f : R → R := fun y ↦ c * y
-    have key : Continuous f := continuous_mul_left c
-    suffices f '' connectedComponent (0 : R) ⊆ connectedComponent (0 : R) from this ⟨x, h, rfl⟩
-    apply IsConnected.subset_connectedComponent
-    · exact isConnected_connectedComponent.image _ key.continuousOn
-    · exact ⟨0, mem_connectedComponent, mul_zero c⟩
-
 /-- A connected compact Hausdorff vector space over `𝔽_p` is trivial.
 This might sound easy, but it might require existence of continuous characters.
 Here's a proof, using existence of continuous characters:
