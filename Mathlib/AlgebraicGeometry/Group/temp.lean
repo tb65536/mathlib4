@@ -38,19 +38,23 @@ def GrpObj.ofInvertible {C : Type*} [Category* C] (G : C) [CartesianMonoidalCate
     apply invOf_eq_left_inv -- add `rw` version of this?
     rw [← comp_mul, invOf_mul_self', comp_one]⟩
   left_inv := by
-    simp_rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, invOf_mul_self, Hom.one_def]
+    rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, invOf_mul_self, Hom.one_def]
   right_inv := by
-    simp_rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, mul_invOf_self, Hom.one_def]
+    rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, mul_invOf_self, Hom.one_def]
 
 instance {C J : Type*} [Category.{v} C] [SmallCategory J] [CartesianMonoidalCategory C]
     [HasLimitsOfShape J C] [HasLimitsOfShape J MonCat.{v}] :
     PreservesLimitsOfShape J (yonedaMon (C := C)) := by
-  convert preservesLimitsOfShape_of_reflects_of_preserves (J := J) (yonedaMon (C := C))
-    ((Functor.whiskeringRight _ _ _).obj (forget MonCat))
-  · exact inferInstanceAs (PreservesLimitsOfShape J (Mon.forget C ⋙ yoneda))
-  · -- extract this as instance (CategoryTheory/Limits/FunctorCategory), next to
+  have : PreservesLimitsOfShape J
+      (yonedaMon ⋙ (Functor.whiskeringRight Cᵒᵖ MonCat (Type v)).obj (forget MonCat)) :=
+    inferInstanceAs (PreservesLimitsOfShape J (Mon.forget C ⋙ yoneda))
+  have : ReflectsLimitsOfShape J
+    ((Functor.whiskeringRight Cᵒᵖ MonCat (Type v)).obj (forget MonCat)) := by
+    -- extract this as instance (CategoryTheory/Limits/FunctorCategory), next to
     -- `whiskeringRight_preservesLimitsOfShape` (from `ReflectsLimits` to `ReflectsLimits`)
-    apply reflectsLimitsOfShape_of_reflectsIsomorphisms
+    exact reflectsLimitsOfShape_of_reflectsIsomorphisms
+  exact preservesLimitsOfShape_of_reflects_of_preserves (J := J) (yonedaMon (C := C))
+    ((Functor.whiskeringRight _ _ _).obj (forget MonCat))
 
 noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCategory J]
     [CartesianMonoidalCategory C] [HasLimitsOfShape J C]
@@ -61,22 +65,14 @@ noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCatego
   let G : Grp C :=
   { X := (limit (F ⋙ Grp.forget₂Mon C)).X
     grp := GrpObj.ofInvertible (limit (F ⋙ Grp.forget₂Mon C)).X fun X f ↦ by
-      have : PreservesLimits (yoneda (C := C)) := inferInstance
-      let G := yonedaMon (C := C) ⋙ (evaluation _ _).obj (.op X)
-      have : (F ⋙ Grp.forget₂Mon C) ⋙ G ≅ (F ⋙ yonedaGrp ⋙ (evaluation _ _).obj (.op X)) ⋙
-          forget₂ GrpCat MonCat := by
-        rfl
-      have h1 := CategoryTheory.preservesLimitIso G (F ⋙ Grp.forget₂Mon C) ≪≫
-        HasLimit.isoOfNatIso this ≪≫
+      let e := CategoryTheory.preservesLimitIso
+        (yonedaMon (C := C) ⋙ (evaluation _ _).obj (.op X)) (F ⋙ Grp.forget₂Mon C) ≪≫
         (CategoryTheory.preservesLimitIso (forget₂ GrpCat MonCat)
         (F ⋙ yonedaGrp ⋙ (evaluation Cᵒᵖ GrpCat).obj (Opposite.op X))).symm
-      suffices Invertible ((h1.symm.hom.hom) (h1.hom.hom f)) by
-        rwa [Iso.symm_hom, Iso.hom_inv_id_apply] at this
-      suffices Invertible (h1.hom.hom f) by
-        exact this.map h1.symm.hom.hom
-      refine @invertibleOfGroup _ ?_ _ }
-  apply createsLimitOfFullyFaithfulOfIso G
-  rfl
+      rw [← e.hom_inv_id_apply f, ← e.symm_hom]
+      suffices hf : Invertible (e.hom.hom f) from hf.map e.symm.hom.hom
+      exact @invertibleOfGroup  _ ?_ (e.hom.hom f) }
+  exact createsLimitOfFullyFaithfulOfIso G (Iso.refl G.toMon)
 
 noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCategory J]
     [CartesianMonoidalCategory C] [HasLimitsOfShape J C]
@@ -84,7 +80,7 @@ noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCatego
     CreatesLimitsOfShape J (Grp.forget C) :=
   inferInstanceAs (CreatesLimitsOfShape J (Grp.forget₂Mon C ⋙ Mon.forget C))
 
-instance foo {C : Type*} [Category* C] [CartesianMonoidalCategory C]
+instance {C : Type*} [Category* C] [CartesianMonoidalCategory C]
     [HasLimitsOfShape WalkingParallelPair C] : HasKernels (Grp C) := by
   constructor
   intro X Y f
