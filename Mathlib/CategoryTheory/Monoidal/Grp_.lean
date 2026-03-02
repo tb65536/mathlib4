@@ -387,6 +387,9 @@ instance : HasZeroObject (Grp C) where
 
 noncomputable instance : HasZeroMorphisms (Grp C) := HasZeroObject.zeroMorphismsOfZeroObject
 
+instance : HasTerminal (Grp C) :=
+  hasTerminal_of_unique (trivial C)
+
 /-! ### `Grp C` is cartesian-monoidal -/
 
 variable [BraidedCategory C] {G H H₁ H₂ : Grp C}
