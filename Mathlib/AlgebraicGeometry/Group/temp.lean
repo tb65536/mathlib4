@@ -6,6 +6,8 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.AlgebraicGeometry.Properties
+public import Mathlib.CategoryTheory.Adjunction.Evaluation
+public import Mathlib.CategoryTheory.Adjunction.Limits
 public import Mathlib.CategoryTheory.Monoidal.Grp_
 public import Mathlib.CategoryTheory.Monoidal.Internal.Limits
 
@@ -43,29 +45,48 @@ instance [SemiCartesianMonoidalCategory C] [HasLimitsOfShape WalkingParallelPair
 
 open MonObj
 
-def tada (G : C) [CartesianMonoidalCategory C] [MonObj G] (h : ∀ (X : C) (f : X ⟶ G), Invertible f) :
-    GrpObj G where
+def tada (G : C) [CartesianMonoidalCategory C] [MonObj G]
+    (h : ∀ (X : C) (f : X ⟶ G), Invertible f) : GrpObj G where
   inv := Yoneda.fullyFaithful.preimage ⟨fun X f ↦ (h X.unop f).invOf, fun X Y f ↦ by
     ext g
-    simp only [yoneda_obj_obj, types_comp_apply, yoneda_obj_map]
-    apply invOf_eq_left_inv
+    simp_rw [yoneda_obj_obj, types_comp_apply, yoneda_obj_map]
+    apply invOf_eq_left_inv -- add `rw` version of this?
     rw [← comp_mul, invOf_mul_self', comp_one]⟩
   left_inv := by
-    sorry
+    simp_rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, invOf_mul_self, Hom.one_def]
   right_inv := by
-    sorry
+    simp_rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, mul_invOf_self, Hom.one_def]
 
-noncomputable instance [CartesianMonoidalCategory C] [HasLimitsOfShape J C] :
+-- J could be too large
+instance [CartesianMonoidalCategory C] : PreservesLimitsOfShape J (yonedaMon (C := C)) :=
+  sorry
+
+noncomputable instance [CartesianMonoidalCategory C] [HasLimitsOfShape J C]
+    [HasLimitsOfShape J MonCat] :
     CreatesLimitsOfShape J (Grp.forget₂Mon C) := by
   constructor
   intro F
   let G : Grp C :=
-  { X := (CategoryTheory.Mon.limit (F ⋙ Grp.forget₂Mon C)).X
-    grp := by
-      apply tada
-      intro X f
+  { X := (limit (F ⋙ Grp.forget₂Mon C)).X
+    grp := tada (limit (F ⋙ Grp.forget₂Mon C)).X fun X f ↦ by
+      have : PreservesLimits (yoneda (C := C)) := inferInstance
+      -- todo: `yonedaMon` preserves limits (evaluation reflects limits)
+      let G := yonedaMon (C := C) ⋙ (evaluation _ _).obj (.op X)
+      -- let G := (yonedaMon (C := C) ⋙ (Functor.whiskeringRight _ _ _).obj (forget MonCat)) ⋙
+      --   (evaluation _ _).obj (.op X)
+      have : PreservesLimitsOfShape J G := inferInstance
+      have := CategoryTheory.preservesLimitIso G (F ⋙ Grp.forget₂Mon C)
+
+      apply Invertible.map this.symm.hom.hom
+
+
+      -- set H :=
+
+
+
       sorry }
   apply createsLimitOfFullyFaithfulOfIso G
+  sorry
 
 noncomputable instance [CartesianMonoidalCategory C] [HasLimitsOfShape J C] :
     CreatesLimitsOfShape J (Grp.forget C) :=
