@@ -30,6 +30,7 @@ universe u v
 
 open MonObj
 
+-- PRed
 def GrpObj.ofInvertible {C : Type*} [Category* C] (G : C) [CartesianMonoidalCategory C] [MonObj G]
     (h : ∀ (X : C) (f : X ⟶ G), Invertible f) : GrpObj G where
   inv := Yoneda.fullyFaithful.preimage ⟨fun X f ↦ (h X.unop f).invOf, fun X Y f ↦ by
@@ -42,17 +43,19 @@ def GrpObj.ofInvertible {C : Type*} [Category* C] (G : C) [CartesianMonoidalCate
   right_inv := by
     rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, mul_invOf_self, Hom.one_def]
 
+-- PRed
+instance whiskeringRight_reflectsLimitsOfShape {C : Type*} [Category* C] {D : Type*}
+    [Category* D] {E : Type*} [Category* E] {J : Type*} [Category* J]
+    [HasLimitsOfShape J D] (F : D ⥤ E) [PreservesLimitsOfShape J F] [F.ReflectsIsomorphisms] :
+    ReflectsLimitsOfShape J ((Functor.whiskeringRight C D E).obj F) :=
+  reflectsLimitsOfShape_of_reflectsIsomorphisms
+
 instance {C J : Type*} [Category.{v} C] [SmallCategory J] [CartesianMonoidalCategory C]
     [HasLimitsOfShape J C] [HasLimitsOfShape J MonCat.{v}] :
     PreservesLimitsOfShape J (yonedaMon (C := C)) := by
   have : PreservesLimitsOfShape J
       (yonedaMon ⋙ (Functor.whiskeringRight Cᵒᵖ MonCat (Type v)).obj (forget MonCat)) :=
     inferInstanceAs (PreservesLimitsOfShape J (Mon.forget C ⋙ yoneda))
-  have : ReflectsLimitsOfShape J
-    ((Functor.whiskeringRight Cᵒᵖ MonCat (Type v)).obj (forget MonCat)) := by
-    -- extract this as instance (CategoryTheory/Limits/FunctorCategory), next to
-    -- `whiskeringRight_preservesLimitsOfShape` (from `ReflectsLimits` to `ReflectsLimits`)
-    exact reflectsLimitsOfShape_of_reflectsIsomorphisms
   exact preservesLimitsOfShape_of_reflects_of_preserves (J := J) (yonedaMon (C := C))
     ((Functor.whiskeringRight _ _ _).obj (forget MonCat))
 
