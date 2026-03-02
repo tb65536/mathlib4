@@ -30,7 +30,7 @@ universe u v
 
 open MonObj
 
-def tada {C : Type*} [Category* C] (G : C) [CartesianMonoidalCategory C] [MonObj G]
+def GrpObj.ofInvertible {C : Type*} [Category* C] (G : C) [CartesianMonoidalCategory C] [MonObj G]
     (h : ∀ (X : C) (f : X ⟶ G), Invertible f) : GrpObj G where
   inv := Yoneda.fullyFaithful.preimage ⟨fun X f ↦ (h X.unop f).invOf, fun X Y f ↦ by
     ext g
@@ -60,7 +60,7 @@ noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCatego
   intro F
   let G : Grp C :=
   { X := (limit (F ⋙ Grp.forget₂Mon C)).X
-    grp := tada (limit (F ⋙ Grp.forget₂Mon C)).X fun X f ↦ by
+    grp := GrpObj.ofInvertible (limit (F ⋙ Grp.forget₂Mon C)).X fun X f ↦ by
       have : PreservesLimits (yoneda (C := C)) := inferInstance
       let G := yonedaMon (C := C) ⋙ (evaluation _ _).obj (.op X)
       have : (F ⋙ Grp.forget₂Mon C) ⋙ G ≅ (F ⋙ yonedaGrp ⋙ (evaluation _ _).obj (.op X)) ⋙
