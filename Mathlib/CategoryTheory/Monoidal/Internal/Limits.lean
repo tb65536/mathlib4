@@ -7,7 +7,6 @@ module
 
 public import Mathlib.CategoryTheory.Monoidal.Internal.FunctorCategory
 public import Mathlib.CategoryTheory.Monoidal.Limits.Basic
-public import Mathlib.CategoryTheory.Limits.Creates
 public import Mathlib.CategoryTheory.Limits.Preserves.Basic
 
 /-!
@@ -91,9 +90,6 @@ instance forget_preservesLimitsOfShape : PreservesLimitsOfShape J (Mon.forget C)
   preservesLimit := fun {F} =>
     preservesLimit_of_preserves_limit_cone (limitConeIsLimit F)
       (IsLimit.ofIsoLimit (limit.isLimit (F ⋙ Mon.forget C)) (forgetMapConeLimitConeIso F).symm)
-
-instance createsLimitsOfShape : CreatesLimitsOfShape J (Mon.forget C) :=
-  ⟨fun {_} ↦ createsLimitOfReflectsIsomorphismsOfPreserves⟩
 
 end Mon
 end CategoryTheory
