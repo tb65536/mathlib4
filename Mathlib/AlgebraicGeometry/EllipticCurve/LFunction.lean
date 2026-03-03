@@ -27,7 +27,7 @@ In this file, we define the L-function of an elliptic curve.
 
 @[expose] public section
 
-namespace ArithmeticFunction
+namespace ArithmeticFunction -- Euler product of Arithmetic Functions
 
 #check PowerSeries.invOfUnit
 
@@ -35,37 +35,11 @@ open Filter in
 local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) := by
   refine UniformSpace.comap ((↑) : ArithmeticFunction R → (ℕ → R)) (UniformSpace.ofCore ?_)
   apply UniformSpace.Core.mk (⨅ s : Finset ℕ, (𝓟 {(f, g) | Set.EqOn f g s}))
-  · grind [Set.EqOn, SetRel.id, le_iInf_iff, le_principal_iff, mem_principal]
-  · suffices
-      Tendsto (_root_.id) (⨅ s : Finset ℕ, 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g ↑s})
-        (⨅ s : Finset ℕ, 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g ↑s}) by
-      simp only [tendsto_iInf, tendsto_principal, Set.mem_setOf_eq, Prod.fst_swap, Prod.snd_swap] at this ⊢
-      simp_rw [Set.eqOn_comm]
-      exact this
-    exact tendsto_id
-  · simp only [le_iInf_iff, le_principal_iff]
-    rw [SetRel.comp]
-    intro i hi
-    obtain ⟨s, hs, t, ht, rfl⟩ := Filter.mem_iInf.mp hi
-    clear hi
-    refine ⟨⋂ k : s, t k, ?_, ?_⟩
-    · exact Filter.mem_iInf.mpr ⟨s, hs, t, ht, rfl⟩
-    · rintro a b c ⟨d, rfl⟩
-      simp only
-      specialize ht d
-      rw [Filter.mem_principal] at ht
-      apply ht
-      simp
-      rw [SetRel.mem_comp] at b
-      obtain ⟨x, y, z⟩ := b
-
-      grind [Filter.mem_iInf, Filter.mem_principal, Set.EqOn, Set.mem_iInter, SetRel.comp]
-      sorry
-
-
-    simp
-
-    sorry
+  · simp [Set.subset_def, Set.eqOn_refl]
+  · exact tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm
+  · refine le_iInf fun s ↦ ?_
+    have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
+    exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn])
 
 /-- The Euler product of a family of arithmetic functions. -/
 noncomputable def eulerProduct {R : Type*} [CommRing R] {ι : Type*} (f : ι → ArithmeticFunction R) :
@@ -79,11 +53,11 @@ theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*} (f : ι �
     False := by
   sorry
 
--- evaluating at s gives tprod ...
+-- API: evaluating at s gives tprod ...
 
 end ArithmeticFunction
 
-namespace ArithmeticFunction
+namespace ArithmeticFunction -- ArithmeticFunction from a PowerSeries
 
 variable {R : Type*} [CommRing R]
 
@@ -124,35 +98,33 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
   map_mul' f g := by
     split_ifs with hq
     · ext k
+      let i₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
+      let i : ℕ × ℕ ↪ ℕ × ℕ := i₀.prodMap i₀
       simp only [coe_mk, mul_apply]
       by_cases h : ∃ a, q ^ a = k
-      · obtain ⟨a, rfl⟩ := h
+      · obtain ⟨k, rfl⟩ := h
         rw [(Nat.pow_right_injective hq).extend_apply]
-        let i₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
-        let i : ℕ × ℕ ↪ ℕ × ℕ := i₀.prodMap i₀
-        have hs : (Finset.antidiagonal a).map i ⊆ (q ^ a).divisorsAntidiagonal := by
+        let ι₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
+        let ι : ℕ × ℕ ↪ ℕ × ℕ := ι₀.prodMap ι₀
+        have hs : (Finset.antidiagonal k).map ι ⊆ (q ^ k).divisorsAntidiagonal := by
           intro k hk
           rw [Finset.mem_map] at hk
           obtain ⟨k, hk, rfl⟩ := hk
           rw [Finset.mem_antidiagonal] at hk
-          simp [Nat.mem_divisorsAntidiagonal, i, i₀, ← pow_add, hk, ne_zero_of_lt hq]
-        rw [PowerSeries.coeff_mul a f g, ← Finset.sum_subset hs]
-        · simp [i, i₀, (Nat.pow_right_injective hq).extend_apply]
-        · intro k hk h
-          by_cases ha : ∃ a, q ^ a = k.1
-          · by_cases hb : ∃ b, q ^ b = k.2
-            · obtain ⟨a, ha⟩ := ha
-              obtain ⟨b, hb⟩ := hb
-              rw [Nat.mem_divisorsAntidiagonal, ← ha, ← hb, ← pow_add] at hk
-              replace hk := Nat.pow_right_injective hq hk.1
-              rw [Finset.mem_map] at h
-              simp at h
-              specialize h a b hk
-              simp [Prod.ext_iff, i, i₀, ← ha, ← hb] at h
-            · rw [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
-              exact hb
-          · rw [Function.extend_apply', Pi.zero_apply, zero_mul]
-            exact ha
+          simp [Nat.mem_divisorsAntidiagonal, ι, ι₀, ← pow_add, hk, ne_zero_of_lt hq]
+        rw [PowerSeries.coeff_mul k f g, ← Finset.sum_subset hs]
+        · simp [ι, ι₀, (Nat.pow_right_injective hq).extend_apply]
+        · intro (a, b) hab h
+          by_cases ha : ∃ i, q ^ i = a
+          · by_cases hb : ∃ j, q ^ j = b
+            · obtain ⟨i, hi⟩ := ha
+              obtain ⟨j, hj⟩ := hb
+              rw [Nat.mem_divisorsAntidiagonal, ← hi, ← hj, ← pow_add, Nat.pow_right_inj hq] at hab
+              simp_rw [Finset.mem_map, not_exists, not_and, Finset.mem_antidiagonal] at h
+              specialize h (i, j) hab.1
+              simp [ι, ι₀, ← hi, ← hj] at h
+            · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+          · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
       · rw [Function.extend_apply' _ _ _ h, Pi.zero_apply, Finset.sum_eq_zero]
         intro (a, b) hk
         obtain ⟨hab, -⟩ := Nat.mem_divisorsAntidiagonal.mp hk
@@ -160,10 +132,9 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
         · by_cases hb : ∃ j, q ^ j = b
           · obtain ⟨i, hi⟩ := ha
             obtain ⟨j, hj⟩ := hb
-            push_neg at h
-            specialize h (i + j)
-            rw [pow_add, hi, hj] at h
-            exact (h hab).elim
+            contrapose! h
+            use i + j
+            rwa [pow_add, hi, hj]
           · rw [mul_comm, Function.extend_apply' _ _ _ hb, Pi.zero_apply, zero_mul]
         · rw [Function.extend_apply' _ _ _ ha, Pi.zero_apply, zero_mul]
     · ext k
