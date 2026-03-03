@@ -30,26 +30,6 @@ universe u v
 
 open MonObj
 
--- PRed
-def GrpObj.ofInvertible {C : Type*} [Category* C] (G : C) [CartesianMonoidalCategory C] [MonObj G]
-    (h : ∀ (X : C) (f : X ⟶ G), Invertible f) : GrpObj G where
-  inv := Yoneda.fullyFaithful.preimage ⟨fun X f ↦ (h X.unop f).invOf, fun X Y f ↦ by
-    ext g
-    simp_rw [yoneda_obj_obj, types_comp_apply, yoneda_obj_map]
-    apply invOf_eq_left_inv -- add `rw` version of this?
-    rw [← comp_mul, invOf_mul_self', comp_one]⟩
-  left_inv := by
-    rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, invOf_mul_self, Hom.one_def]
-  right_inv := by
-    rw [Yoneda.fullyFaithful_preimage, ← Hom.mul_def, mul_invOf_self, Hom.one_def]
-
--- PRed
-instance whiskeringRight_reflectsLimitsOfShape {C : Type*} [Category* C] {D : Type*}
-    [Category* D] {E : Type*} [Category* E] {J : Type*} [Category* J]
-    [HasLimitsOfShape J D] (F : D ⥤ E) [PreservesLimitsOfShape J F] [F.ReflectsIsomorphisms] :
-    ReflectsLimitsOfShape J ((Functor.whiskeringRight C D E).obj F) :=
-  reflectsLimitsOfShape_of_reflectsIsomorphisms
-
 instance {C J : Type*} [Category.{v} C] [SmallCategory J] [CartesianMonoidalCategory C]
     [HasLimitsOfShape J C] [HasLimitsOfShape J MonCat.{v}] :
     PreservesLimitsOfShape J (yonedaMon (C := C)) := by
