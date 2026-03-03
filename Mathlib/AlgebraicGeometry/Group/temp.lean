@@ -28,16 +28,16 @@ section
 
 universe u v
 
+open Functor in
 instance {C J : Type*} [Category.{v} C] [SmallCategory J] [CartesianMonoidalCategory C]
     [HasLimitsOfShape J C] [HasLimitsOfShape J MonCat.{v}] :
     PreservesLimitsOfShape J (yonedaMon (C := C)) := by
-  have : PreservesLimitsOfShape J
-      (yonedaMon ⋙ (Functor.whiskeringRight Cᵒᵖ MonCat (Type v)).obj (forget MonCat)) :=
+  have : PreservesLimitsOfShape J (yonedaMon ⋙ (whiskeringRight _ _ _).obj (forget MonCat)) :=
     inferInstanceAs (PreservesLimitsOfShape J (Mon.forget C ⋙ yoneda))
-  exact preservesLimitsOfShape_of_reflects_of_preserves (J := J) (yonedaMon (C := C))
-    ((Functor.whiskeringRight _ _ _).obj (forget MonCat))
+  exact preservesLimitsOfShape_of_reflects_of_preserves yonedaMon
+    ((whiskeringRight _ _ _).obj (forget MonCat))
 
-noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCategory J]
+noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [Category J]
     [CartesianMonoidalCategory C] [HasLimitsOfShape J C]
     [HasLimitsOfShape J MonCat] [HasLimitsOfShape J GrpCat] :
     CreatesLimitsOfShape J (Grp.forget₂Mon C) := by
@@ -55,7 +55,7 @@ noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCatego
       exact @invertibleOfGroup  _ ?_ (e.hom.hom f) }
   exact createsLimitOfFullyFaithfulOfIso G (Iso.refl G.toMon)
 
-noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [SmallCategory J]
+noncomputable instance {C J : Type*} [Category.{v} C] [Small.{v} J] [Category J]
     [CartesianMonoidalCategory C] [HasLimitsOfShape J C]
     [HasLimitsOfShape J MonCat] [HasLimitsOfShape J GrpCat] :
     CreatesLimitsOfShape J (Grp.forget C) :=
