@@ -87,8 +87,7 @@ namespace ArithmeticFunction
 
 variable {R : Type*} [CommRing R]
 
-#check ArithmeticFunction.one_apply
-
+set_option backward.isDefEq.respectTransparency false in
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
 For example, if `f = 1 + X + X² + ...` and `q = p`, then `f(q⁻ˢ) = 1 + p⁻ˢ + p⁻²ˢ + ...`.
 
@@ -96,7 +95,7 @@ If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use a junk value of `f.c
 noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFunction R where
   toFun f := if hq : 1 < q then
     ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
-    ⟨fun k ↦ if k = 1 then f.constantCoeff else 0, by simp⟩
+      ⟨fun k ↦ if k = 1 then f.constantCoeff else 0, by simp⟩
   map_zero' := by
     split_ifs with hq
     · rw [← coe_inj]
@@ -109,7 +108,7 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
       rw [coe_mk]
       by_cases h : ∃ a, q ^ a = k
       · obtain ⟨a, rfl⟩ := h
-        simp [(Nat.pow_right_injective hq).extend_apply, ArithmeticFunction.one_apply, hq.ne']
+        simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
       · simp [h, ArithmeticFunction.one_apply_ne (fun H ↦ h ⟨0, H.symm⟩)]
     · ext k
       simp [ArithmeticFunction.one_apply]
@@ -128,12 +127,51 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
       by_cases h : ∃ a, q ^ a = k
       · obtain ⟨a, rfl⟩ := h
         simp [(Nat.pow_right_injective hq).extend_apply]
-        sorry
+        let i₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
+        let i : ℕ × ℕ ↪ ℕ × ℕ := i₀.prodMap i₀
+        have hs : (Finset.antidiagonal a).map i ⊆ (q ^ a).divisorsAntidiagonal := by
+          intro k hk
+          rw [Finset.mem_map] at hk
+          obtain ⟨k, hk, rfl⟩ := hk
+          rw [Finset.mem_antidiagonal] at hk
+          simp [Nat.mem_divisorsAntidiagonal, i, i₀, ← pow_add, hk, ne_zero_of_lt hq]
+        rw [PowerSeries.coeff_mul a f g, ← Finset.sum_subset hs, Finset.sum_map]
+        · apply Finset.sum_congr rfl
+          intro (j, k) h
+          simp [i, i₀]
+          rw [(Nat.pow_right_injective hq).extend_apply,
+            (Nat.pow_right_injective hq).extend_apply]
+        · intro k hk h
+          by_cases ha : ∃ a, q ^ a = k.1
+          · by_cases hb : ∃ b, q ^ b = k.2
+            · obtain ⟨a, ha⟩ := ha
+              obtain ⟨b, hb⟩ := hb
+              rw [Nat.mem_divisorsAntidiagonal, ← ha, ← hb, ← pow_add] at hk
+              replace hk := Nat.pow_right_injective hq hk.1
+              rw [Finset.mem_map] at h
+              simp at h
+              specialize h a b hk
+              simp [Prod.ext_iff, i, i₀, ← ha, ← hb] at h
+            · rw [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+              exact hb
+          · rw [Function.extend_apply', Pi.zero_apply, zero_mul]
+            exact ha
       · simp [h]
         rw [Finset.sum_eq_zero]
-        intro x hx
-        rw [Nat.mem_divisorsAntidiagonal] at hx
-        sorry
+        intro k hk
+        rw [Nat.mem_divisorsAntidiagonal] at hk
+        by_cases ha : ∃ a, q ^ a = k.1
+        · by_cases hb : ∃ b, q ^ b = k.2
+          · obtain ⟨a, ha⟩ := ha
+            obtain ⟨b, hb⟩ := hb
+            push_neg at h
+            specialize h (a + b)
+            rw [pow_add, ha, hb] at h
+            exact (h hk.1).elim
+          · rw [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+            exact hb
+        · rw [Function.extend_apply', Pi.zero_apply, zero_mul]
+          exact ha
     · ext k
       by_cases hk : k = 1
       · simp [hk]
