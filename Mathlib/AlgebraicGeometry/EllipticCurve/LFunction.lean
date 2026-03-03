@@ -9,6 +9,7 @@ public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
 public import Mathlib.NumberTheory.ArithmeticFunction.Moebius
 public import Mathlib.NumberTheory.LSeries.SumCoeff
 public import Mathlib.RingTheory.Ideal.Norm.AbsNorm
+public import Mathlib.RingTheory.PowerSeries.Inverse
 
 /-!
 # The L-function of an elliptic curve
@@ -25,6 +26,145 @@ In this file, we define the L-function of an elliptic curve.
 -/
 
 @[expose] public section
+
+namespace ArithmeticFunction
+
+#check PowerSeries.invOfUnit
+
+open Filter in
+local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) := by
+  refine UniformSpace.comap ((↑) : ArithmeticFunction R → (ℕ → R)) (UniformSpace.ofCore ?_)
+  apply UniformSpace.Core.mk (⨅ s : Finset ℕ, (𝓟 {(f, g) | Set.EqOn f g s}))
+  · grind [Set.EqOn, SetRel.id, le_iInf_iff, le_principal_iff, mem_principal]
+  · suffices
+      Tendsto (_root_.id) (⨅ s : Finset ℕ, 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g ↑s})
+        (⨅ s : Finset ℕ, 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g ↑s}) by
+      simp only [tendsto_iInf, tendsto_principal, Set.mem_setOf_eq, Prod.fst_swap, Prod.snd_swap] at this ⊢
+      simp_rw [Set.eqOn_comm]
+      exact this
+    exact tendsto_id
+  · simp only [le_iInf_iff, le_principal_iff]
+    rw [SetRel.comp]
+    intro i hi
+    obtain ⟨s, hs, t, ht, rfl⟩ := Filter.mem_iInf.mp hi
+    clear hi
+    refine ⟨⋂ k : s, t k, ?_, ?_⟩
+    · exact Filter.mem_iInf.mpr ⟨s, hs, t, ht, rfl⟩
+    · rintro a b c ⟨d, rfl⟩
+      simp only
+      specialize ht d
+      rw [Filter.mem_principal] at ht
+      apply ht
+      simp
+      rw [SetRel.mem_comp] at b
+      obtain ⟨x, y, z⟩ := b
+
+      grind [Filter.mem_iInf, Filter.mem_principal, Set.EqOn, Set.mem_iInter, SetRel.comp]
+      sorry
+
+
+    simp
+
+    sorry
+
+/-- The Euler product of a family of arithmetic functions. -/
+noncomputable def eulerProduct {R : Type*} [CommRing R] {ι : Type*} (f : ι → ArithmeticFunction R) :
+    ArithmeticFunction R :=
+  ∏' i, f i
+
+-- some API ...
+
+theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*} (f : ι → PowerSeries R)
+    (q : ι → ℕ) (h : Filter.Tendsto q Filter.cofinite Filter.atTop) :
+    False := by
+  sorry
+
+-- evaluating at s gives tprod ...
+
+end ArithmeticFunction
+
+namespace ArithmeticFunction
+
+variable {R : Type*} [CommRing R]
+
+#check ArithmeticFunction.one_apply
+
+/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
+For example, if `f = 1 + X + X² + ...` and `q = p`, then `f(q⁻ˢ) = 1 + p⁻ˢ + p⁻²ˢ + ...`.
+
+If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use a junk value of `f.constantCoeff`. -/
+noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFunction R where
+  toFun f := if hq : 1 < q then
+    ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
+    ⟨fun k ↦ if k = 1 then f.constantCoeff else 0, by simp⟩
+  map_zero' := by
+    split_ifs with hq
+    · rw [← coe_inj]
+      apply Function.extend_zero
+    · ext
+      simp
+  map_one' := by
+    split_ifs with hq
+    · ext k
+      rw [coe_mk]
+      by_cases h : ∃ a, q ^ a = k
+      · obtain ⟨a, rfl⟩ := h
+        simp [(Nat.pow_right_injective hq).extend_apply, ArithmeticFunction.one_apply, hq.ne']
+      · simp [h, ArithmeticFunction.one_apply_ne (fun H ↦ h ⟨0, H.symm⟩)]
+    · ext k
+      simp [ArithmeticFunction.one_apply]
+  map_add' f g := by
+    split_ifs with hq
+    · ext k
+      by_cases h : ∃ a, q ^ a = k
+      · obtain ⟨a, rfl⟩ := h
+        simp [(Nat.pow_right_injective hq).extend_apply]
+      · simp [h]
+    · ext k
+      by_cases hk : k = 1 <;> simp [hk]
+  map_mul' f g := by
+    split_ifs with hq
+    · ext k
+      by_cases h : ∃ a, q ^ a = k
+      · obtain ⟨a, rfl⟩ := h
+        simp [(Nat.pow_right_injective hq).extend_apply]
+        sorry
+      · simp [h]
+        rw [Finset.sum_eq_zero]
+        intro x hx
+        rw [Nat.mem_divisorsAntidiagonal] at hx
+        sorry
+    · ext k
+      by_cases hk : k = 1
+      · simp [hk]
+      · simp only [PowerSeries.coeff_zero_eq_constantCoeff, map_mul, coe_mk, hk, ↓reduceIte]
+        rw [mul_apply]
+        rw [Finset.sum_eq_zero]
+        intro x hx
+        simp
+        intro h1 h2
+        rw [Nat.mem_divisorsAntidiagonal] at hx
+        grind
+
+theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
+    ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
+  simp [ofPowerSeries, dif_pos hq]
+
+theorem ofPowerSeries_apply_zero (q : ℕ) (f : PowerSeries R) : ofPowerSeries q f 0 = 0 := by
+  simp
+
+theorem ofPowerSeries_apply_one (q : ℕ) (hq : 1 < q) (f : PowerSeries R) :
+    ofPowerSeries q f 1 = f.constantCoeff := by
+  rw [ofPowerSeries_apply q hq, ← pow_zero q, (Nat.pow_right_injective hq).extend_apply]
+  rw [PowerSeries.coeff_zero_eq_constantCoeff]
+
+theorem ofPowerSeries_apply_one' (q : ℕ) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
+    ofPowerSeries q f 1 = 1 := by
+  by_cases hq : 1 < q
+  · exact (ofPowerSeries_apply_one q hq f).trans hf
+  · simpa [ofPowerSeries, dif_neg hq]
+
+end ArithmeticFunction
 
 namespace ArithmeticFunction
 
