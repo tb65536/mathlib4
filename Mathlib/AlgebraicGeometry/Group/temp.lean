@@ -29,7 +29,7 @@ section
 universe u v
 
 open Functor in
-instance {C J : Type*} [Category.{v} C] [SmallCategory J] [CartesianMonoidalCategory C]
+instance {C J : Type*} [Category.{v} C] [Category J] [CartesianMonoidalCategory C]
     [HasLimitsOfShape J C] [HasLimitsOfShape J MonCat.{v}] :
     PreservesLimitsOfShape J (yonedaMon (C := C)) := by
   have : PreservesLimitsOfShape J (yonedaMon ⋙ (whiskeringRight _ _ _).obj (forget MonCat)) :=
