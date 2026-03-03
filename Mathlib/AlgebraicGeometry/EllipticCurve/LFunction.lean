@@ -42,16 +42,26 @@ local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) := by
     exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn])
 
 /-- The Euler product of a family of arithmetic functions. -/
-noncomputable def eulerProduct
-    {R : Type*} [CommSemiring R] {ι : Type*} (f : ι → ArithmeticFunction R) :
+noncomputable def eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
+    (f : ι → ArithmeticFunction R) :
     ArithmeticFunction R :=
   ∏' i, f i
 
--- some API ...
+theorem isMultiplicative_eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
+    (f : ι → ArithmeticFunction R) (hf : ∀ i, IsMultiplicative (f i)) :
+    IsMultiplicative (eulerProduct f) := by
+  -- all finite products are multiplicative,
+  -- and a limit of multiplicative functions is multiplicative
+  sorry
 
-theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*} (f : ι → PowerSeries R)
-    (q : ι → ℕ) (h : Filter.Tendsto q Filter.cofinite Filter.atTop) :
-    False := by
+#check ArithmeticFunction.IsMultiplicative
+
+-- prove multiplicative
+
+theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*}
+    (q : ι → ℕ) (h : Filter.Tendsto q Filter.cofinite Filter.atTop)
+    (f : ι → PowerSeries R) (hf1 : ∀ i, (f i).constantCoeff = 1) :
+    eulerProduct  := by
   sorry
 
 -- API: evaluating at s gives tprod ...
