@@ -175,14 +175,8 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
     · ext k
       by_cases hk : k = 1
       · simp [hk]
-      · simp only [PowerSeries.coeff_zero_eq_constantCoeff, map_mul, coe_mk, hk, ↓reduceIte]
-        rw [mul_apply]
-        rw [Finset.sum_eq_zero]
-        intro x hx
-        simp
-        intro h1 h2
-        rw [Nat.mem_divisorsAntidiagonal] at hx
-        grind
+      · rw [coe_mk, if_neg hk, mul_apply, Finset.sum_eq_zero]
+        grind [coe_mk, Nat.mem_divisorsAntidiagonal]
 
 theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
     ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
