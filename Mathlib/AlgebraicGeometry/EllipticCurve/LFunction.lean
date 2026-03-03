@@ -134,7 +134,7 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
               simp_rw [Finset.mem_map, not_exists, not_and, Finset.mem_antidiagonal] at h
               specialize h (i, j) hab.1
               simp [ι, ι₀, ← hi, ← hj] at h
-            · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+            · rw [Function.extend_apply' _ _ _ hb, Pi.zero_apply, mul_zero]
           · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
       · rw [Function.extend_apply' _ _ _ h, Pi.zero_apply, Finset.sum_eq_zero]
         intro (a, b) hk
@@ -146,7 +146,7 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
             contrapose! h
             use i + j
             rwa [pow_add, hi, hj]
-          · rw [mul_comm, Function.extend_apply' _ _ _ hb, Pi.zero_apply, zero_mul]
+          · rw [Function.extend_apply' _ _ _ hb, Pi.zero_apply, mul_zero]
         · rw [Function.extend_apply' _ _ _ ha, Pi.zero_apply, zero_mul]
     · ext k
       by_cases hk : k = 1
@@ -171,6 +171,46 @@ theorem ofPowerSeries_apply_one' (q : ℕ) (f : PowerSeries R) (hf : f.constantC
   by_cases hq : 1 < q
   · exact (ofPowerSeries_apply_one q hq f).trans hf
   · simpa [ofPowerSeries, dif_neg hq]
+
+theorem multiplicative_ofPowerSeries
+    (q : ℕ) (hq : IsPrimePow q) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
+    IsMultiplicative (ofPowerSeries q f) := by
+  have hq' : 1 < q := hq.one_lt
+  refine ⟨ofPowerSeries_apply_one' q f hf, ?_⟩
+  intro m n hmn
+  rw [ofPowerSeries_apply q hq.one_lt, ofPowerSeries_apply q hq.one_lt,
+    ofPowerSeries_apply q hq.one_lt]
+  obtain ⟨p, k, hp, hk, rfl⟩ := hq
+  -- trick: ofPowerSeries_pow lemma
+  by_cases hm : ∃ i, p ^ i = m
+  · by_cases hn : ∃ j, p ^ j = n
+    ·
+      sorry
+    · rw [Function.extend_apply', Pi.zero_apply, mul_comm,
+        Function.extend_apply', Pi.zero_apply, zero_mul]
+      · contrapose! hn
+        obtain ⟨i, hi⟩ := hn
+        use k * i
+        rwa [pow_mul]
+      · contrapose! hn
+        obtain ⟨i, hi⟩ := hn
+        replace hn : n ∣ p ^ (k * i) := by
+          use m
+          rwa [pow_mul, mul_comm]
+        sorry
+  · rw [Function.extend_apply', Pi.zero_apply, Function.extend_apply', Pi.zero_apply, zero_mul]
+    · contrapose! hm
+      obtain ⟨i, hi⟩ := hm
+      use k * i
+      rwa [pow_mul]
+    · contrapose! hm
+      obtain ⟨i, hi⟩ := hm
+      replace hi : m ∣ p ^ (k * i) := by
+        use n
+        rwa [pow_mul]
+      sorry
+
+-- multiplicative if `IsPrimePow q`
 
 end ArithmeticFunction
 
