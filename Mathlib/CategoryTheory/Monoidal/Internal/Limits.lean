@@ -9,7 +9,6 @@ public import Mathlib.CategoryTheory.Monoidal.Internal.FunctorCategory
 public import Mathlib.CategoryTheory.Monoidal.Limits.Basic
 public import Mathlib.CategoryTheory.Limits.Creates
 public import Mathlib.CategoryTheory.Limits.Preserves.Basic
-public import Mathlib.CategoryTheory.Limits.Creates
 
 /-!
 # Limits of monoid objects.
@@ -115,9 +114,6 @@ instance [HasLimitsOfShape J C] : HasLimitsOfShape J (Mon C) :=
 instance [HasLimitsOfShape J C] :
     PreservesLimitsOfShape J (Mon.forget C) :=
   CategoryTheory.preservesLimitOfShape_of_createsLimitsOfShape_and_hasLimitsOfShape _
-
-instance createsLimitsOfShape : CreatesLimitsOfShape J (Mon.forget C) :=
-  ⟨fun {_} ↦ createsLimitOfReflectsIsomorphismsOfPreserves⟩
 
 end Mon
 end CategoryTheory
