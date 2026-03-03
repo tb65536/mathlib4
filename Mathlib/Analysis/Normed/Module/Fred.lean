@@ -9,6 +9,23 @@ import Mathlib.Analysis.Normed.Operator.Banach
 import Mathlib.Analysis.Normed.Operator.Compact
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 
+open Module.End
+
+instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
+    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
+    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
+    (f : M →L[R] M)
+    (μ : R) (n : ℕ) : IsClosed (genEigenspace (f : Module.End R M) μ n : Set M) := by
+  rw [genEigenspace_nat, one_eq_id, ← coe_id, ← coe_smul, ← coe_sub, ← coe_pow]
+  apply ContinuousLinearMap.isClosed_ker
+
+instance ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
+    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
+    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
+    (f : M →L[R] M)
+    (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) :=
+  isClosed_genEigenspace f μ 1
+
 -- PRed
 theorem ContinuousLinearMap.isHomeomorph_of_isUnit
     {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
@@ -118,21 +135,6 @@ theorem IsCompactOperator.forall_eigenspace_ne_bot_iff_eq_zero
     obtain ⟨v, hv⟩ := h.exists_hasEigenvector
     simp [hasEigenvector_iff] at hv
     grind [smul_eq_zero]
-
-instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
-    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
-    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
-    (f : M →L[R] M)
-    (μ : R) (n : ℕ) : IsClosed (genEigenspace (f : Module.End R M) μ n : Set M) := by
-  rw [genEigenspace_nat, one_eq_id, ← coe_id, ← coe_smul, ← coe_sub, ← coe_pow]
-  apply ContinuousLinearMap.isClosed_ker
-
-instance ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
-    [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
-    [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
-    (f : M →L[R] M)
-    (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) :=
-  isClosed_genEigenspace f μ 1
 
 set_option backward.isDefEq.respectTransparency false in
 theorem spectral_theorem (hT : IsCompactOperator T) (hT' : T.IsSymmetric) :
