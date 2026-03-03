@@ -124,9 +124,10 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
   map_mul' f g := by
     split_ifs with hq
     · ext k
+      simp only [coe_mk, mul_apply]
       by_cases h : ∃ a, q ^ a = k
       · obtain ⟨a, rfl⟩ := h
-        simp [(Nat.pow_right_injective hq).extend_apply]
+        rw [(Nat.pow_right_injective hq).extend_apply]
         let i₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
         let i : ℕ × ℕ ↪ ℕ × ℕ := i₀.prodMap i₀
         have hs : (Finset.antidiagonal a).map i ⊆ (q ^ a).divisorsAntidiagonal := by
@@ -135,12 +136,8 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
           obtain ⟨k, hk, rfl⟩ := hk
           rw [Finset.mem_antidiagonal] at hk
           simp [Nat.mem_divisorsAntidiagonal, i, i₀, ← pow_add, hk, ne_zero_of_lt hq]
-        rw [PowerSeries.coeff_mul a f g, ← Finset.sum_subset hs, Finset.sum_map]
-        · apply Finset.sum_congr rfl
-          intro (j, k) h
-          simp [i, i₀]
-          rw [(Nat.pow_right_injective hq).extend_apply,
-            (Nat.pow_right_injective hq).extend_apply]
+        rw [PowerSeries.coeff_mul a f g, ← Finset.sum_subset hs]
+        · simp [i, i₀, (Nat.pow_right_injective hq).extend_apply]
         · intro k hk h
           by_cases ha : ∃ a, q ^ a = k.1
           · by_cases hb : ∃ b, q ^ b = k.2
@@ -156,22 +153,19 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
               exact hb
           · rw [Function.extend_apply', Pi.zero_apply, zero_mul]
             exact ha
-      · simp [h]
-        rw [Finset.sum_eq_zero]
-        intro k hk
-        rw [Nat.mem_divisorsAntidiagonal] at hk
-        by_cases ha : ∃ a, q ^ a = k.1
-        · by_cases hb : ∃ b, q ^ b = k.2
-          · obtain ⟨a, ha⟩ := ha
-            obtain ⟨b, hb⟩ := hb
+      · rw [Function.extend_apply' _ _ _ h, Pi.zero_apply, Finset.sum_eq_zero]
+        intro (a, b) hk
+        obtain ⟨hab, -⟩ := Nat.mem_divisorsAntidiagonal.mp hk
+        by_cases ha : ∃ i, q ^ i = a
+        · by_cases hb : ∃ j, q ^ j = b
+          · obtain ⟨i, hi⟩ := ha
+            obtain ⟨j, hj⟩ := hb
             push_neg at h
-            specialize h (a + b)
-            rw [pow_add, ha, hb] at h
-            exact (h hk.1).elim
-          · rw [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
-            exact hb
-        · rw [Function.extend_apply', Pi.zero_apply, zero_mul]
-          exact ha
+            specialize h (i + j)
+            rw [pow_add, hi, hj] at h
+            exact (h hab).elim
+          · rw [mul_comm, Function.extend_apply' _ _ _ hb, Pi.zero_apply, zero_mul]
+        · rw [Function.extend_apply' _ _ _ ha, Pi.zero_apply, zero_mul]
     · ext k
       by_cases hk : k = 1
       · simp [hk]
