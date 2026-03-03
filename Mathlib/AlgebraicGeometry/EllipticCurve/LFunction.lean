@@ -42,7 +42,8 @@ local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) := by
     exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn])
 
 /-- The Euler product of a family of arithmetic functions. -/
-noncomputable def eulerProduct {R : Type*} [CommRing R] {ι : Type*} (f : ι → ArithmeticFunction R) :
+noncomputable def eulerProduct
+    {R : Type*} [CommSemiring R] {ι : Type*} (f : ι → ArithmeticFunction R) :
     ArithmeticFunction R :=
   ∏' i, f i
 
