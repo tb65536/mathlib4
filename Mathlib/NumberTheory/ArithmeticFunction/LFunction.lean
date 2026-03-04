@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.FiniteSupport.Basic
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
 public import Mathlib.NumberTheory.ArithmeticFunction.Moebius
+public import Mathlib.NumberTheory.Height.Northcott
 public import Mathlib.NumberTheory.LSeries.SumCoeff
 public import Mathlib.RingTheory.Ideal.Norm.AbsNorm
 public import Mathlib.RingTheory.PowerSeries.Inverse
@@ -15,17 +16,24 @@ public import Mathlib.RingTheory.PowerSeries.Inverse
 /-!
 # Construction of L-functions
 
-This file develop machinery to construct L-functions.
+This file constructs L-functions as formal Dirichlet series.
 
 ## Main definitions
 
-* `ArithmeticFunction.EulerProduct`: the Euler product of a family of L-functions.
+* `ArithmeticFunction.ofPowerSeries q f`: L-function `f(q⁻ˢ)` obtained from a power series `f(T)`.
+* `ArithmeticFunction.eulerProduct f`: the Euler product of a family `f i` of Dirichlet series.
 
 ## Implementation notes
 
-Ultimately, an L-function is constructed from a collection of polynomials. However, there are
-multiple routes that one can take. We choose to pass through power series, Dirichlet series,
-but not multivariate power series.
+We take the following route from polynomials to L-functions:
+* Starting from a polynomial in `T`, `PowerSeries.invOfUnit` gives the reciporical power series.
+* `ofPowerSeries` gives the local Euler factor as a formal Dirichlet series on powers of `q`.
+* `eulerProduct` gives the L-function as the formal product of these local Euler factors.
+* `LSeries` gives the L-function as an analytic function on the right half-plane of convergence.
+
+For example, the Riemann zeta function `ζ(s)` corresponds to taking `1 - T` at each prime `p`.
+
+For context, here is a diagram of possible routes from polynomials to L-functions:
 
                    T=q⁻ˢ                     s ∈ ℂ
 [polynomials in T] ---> [polynomials in q⁻ˢ] ---> [analytic function in s]
@@ -38,183 +46,21 @@ but not multivariate power series.
           v                 T=q⁻ˢ   V               s ∈ ℂ       V
 [multivariate power series] ---> [Dirichlet series] ---> [L-function in s] (the Euler product)
 
-The first vertical map is `PowerSeries.invOfUnit`, the first horizontal map is
-`ArithmeticFunction.ofPowerSeries` (in this file), the second vertical map is
-`ArithmeticFunction.eulerProduct` (in this file), and the second horizontal map is `LSeries`.
-
+## TODO
+* If `q` is a prime power, then `ArithmeticFunction.ofPowerSeries q f` is multiplicative.
+* If each `f i` is multiplicative, then `ArithmeticFunction.eulerProduct f` is multiplicative.
 -/
 
 @[expose] public section
 
+-- PRed
 theorem multipliable_iff_cauchySeq_finset' {α β : Type*} [CommMonoid α] [UniformSpace α]
     [CompleteSpace α] {f : β → α} : Multipliable f ↔ CauchySeq fun s ↦ ∏ b ∈ s, f b := by
   classical exact cauchy_map_iff_exists_tendsto.symm
 
-namespace ArithmeticFunction -- Euler product of Arithmetic Functions
+namespace ArithmeticFunction
 
-open Filter
-
-variable {ι R : Type*} [CommSemiring R]
-
-/-- A local uniform space instance on `ArithmeticFunction` in order to define `eulerProduct` as a
-`tprod`. See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
-local instance : UniformSpace (ArithmeticFunction R) :=
-  .comap ((↑) : ArithmeticFunction R → (ℕ → R)) <| .ofCore <|
-    .mk (⨅ s : Finset ℕ, 𝓟 {(f, g) | Set.EqOn f g s})
-      (by simp [Set.subset_def, Set.eqOn_refl])
-      (tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm)
-      (le_iInf fun s ↦ by
-        have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
-        exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn]))
-
-/-- The uniformity on `ArithmeticFunction` required in order to define `eulerProduct` as a `tprod`.
-See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
-theorem uniformity_eq : uniformity (ArithmeticFunction R) =
-    comap (fun i ↦ (i.1, i.2)) ((⨅ s : Finset ℕ, 𝓟 {((f : ℕ → R), g) | Set.EqOn f g s})) :=
-  rfl
-
-/-- The topology on `ArithmeticFunction` is the topology of pointwise convergence.
-See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
-theorem tendsto_iff {f : ι → ArithmeticFunction R} {F : Filter ι} {g : ArithmeticFunction R} :
-    Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
-  simp_rw [nhds_eq_comap_uniformity,
-    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
-    tendsto_pure, Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset, eq_comm]
-  exact ⟨fun h n ↦ by simpa using h { n }, fun h s k hk ↦ h k⟩
-
-instance : CompleteSpace (ArithmeticFunction R) where
-  complete {f} hf := by
-    simp_rw [Cauchy] at hf
-    simp_rw [nhds_eq_comap_uniformity]
-    simp_rw [uniformity_eq, comap_iInf, comap_principal, le_iInf_iff, le_principal_iff,
-      Set.preimage_setOf_eq] at hf ⊢
-    obtain ⟨hf0, hf⟩ := hf
-    replace hf (i : ℕ) : _ := hf {i}
-    simp_rw [Finset.coe_singleton, Set.eqOn_singleton, mem_prod_self_iff] at hf
-    sorry
-
-/-- The Euler product of a family of arithmetic functions. Defined as a `tprod`, but see
-`tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
-noncomputable def eulerProduct (f : ι → ArithmeticFunction R) : ArithmeticFunction R :=
-  ∏' i, f i
-
-set_option backward.isDefEq.respectTransparency false in
-/-- If arithmetic functions `f i` converges to `1` pointwise, then the partial products
-`∏ i ∈ s, f i` converge to `eulerProduct f` pointwise. -/
-theorem tendsTo_eulerProduct_of_tendsTo (f : ι → ArithmeticFunction R)
-    (hf : ∀ n, Tendsto (fun i ↦ f i n) cofinite (pure ((1 : ArithmeticFunction R) n))) :
-    ∀ n, Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) atTop (pure (eulerProduct f n)) := by
-  classical
-  suffices Multipliable f from tendsto_iff.mp this.hasProd
-  simp_rw [multipliable_iff_cauchySeq_finset', CauchySeq, cauchy_map_iff',
-    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
-    Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset]
-  intro s n hn
-  rw [prod_atTop_atTop_eq, eventually_atTop_prod_self]
-  replace hf : ∀ k ∈ Set.Iic n, ∀ᶠ (x : ι) in cofinite, (f x) k = (1 : ArithmeticFunction R) k :=
-    fun k hk ↦ tendsto_pure.mp (hf k)
-  rw [← eventually_all_finite (Set.finite_Iic n), eventually_iff_exists_mem] at hf
-  obtain ⟨s, hs, hs'⟩ := hf
-  let t := (mem_cofinite.mp hs).toFinset
-  refine ⟨t, fun u v hu hv ↦ ?_⟩
-  rw [← Finset.prod_sdiff hu, ← Finset.prod_sdiff hv]
-  replace hu : ∀ i ∈ u \ t, i ∈ s := by
-    intro i hi
-    rw [Finset.mem_sdiff, Set.Finite.mem_toFinset, Set.notMem_compl_iff] at hi
-    exact hi.2
-  replace hv : ∀ i ∈ v \ t, i ∈ s := by
-    intro i hi
-    rw [Finset.mem_sdiff, Set.Finite.mem_toFinset, Set.notMem_compl_iff] at hi
-    exact hi.2
-  suffices ∀ k ≤ n, (∏ x ∈ u \ t, f x) k = (∏ x ∈ v \ t, f x) k by
-    rw [mul_apply, mul_apply]
-    refine Finset.sum_congr rfl fun k hk ↦ ?_
-    rw [this k.1 (Nat.divisor_le (Nat.fst_mem_divisors_of_mem_antidiagonal hk))]
-  have key w (hw : ∀ i ∈ w, i ∈ s) : ∀ k ≤ n, (∏ x ∈ w, f x) k = (1 : ArithmeticFunction R) k := by
-    induction w using Finset.induction_on
-    case empty => simp
-    case insert i w hi hw' =>
-      intro k hk
-      rw [← one_mul (1 : ArithmeticFunction R)]
-      rw [Finset.prod_insert hi, mul_apply, mul_apply]
-      apply Finset.sum_congr rfl
-      intro j hj
-      have h1 := hs' i (hw i (Finset.mem_insert_self i w)) j.1
-        ((Nat.divisor_le (Nat.fst_mem_divisors_of_mem_antidiagonal hj)).trans hk)
-      have h2 := hw' (fun i hi ↦ hw i (Finset.mem_insert_of_mem hi)) j.2
-        ((Nat.divisor_le (Nat.snd_mem_divisors_of_mem_antidiagonal hj)).trans hk)
-      rw [h1, h2]
-  intro k hk
-  rw [key (u \ t) hu k hk, key (v \ t) hv k hk]
-
--- todo: prove that the tendsto condition holds for arithmetic functions constructed from the
--- power series machinery (under a Northcott assumption???)
-
-@[ext]
-structure _root_.Nat.Factorizations (n : ℕ) (ι : Type*) where
-  f : ι → ℕ
-  hf : finprod f = n
-
-instance (n : ℕ) (ι : Type*) : FunLike (Nat.Factorizations n ι) ι ℕ where
-  coe := Nat.Factorizations.f
-  coe_injective' := by
-    intro f g
-    exact Nat.Factorizations.ext
-
-theorem eulerProduct_apply {R : Type*} [CommSemiring R] [Nontrivial R]
-    {ι : Type*} (f : ι → ArithmeticFunction R) (hf : ∀ i, f i 1 = 1)
-    (hf : ∀ (n : ℕ) (d : Nat.Factorizations n ι),
-      Function.HasFiniteMulSupport (fun j ↦ f j (d j))) (n : ℕ) :
-    eulerProduct f n =
-      finsum fun i : n.Factorizations ι ↦ finprod fun j ↦ f j (i.1 j) := by
-  by_cases hn : n = 0
-  · rw [hn, map_zero, eq_comm]
-    apply finsum_eq_zero_of_forall_eq_zero
-    rintro ⟨i, hi⟩
-    have h0 : (Function.mulSupport fun j ↦ (f j) (i j)) ⊆ Function.mulSupport i := by
-      intro x hx
-      contrapose! hx
-      rw [Function.notMem_mulSupport] at hx ⊢
-      rw [hx, hf]
-    have h1 : Function.HasFiniteMulSupport i := by
-      contrapose! hi
-      rw [finprod_of_not_hasFiniteMulSupport hi]
-      exact one_ne_zero
-    have h2 : Function.HasFiniteMulSupport fun j ↦ f j (i j) := by
-      rw [Function.HasFiniteMulSupport] at h1 ⊢
-      exact h1.subset h0
-    rw [finprod_eq_prod _ h1, Finset.prod_eq_zero_iff] at hi
-    obtain ⟨j, hj, hij⟩ := hi
-    rw [finprod_eq_prod _ h2]
-    apply Finset.prod_eq_zero (i := j)
-    · rw [Set.Finite.mem_toFinset] at hj ⊢
-      rw [Function.mem_mulSupport, hij, map_zero]
-      exact zero_ne_one
-    · rw [hij, map_zero]
-  · sorry
-
-theorem isMultiplicative_eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
-    (f : ι → ArithmeticFunction R) (hf : ∀ i, IsMultiplicative (f i)) :
-    IsMultiplicative (eulerProduct f) := by
-  -- all finite products are multiplicative,
-  -- and a limit of multiplicative functions is multiplicative
-  sorry
-
-#check ArithmeticFunction.IsMultiplicative
-
--- prove multiplicative
-
-theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*}
-    (q : ι → ℕ) (h : Filter.Tendsto q Filter.cofinite Filter.atTop)
-    (f : ι → PowerSeries R) (hf1 : ∀ i, (f i).constantCoeff = 1) :
-    eulerProduct  := by
-  sorry
-
--- API: evaluating at s gives tprod ...
-
-end ArithmeticFunction
-
-namespace ArithmeticFunction -- ArithmeticFunction from a PowerSeries
+section PowerSeries
 
 variable {R : Type*} [CommRing R]
 
@@ -356,88 +202,120 @@ theorem multiplicative_ofPowerSeries
         rwa [pow_mul]
       sorry
 
--- multiplicative if `IsPrimePow q`
+end PowerSeries
 
-end ArithmeticFunction
+section EulerProduct -- Euler product of Arithmetic Functions
 
-namespace ArithmeticFunction
+open Filter
 
-variable {R : Type*} [CommRing R] (f : Polynomial R) (q : ℕ)
+variable {ι R : Type*} [CommSemiring R]
 
-/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
-For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ) = 1 - p⁻ˢ`.
+/-- A local uniform space instance on `ArithmeticFunction` in order to define `eulerProduct` as a
+`tprod`. See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+local instance : UniformSpace (ArithmeticFunction R) :=
+  .comap ((↑) : ArithmeticFunction R → (ℕ → R)) <| .ofCore <|
+    .mk (⨅ s : Finset ℕ, 𝓟 {(f, g) | Set.EqOn f g s})
+      (by simp [Set.subset_def, Set.eqOn_refl])
+      (tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm)
+      (le_iInf fun s ↦ by
+        have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
+        exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn]))
 
-If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use a junk value of `1`. -/
-noncomputable def ofPolynomial : ArithmeticFunction R :=
-  if hq : 1 < q then ⟨Function.extend (q ^ ·) f.coeff 0, by simp [Nat.ne_zero_of_lt hq]⟩ else 1
+/-- The uniformity on `ArithmeticFunction` required in order to define `eulerProduct` as a `tprod`.
+See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+theorem uniformity_eq : uniformity (ArithmeticFunction R) =
+    comap (fun i ↦ (i.1, i.2)) ((⨅ s : Finset ℕ, 𝓟 {((f : ℕ → R), g) | Set.EqOn f g s})) :=
+  rfl
 
-theorem ofPolynomial_apply (hq : 1 < q) (n : ℕ) :
-    ofPolynomial f q n = Function.extend (q ^ ·) f.coeff 0 n := by
-  rw [ofPolynomial, dif_pos hq, coe_mk]
+/-- The topology on `ArithmeticFunction` is the topology of pointwise convergence.
+See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+theorem tendsto_iff {f : ι → ArithmeticFunction R} {F : Filter ι} {g : ArithmeticFunction R} :
+    Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
+  simp_rw [nhds_eq_comap_uniformity,
+    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
+    tendsto_pure, Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset, eq_comm]
+  exact ⟨fun h n ↦ by simpa using h { n }, fun h s k hk ↦ h k⟩
 
-theorem ofPolynomial_apply_zero : ofPolynomial f q 0 = 0 := by
-  simp
+instance : CompleteSpace (ArithmeticFunction R) where
+  complete {f} hf := by
+    simp_rw [Cauchy] at hf
+    simp_rw [nhds_eq_comap_uniformity]
+    simp_rw [uniformity_eq, comap_iInf, comap_principal, le_iInf_iff, le_principal_iff,
+      Set.preimage_setOf_eq] at hf ⊢
+    obtain ⟨hf0, hf⟩ := hf
+    replace hf (i : ℕ) : _ := hf {i}
+    simp_rw [Finset.coe_singleton, Set.eqOn_singleton, mem_prod_self_iff] at hf
+    sorry
 
-theorem ofPolynomial_apply_one (hq : 1 < q) : ofPolynomial f q 1 = f.coeff 0 := by
-  rw [ofPolynomial_apply f q hq, ← pow_zero q, (Nat.pow_right_injective hq).extend_apply]
+/-- The Euler product of a family of arithmetic functions. Defined as a `tprod`, but see
+`tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+noncomputable def eulerProduct (f : ι → ArithmeticFunction R) : ArithmeticFunction R :=
+  ∏' i, f i
 
-theorem ofPolynomial_apply_one' (hf : f.coeff 0 = 1) : ofPolynomial f q 1 = 1 := by
-  by_cases hq : 1 < q
-  · exact (ofPolynomial_apply_one f q hq).trans hf
-  · rw [ofPolynomial, dif_neg hq, one_one]
+set_option backward.isDefEq.respectTransparency false in
+/-- If arithmetic functions `f i` converges to `1` pointwise, then the partial products
+`∏ i ∈ s, f i` converge to `eulerProduct f` pointwise. -/
+theorem tendsTo_eulerProduct_of_tendsTo (f : ι → ArithmeticFunction R)
+    (hf : ∀ n, Tendsto (fun i ↦ f i n) cofinite (pure ((1 : ArithmeticFunction R) n))) :
+    ∀ n, Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) atTop (pure (eulerProduct f n)) := by
+  classical
+  suffices Multipliable f from tendsto_iff.mp this.hasProd
+  simp_rw [multipliable_iff_cauchySeq_finset', CauchySeq, cauchy_map_iff',
+    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
+    Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset]
+  intro s n hn
+  rw [prod_atTop_atTop_eq, eventually_atTop_prod_self]
+  replace hf : ∀ k ∈ Set.Iic n, ∀ᶠ (x : ι) in cofinite, (f x) k = (1 : ArithmeticFunction R) k :=
+    fun k hk ↦ tendsto_pure.mp (hf k)
+  rw [← eventually_all_finite (Set.finite_Iic n), eventually_iff_exists_mem] at hf
+  obtain ⟨s, hs, hs'⟩ := hf
+  let t := (mem_cofinite.mp hs).toFinset
+  refine ⟨t, fun u v hu hv ↦ ?_⟩
+  rw [← Finset.prod_sdiff hu, ← Finset.prod_sdiff hv]
+  replace hu : ∀ i ∈ u \ t, i ∈ s := by
+    intro i hi
+    rw [Finset.mem_sdiff, Set.Finite.mem_toFinset, Set.notMem_compl_iff] at hi
+    exact hi.2
+  replace hv : ∀ i ∈ v \ t, i ∈ s := by
+    intro i hi
+    rw [Finset.mem_sdiff, Set.Finite.mem_toFinset, Set.notMem_compl_iff] at hi
+    exact hi.2
+  suffices ∀ k ≤ n, (∏ x ∈ u \ t, f x) k = (∏ x ∈ v \ t, f x) k by
+    rw [mul_apply, mul_apply]
+    refine Finset.sum_congr rfl fun k hk ↦ ?_
+    rw [this k.1 (Nat.divisor_le (Nat.fst_mem_divisors_of_mem_antidiagonal hk))]
+  have key w (hw : ∀ i ∈ w, i ∈ s) : ∀ k ≤ n, (∏ x ∈ w, f x) k = (1 : ArithmeticFunction R) k := by
+    induction w using Finset.induction_on
+    case empty => simp
+    case insert i w hi hw' =>
+      intro k hk
+      rw [← one_mul (1 : ArithmeticFunction R)]
+      rw [Finset.prod_insert hi, mul_apply, mul_apply]
+      apply Finset.sum_congr rfl
+      intro j hj
+      have h1 := hs' i (hw i (Finset.mem_insert_self i w)) j.1
+        ((Nat.divisor_le (Nat.fst_mem_divisors_of_mem_antidiagonal hj)).trans hk)
+      have h2 := hw' (fun i hi ↦ hw i (Finset.mem_insert_of_mem hi)) j.2
+        ((Nat.divisor_le (Nat.snd_mem_divisors_of_mem_antidiagonal hj)).trans hk)
+      rw [h1, h2]
+  intro k hk
+  rw [key (u \ t) hu k hk, key (v \ t) hv k hk]
 
-/-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)⁻¹`.
-For example, if `f = 1 - X` and `q = p`, then `f(q⁻ˢ)⁻¹ = (1 - p⁻ˢ)⁻¹ = 1 + p⁻ˢ + p⁻²ˢ + ...`. -/
-noncomputable def ofPolynomialInv (hf : f.coeff 0 = 1) :
-    ArithmeticFunction R :=
-  dirichletInverse (ofPolynomial f q) (invertibleOne.copy _ (ofPolynomial_apply_one' f q hf))
-
-/-- The arithmetic function corresponding to the Euler product `∏ f(q⁻ˢ)⁻¹`. -/
-def eulerProduct {R : Type*} [CommRing R] {ι : Type*} (f : ι → Polynomial R) (q : ι → ℕ)
-    (h : Filter.Tendsto q Filter.cofinite Filter.atTop) : ArithmeticFunction R :=
+theorem isMultiplicative_eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
+    (f : ι → ArithmeticFunction R) (hf : ∀ i, IsMultiplicative (f i)) :
+    IsMultiplicative (eulerProduct f) := by
+  -- all finite products are multiplicative,
+  -- and a limit of multiplicative functions is multiplicative
   sorry
 
-end ArithmeticFunction
+end EulerProduct
 
-namespace WeierstrassCurve
-
-open NumberField
-
-variable {K : Type*} [Field K] [NumberField K]
-
-/-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
-* `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
-* `fₚ = 1 - T` if `E` has split multiplicative reduction at `p`,
-* `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
-* `fₚ = 1` if `E` has additive reduction at `p`.
--/
-noncomputable def localPolynomial (W : WeierstrassCurve K)
-  (p : IsDedekindDomain.HeightOneSpectrum (𝓞 K)) : Polynomial ℤ :=
+theorem eulerProd_ofPowerSeries {R : Type*} [CommRing R] {ι : Type*}
+    (q : ι → ℕ) [Northcott q]
+    (f : ι → PowerSeries R) (hf1 : ∀ i, (f i).constantCoeff = 1) :
+    eulerProduct  := by
   sorry
 
--- can we generalize the hypotheses of `Ideal.finite_setOf_absNorm_le`?
-theorem foobar {S : Type u_1} [CommRing S] [Nontrivial S] [IsDedekindDomain S] [Module.Free ℤ S]
-  [Module.Finite ℤ S] [CharZero S] : Filter.Tendsto
-  (fun p : IsDedekindDomain.HeightOneSpectrum S ↦ p.asIdeal.absNorm) Filter.cofinite Filter.atTop := by
-  rw [Filter.tendsto_atTop]
-  intro B
-  rw [Filter.eventually_cofinite]
-  refine ((Ideal.finite_setOf_absNorm_le B).preimage
-    (f := IsDedekindDomain.HeightOneSpectrum.asIdeal) (Function.Injective.injOn ?_)).subset ?_
-  · exact fun _ _ ↦ IsDedekindDomain.HeightOneSpectrum.ext
-  · grind
+-- API: evaluating at s gives tprod ...
 
-noncomputable def L (W : WeierstrassCurve K) : ArithmeticFunction ℤ :=
-  ArithmeticFunction.eulerProduct W.localPolynomial
-    (fun p ↦ p.asIdeal.absNorm) foobar
-
-/-- The L-function of an elliptic curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
-* `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` if `E` has good reduction at `p`,
-* `fₚ = 1 - T` if `E` has split multiplicative reduction at `p`,
-* `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
-* `fₚ = 1` if `E` has additive reduction at `p`.
--/
-noncomputable def Lfunction (W : WeierstrassCurve K) (s : ℂ) :=
-  LSeries (fun n ↦ W.L n) s
-
-end WeierstrassCurve
+end ArithmeticFunction
