@@ -60,14 +60,12 @@ theorem uniformity_eq : uniformity (ArithmeticFunction R) =
 
 /-- The topology on `ArithmeticFunction` is the topology of pointwise convergence.
 See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
-theorem tendsto_iff (f : ι → ArithmeticFunction R) (F : Filter ι) (g : ArithmeticFunction R) :
+theorem tendsto_iff {f : ι → ArithmeticFunction R} {F : Filter ι} {g : ArithmeticFunction R} :
     Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
-  rw [nhds_eq_comap_uniformity, uniformity_eq]
-  simp_rw [tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply, tendsto_pure]
-  refine ⟨fun h n ↦ by simpa [eq_comm] using h {n}, fun h s ↦ ?_⟩
-  simp_rw [eventually_iff, Set.EqOn, Set.setOf_forall, Set.mem_iInter, Set.mem_setOf_eq,
-    Set.setOf_forall, SetLike.mem_coe, biInter_finset_mem, eq_comm] at h ⊢
-  exact fun k _ ↦ h k
+  simp_rw [nhds_eq_comap_uniformity,
+    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
+    tendsto_pure, Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset, eq_comm]
+  exact ⟨fun h n ↦ by simpa using h { n }, fun h s k hk ↦ h k⟩
 
 /-- The Euler product of a family of arithmetic functions. Defined as a `tprod`, but see
 `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
@@ -80,12 +78,14 @@ set_option backward.isDefEq.respectTransparency false in
 theorem tendsTo_eulerProduct_of_tendsTo (f : ι → ArithmeticFunction R)
     (hf : ∀ n, Tendsto (fun i ↦ f i n) cofinite (pure ((1 : ArithmeticFunction R) n))) :
     ∀ n, Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) atTop (pure (eulerProduct f n)) := by
-  rw [← tendsto_iff] at hf ⊢
-  suffices Multipliable f from this.hasProd
-  rw [multipliable_iff_cauchySeq_finset']
-
+  suffices Multipliable f from tendsto_iff.mp this.hasProd
+  simp_rw [multipliable_iff_cauchySeq_finset', CauchySeq, cauchy_map_iff',
+    uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
+    Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset]
+  intro s k hk
+  simp_rw [tendsto_pure] at hf
+  -- product only involves finitely many places
   sorry
-
 
 @[ext]
 structure _root_.Nat.Factorizations (n : ℕ) (ι : Type*) where
