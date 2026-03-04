@@ -13,17 +13,35 @@ public import Mathlib.RingTheory.Ideal.Norm.AbsNorm
 public import Mathlib.RingTheory.PowerSeries.Inverse
 
 /-!
-# The L-function of an elliptic curve
+# Construction of L-functions
 
-In this file, we define the L-function of an elliptic curve.
+This file develop machinery to construct L-functions.
 
 ## Main definitions
 
-* `WeierstrassCurve.Lfunction`: the L-function of a minimal Weierstrass equation.
+* `ArithmeticFunction.EulerProduct`: the Euler product of a family of L-functions.
 
-## References
+## Implementation notes
 
-* [J Silverman, *The Arithmetic of Elliptic Curves*][silverman2009]
+Ultimately, an L-function is constructed from a collection of polynomials. However, there are
+multiple routes that one can take. We choose to pass through power series, Dirichlet series,
+but not multivariate power series.
+
+                   T=q⁻ˢ                     s ∈ ℂ
+[polynomials in T] ---> [polynomials in q⁻ˢ] ---> [analytic function in s]
+          |                         |                           |
+          | (reciprocal)            | (reciprocal)              | (reciprocal)
+          v         T=q⁻ˢ           V          s ∈ ℂ            V
+[power series in T] ---> [power series in q⁻ˢ] ---> [analytic function in s] (the Euler factor)
+          |                         |                           |
+          | (product)               | (product)                 | (product)
+          v                 T=q⁻ˢ   V               s ∈ ℂ       V
+[multivariate power series] ---> [Dirichlet series] ---> [L-function in s] (the Euler product)
+
+The first vertical map is `PowerSeries.invOfUnit`, the first horizontal map is
+`ArithmeticFunction.ofPowerSeries` (in this file), the second vertical map is
+`ArithmeticFunction.eulerProduct` (in this file), and the second horizontal map is `LSeries`.
+
 -/
 
 @[expose] public section
