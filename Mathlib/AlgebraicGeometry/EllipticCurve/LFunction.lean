@@ -28,37 +28,64 @@ In this file, we define the L-function of an elliptic curve.
 
 @[expose] public section
 
+theorem multipliable_iff_cauchySeq_finset' {α β : Type*} [CommMonoid α] [UniformSpace α]
+    [CompleteSpace α] {f : β → α} : Multipliable f ↔ CauchySeq fun s ↦ ∏ b ∈ s, f b := by
+  classical exact cauchy_map_iff_exists_tendsto.symm
+
 namespace ArithmeticFunction -- Euler product of Arithmetic Functions
 
 open Filter
 
-/-- A local instance in order to define `eulerProduct` as a `tprod`. -/
-local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) :=
+variable {ι R : Type*} [CommSemiring R]
+
+/-- A local uniform space instance on `ArithmeticFunction` in order to define `eulerProduct` as a
+`tprod`. See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+local instance : UniformSpace (ArithmeticFunction R) :=
   .comap ((↑) : ArithmeticFunction R → (ℕ → R)) <| .ofCore <|
-    .mk (⨅ s : Finset ℕ, (𝓟 {(f, g) | Set.EqOn f g s}))
+    .mk (⨅ s : Finset ℕ, 𝓟 {(f, g) | Set.EqOn f g s})
       (by simp [Set.subset_def, Set.eqOn_refl])
       (tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm)
       (le_iInf fun s ↦ by
         have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
         exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn]))
 
-/-- The topology on `ArithmeticFunction` is the topology of pointwise convergence. -/
-theorem tendsto_iff {R : Type*} [Zero R] (ι : Type*) (f : ι → ArithmeticFunction R)
-    (F : Filter ι) (g : ArithmeticFunction R) :
-    Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
-  sorry
+instance : CompleteSpace (ArithmeticFunction R) where
+  complete := sorry
 
-/-- The Euler product of a family of arithmetic functions. -/
-noncomputable def eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
-    (f : ι → ArithmeticFunction R) :
-    ArithmeticFunction R :=
+/-- The uniformity on `ArithmeticFunction` required in order to define `eulerProduct` as a `tprod`.
+See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+theorem uniformity_eq : uniformity (ArithmeticFunction R) =
+    comap (fun i ↦ (i.1, i.2)) ((⨅ s : Finset ℕ, 𝓟 {((f : ℕ → R), g) | Set.EqOn f g s})) :=
+  rfl
+
+/-- The topology on `ArithmeticFunction` is the topology of pointwise convergence.
+See `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+theorem tendsto_iff (f : ι → ArithmeticFunction R) (F : Filter ι) (g : ArithmeticFunction R) :
+    Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
+  rw [nhds_eq_comap_uniformity, uniformity_eq]
+  simp_rw [tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply, tendsto_pure]
+  refine ⟨fun h n ↦ by simpa [eq_comm] using h {n}, fun h s ↦ ?_⟩
+  simp_rw [eventually_iff, Set.EqOn, Set.setOf_forall, Set.mem_iInter, Set.mem_setOf_eq,
+    Set.setOf_forall, SetLike.mem_coe, biInter_finset_mem, eq_comm] at h ⊢
+  exact fun k _ ↦ h k
+
+/-- The Euler product of a family of arithmetic functions. Defined as a `tprod`, but see
+`tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
+noncomputable def eulerProduct (f : ι → ArithmeticFunction R) : ArithmeticFunction R :=
   ∏' i, f i
 
-variable {R : Type*} [CommSemiring R] {ι : Type*}
-    (f : ι → ArithmeticFunction R)
-#check ∀ n, Filter.Tendsto (fun i ↦ f i n) .cofinite (pure ((1 : ArithmeticFunction R) n))
-#check ∀ n, Filter.Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) .atTop (pure <| eulerProduct f n)
--- plug in n, tendto finset
+set_option backward.isDefEq.respectTransparency false in
+/-- If arithmetic functions `f i` converges to `1` pointwise, then the partial products
+`∏ i ∈ s, f i` converge to `eulerProduct f` pointwise. -/
+theorem tendsTo_eulerProduct_of_tendsTo (f : ι → ArithmeticFunction R)
+    (hf : ∀ n, Tendsto (fun i ↦ f i n) cofinite (pure ((1 : ArithmeticFunction R) n))) :
+    ∀ n, Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) atTop (pure (eulerProduct f n)) := by
+  rw [← tendsto_iff] at hf ⊢
+  suffices Multipliable f from this.hasProd
+  rw [multipliable_iff_cauchySeq_finset']
+
+  sorry
+
 
 @[ext]
 structure _root_.Nat.Factorizations (n : ℕ) (ι : Type*) where
