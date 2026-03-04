@@ -5,6 +5,7 @@ Authors: Thomas Browning
 -/
 module
 
+public import Mathlib.Algebra.FiniteSupport.Basic
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
 public import Mathlib.NumberTheory.ArithmeticFunction.Moebius
 public import Mathlib.NumberTheory.LSeries.SumCoeff
@@ -29,23 +30,78 @@ In this file, we define the L-function of an elliptic curve.
 
 namespace ArithmeticFunction -- Euler product of Arithmetic Functions
 
-#check PowerSeries.invOfUnit
+open Filter
 
-open Filter in
-local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) := by
-  refine UniformSpace.comap ((↑) : ArithmeticFunction R → (ℕ → R)) (UniformSpace.ofCore ?_)
-  apply UniformSpace.Core.mk (⨅ s : Finset ℕ, (𝓟 {(f, g) | Set.EqOn f g s}))
-  · simp [Set.subset_def, Set.eqOn_refl]
-  · exact tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm
-  · refine le_iInf fun s ↦ ?_
-    have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
-    exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn])
+/-- A local instance in order to define `eulerProduct` as a `tprod`. -/
+local instance {R : Type*} [Zero R] : UniformSpace (ArithmeticFunction R) :=
+  .comap ((↑) : ArithmeticFunction R → (ℕ → R)) <| .ofCore <|
+    .mk (⨅ s : Finset ℕ, (𝓟 {(f, g) | Set.EqOn f g s}))
+      (by simp [Set.subset_def, Set.eqOn_refl])
+      (tendsto_iInf_iInf fun _ ↦ tendsto_principal_principal.mpr fun _ ↦ Set.EqOn.symm)
+      (le_iInf fun s ↦ by
+        have key := iInf_le (fun t : Finset ℕ ↦ 𝓟 {(f, g) : (ℕ → R) × (ℕ → R) | Set.EqOn f g t}) s
+        exact lift'_le (le_principal_iff.mp key) (by grind [principal_mono, SetRel.comp, Set.EqOn]))
+
+/-- The topology on `ArithmeticFunction` is the topology of pointwise convergence. -/
+theorem tendsto_iff {R : Type*} [Zero R] (ι : Type*) (f : ι → ArithmeticFunction R)
+    (F : Filter ι) (g : ArithmeticFunction R) :
+    Tendsto f F (nhds g) ↔ ∀ n, Filter.Tendsto (fun i ↦ f i n) F (pure (g n)) := by
+  sorry
 
 /-- The Euler product of a family of arithmetic functions. -/
 noncomputable def eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
     (f : ι → ArithmeticFunction R) :
     ArithmeticFunction R :=
   ∏' i, f i
+
+variable {R : Type*} [CommSemiring R] {ι : Type*}
+    (f : ι → ArithmeticFunction R)
+#check ∀ n, Filter.Tendsto (fun i ↦ f i n) .cofinite (pure ((1 : ArithmeticFunction R) n))
+#check ∀ n, Filter.Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) .atTop (pure <| eulerProduct f n)
+-- plug in n, tendto finset
+
+@[ext]
+structure _root_.Nat.Factorizations (n : ℕ) (ι : Type*) where
+  f : ι → ℕ
+  hf : finprod f = n
+
+instance (n : ℕ) (ι : Type*) : FunLike (Nat.Factorizations n ι) ι ℕ where
+  coe := Nat.Factorizations.f
+  coe_injective' := by
+    intro f g
+    exact Nat.Factorizations.ext
+
+theorem eulerProduct_apply {R : Type*} [CommSemiring R] [Nontrivial R]
+    {ι : Type*} (f : ι → ArithmeticFunction R) (hf : ∀ i, f i 1 = 1)
+    (hf : ∀ (n : ℕ) (d : Nat.Factorizations n ι),
+      Function.HasFiniteMulSupport (fun j ↦ f j (d j))) (n : ℕ) :
+    eulerProduct f n =
+      finsum fun i : n.Factorizations ι ↦ finprod fun j ↦ f j (i.1 j) := by
+  by_cases hn : n = 0
+  · rw [hn, map_zero, eq_comm]
+    apply finsum_eq_zero_of_forall_eq_zero
+    rintro ⟨i, hi⟩
+    have h0 : (Function.mulSupport fun j ↦ (f j) (i j)) ⊆ Function.mulSupport i := by
+      intro x hx
+      contrapose! hx
+      rw [Function.notMem_mulSupport] at hx ⊢
+      rw [hx, hf]
+    have h1 : Function.HasFiniteMulSupport i := by
+      contrapose! hi
+      rw [finprod_of_not_hasFiniteMulSupport hi]
+      exact one_ne_zero
+    have h2 : Function.HasFiniteMulSupport fun j ↦ f j (i j) := by
+      rw [Function.HasFiniteMulSupport] at h1 ⊢
+      exact h1.subset h0
+    rw [finprod_eq_prod _ h1, Finset.prod_eq_zero_iff] at hi
+    obtain ⟨j, hj, hij⟩ := hi
+    rw [finprod_eq_prod _ h2]
+    apply Finset.prod_eq_zero (i := j)
+    · rw [Set.Finite.mem_toFinset] at hj ⊢
+      rw [Function.mem_mulSupport, hij, map_zero]
+      exact zero_ne_one
+    · rw [hij, map_zero]
+  · sorry
 
 theorem isMultiplicative_eulerProduct {R : Type*} [CommSemiring R] {ι : Type*}
     (f : ι → ArithmeticFunction R) (hf : ∀ i, IsMultiplicative (f i)) :
