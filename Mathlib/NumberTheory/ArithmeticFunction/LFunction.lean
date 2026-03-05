@@ -53,10 +53,27 @@ For context, here is a diagram of possible routes from polynomials to L-function
 
 @[expose] public section
 
--- PRed
-theorem multipliable_iff_cauchySeq_finset' {α β : Type*} [CommMonoid α] [UniformSpace α]
-    [CompleteSpace α] {f : β → α} : Multipliable f ↔ CauchySeq fun s ↦ ∏ b ∈ s, f b := by
-  classical exact cauchy_map_iff_exists_tendsto.symm
+namespace ArithmeticFunction
+
+instance {R : Type*} [Semiring R] : Module R (ArithmeticFunction R) where
+  smul x f := ⟨x • f, by simp⟩
+  smul_zero x := ext fun n ↦ smul_zero x
+  smul_add x f g := ext fun n ↦ smul_add x (f n) (g n)
+  zero_smul f := ext fun n ↦ zero_smul R (f n)
+  one_smul f := ext fun n ↦ one_smul R (f n)
+  add_smul x y f := ext fun n ↦ add_smul x y (f n)
+  mul_smul x y f := ext fun n ↦ mul_smul x y (f n)
+
+@[simp]
+theorem smul_map {R : Type*} [Semiring R] (x : R) (f : ArithmeticFunction R) (n : ℕ) :
+    (x • f) n = x • f n := by
+  rfl
+
+instance {R : Type*} [CommSemiring R] : Algebra R (ArithmeticFunction R) :=
+  .ofModule (fun x f g ↦ ext fun n ↦ by simp [mul_assoc, Finset.mul_sum])
+    fun x f g ↦ ext fun n ↦ by simp [mul_assoc, mul_comm x, Finset.sum_mul]
+
+end ArithmeticFunction
 
 namespace ArithmeticFunction
 
@@ -68,17 +85,16 @@ set_option backward.isDefEq.respectTransparency false in
 /-- The arithmetic function corresponding to the Dirichlet series `f(q⁻ˢ)`.
 For example, if `f = 1 + X + X² + ...` and `q = p`, then `f(q⁻ˢ) = 1 + p⁻ˢ + p⁻²ˢ + ...`.
 
-If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use a junk value of `f.constantCoeff`. -/
+If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use the junk value `f.constantCoeff`. -/
 noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFunction R where
   toFun f := if hq : 1 < q then
     ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
-      ⟨fun k ↦ if k = 1 then f.constantCoeff else 0, by simp⟩
+      f.constantCoeff • 1
   map_zero' := by
     split_ifs with hq
     · rw [← coe_inj]
       apply Function.extend_zero
-    · ext
-      simp
+    · simp
   map_one' := by
     split_ifs with hq
     · ext k
@@ -140,11 +156,8 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFuncti
             rwa [pow_add, hi, hj]
           · rw [Function.extend_apply' _ _ _ hb, Pi.zero_apply, mul_zero]
         · rw [Function.extend_apply' _ _ _ ha, Pi.zero_apply, zero_mul]
-    · ext k
-      by_cases hk : k = 1
-      · simp [hk]
-      · rw [coe_mk, if_neg hk, mul_apply, Finset.sum_eq_zero]
-        grind [coe_mk, Nat.mem_divisorsAntidiagonal]
+    · ext
+      simp [one_apply, mul_comm]
 
 theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
     ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
@@ -260,7 +273,7 @@ theorem tendsTo_eulerProduct_of_tendsTo (f : ι → ArithmeticFunction R)
     ∀ n, Tendsto (fun s : Finset ι ↦ (∏ i ∈ s, f i) n) atTop (pure (eulerProduct f n)) := by
   classical
   suffices Multipliable f from tendsto_iff.mp this.hasProd
-  simp_rw [multipliable_iff_cauchySeq_finset', CauchySeq, cauchy_map_iff',
+  simp_rw [multipliable_iff_cauchySeq_finset, CauchySeq, cauchy_map_iff',
     uniformity_eq, tendsto_comap_iff, tendsto_iInf, tendsto_principal, Function.comp_apply,
     Set.EqOn, Finset.mem_coe, Set.mem_setOf_eq, eventually_all_finset]
   intro s n hn
