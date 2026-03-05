@@ -12,6 +12,7 @@ public import Mathlib.NumberTheory.Height.Northcott
 public import Mathlib.NumberTheory.LSeries.SumCoeff
 public import Mathlib.RingTheory.Ideal.Norm.AbsNorm
 public import Mathlib.RingTheory.PowerSeries.Inverse
+public import Mathlib.RingTheory.PowerSeries.Substitution
 
 /-!
 # Construction of L-functions
@@ -73,6 +74,11 @@ instance {R : Type*} [CommSemiring R] : Algebra R (ArithmeticFunction R) :=
   .ofModule (fun x f g ↦ ext fun n ↦ by simp [mul_assoc, Finset.mul_sum])
     fun x f g ↦ ext fun n ↦ by simp [mul_assoc, mul_comm x, Finset.sum_mul]
 
+@[simp]
+theorem algebraMap_map_one {R : Type*} [CommSemiring R] (x : R) :
+    algebraMap R (ArithmeticFunction R) x 1 = x := by
+  simp [Algebra.algebraMap_eq_smul_one]
+
 end ArithmeticFunction
 
 namespace ArithmeticFunction
@@ -89,7 +95,7 @@ If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use the junk value `f.co
 noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →ₐ[R] ArithmeticFunction R where
   toFun f := if hq : 1 < q then
     ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
-      f.constantCoeff • 1
+      algebraMap R (ArithmeticFunction R) f.constantCoeff
   map_zero' := by ext; split_ifs <;> simp [Function.extend]
   map_one' := by
     ext n
@@ -143,26 +149,28 @@ noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →ₐ[R] ArithmeticFu
             exact (hn ⟨i + j, hab⟩).elim
           · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
         · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
-    · simp [one_apply, mul_comm]
+    · simp
   commutes' x := by
     ext n
     split_ifs with hq
-    · simp only [PowerSeries.algebraMap_eq, Algebra.algebraMap_eq_smul_one, coe_mk]
+    · simp only [Algebra.algebraMap_eq_smul_one, coe_mk]
       by_cases hn : ∃ k, q ^ k = n
       · obtain ⟨k, rfl⟩ := hn
-        simp [(Nat.pow_right_injective hq).extend_apply, PowerSeries.coeff_C, one_apply, hq.ne']
+        simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
       · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, smul_map, one_apply_ne, smul_zero]
         contrapose! hn
         exact ⟨0, by simp [hn]⟩
-    · simp [Algebra.algebraMap_eq_smul_one]
+    · simp
 
 theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
     ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
   simp [ofPowerSeries, dif_pos hq]
 
+@[simp]
 theorem ofPowerSeries_apply_zero (q : ℕ) (f : PowerSeries R) : ofPowerSeries q f 0 = 0 := by
   simp
 
+@[simp]
 theorem ofPowerSeries_apply_one (q : ℕ) (f : PowerSeries R) :
     ofPowerSeries q f 1 = f.constantCoeff := by
   by_cases hq : 1 < q
@@ -170,43 +178,87 @@ theorem ofPowerSeries_apply_one (q : ℕ) (f : PowerSeries R) :
       PowerSeries.coeff_zero_eq_constantCoeff]
   · simp [ofPowerSeries, dif_neg hq]
 
+theorem _root_.PowerSeries.constantCoeff_subst' {R : Type*} [CommRing R] {a : PowerSeries R}
+    (ha : PowerSeries.HasSubst a) (f : PowerSeries R) :
+    PowerSeries.constantCoeff (PowerSeries.subst a f) =
+      finsum (fun d ↦ f.coeff d • (a ^ d).constantCoeff) :=
+  PowerSeries.constantCoeff_subst ha f
+
+@[simp]
+theorem _root_.PowerSeries.constantCoeff_subst_X_pow
+    {R : Type*} [CommRing R] {k : ℕ} (hk : k ≠ 0) (f : PowerSeries R) :
+    PowerSeries.constantCoeff (f.subst (PowerSeries.X (R := R) ^ k)) = f.constantCoeff := by
+  rw [PowerSeries.constantCoeff_subst' (.X_pow hk), finsum_eq_single _ 0]
+  · simp
+  · intro n hn
+    simp [hk, hn]
+
+set_option backward.isDefEq.respectTransparency false in
+theorem ofPowerSeries_pow (q k : ℕ) (hk : k ≠ 0) (f : PowerSeries R) :
+    ofPowerSeries (q ^ k) f = ofPowerSeries q (f.subst (PowerSeries.X ^ k)) := by
+  by_cases hq : 1 < q
+  · ext n
+    rw [ofPowerSeries_apply (q ^ k) (one_lt_pow' hq hk), ofPowerSeries_apply q hq]
+    by_cases hn : ∃ i, q ^ i = n
+    · obtain ⟨i, rfl⟩ := hn
+      rw [(Nat.pow_right_injective hq).extend_apply, PowerSeries.coeff_subst' (.X_pow hk)]
+      have : ∀ d, ((PowerSeries.X (R := R) ^ k) ^ d) = PowerSeries.X ^ (k * d) := by simp [pow_mul]
+      simp_rw [this, PowerSeries.coeff_X_pow, smul_eq_mul, mul_ite, mul_one, mul_zero]
+      by_cases hn : k ∣ i
+      · obtain ⟨j, rfl⟩ := hn
+        rw [pow_mul, (Nat.pow_right_injective (one_lt_pow' hq hk)).extend_apply,
+          finsum_eq_single _ j]
+        · simp
+        · intro i hi
+          simp [hi.symm, hk]
+      · rw [Function.extend_apply', Pi.zero_apply, finsum_eq_zero_of_forall_eq_zero]
+        · intro d
+          apply if_neg
+          contrapose! hn
+          use d
+        · contrapose! hn
+          obtain ⟨d, hd⟩ := hn
+          rw [← pow_mul, Nat.pow_right_inj hq] at hd
+          rw [← hd]
+          use d
+    · rwa [Function.extend_apply', Function.extend_apply']
+      contrapose! hn
+      obtain ⟨i, rfl⟩ := hn
+      exact ⟨k * i, pow_mul q k i⟩
+  · simp [ofPowerSeries, hq, hk]
+
 theorem multiplicative_ofPowerSeries
     (q : ℕ) (hq : IsPrimePow q) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
     IsMultiplicative (ofPowerSeries q f) := by
   have hq' : 1 < q := hq.one_lt
   refine ⟨(ofPowerSeries_apply_one q f).trans hf, ?_⟩
   intro m n hmn
-  rw [ofPowerSeries_apply q hq.one_lt, ofPowerSeries_apply q hq.one_lt,
-    ofPowerSeries_apply q hq.one_lt]
   obtain ⟨p, k, hp, hk, rfl⟩ := hq
-  -- trick: ofPowerSeries_pow lemma
+  rw [← Nat.prime_iff] at hp
+  rw [ofPowerSeries_pow p k hk.ne']
   by_cases hm : ∃ i, p ^ i = m
-  · by_cases hn : ∃ j, p ^ j = n
-    ·
-      sorry
-    · rw [Function.extend_apply', Pi.zero_apply, mul_comm,
-        Function.extend_apply', Pi.zero_apply, zero_mul]
+  · obtain ⟨i, rfl⟩ := hm
+    by_cases hn : ∃ j, p ^ j = n
+    · obtain ⟨j, rfl⟩ := hn
+      cases i
+      · simp [hk.ne', hf]
+      · cases j
+        · simp [hk.ne', hf]
+        · simp [hp.ne_one] at hmn
+    · simp_rw [ofPowerSeries_apply p hp.one_lt]
+      rw [Function.extend_apply', Pi.zero_apply,
+        Function.extend_apply' _ _ _ hn, Pi.zero_apply, mul_zero]
       · contrapose! hn
-        obtain ⟨i, hi⟩ := hn
-        use k * i
-        rwa [pow_mul]
-      · contrapose! hn
-        obtain ⟨i, hi⟩ := hn
-        replace hn : n ∣ p ^ (k * i) := by
-          use m
-          rwa [pow_mul, mul_comm]
-        sorry
-  · rw [Function.extend_apply', Pi.zero_apply, Function.extend_apply', Pi.zero_apply, zero_mul]
-    · contrapose! hm
-      obtain ⟨i, hi⟩ := hm
-      use k * i
-      rwa [pow_mul]
-    · contrapose! hm
-      obtain ⟨i, hi⟩ := hm
-      replace hi : m ∣ p ^ (k * i) := by
-        use n
-        rwa [pow_mul]
-      sorry
+        obtain ⟨j, hj⟩ := hn
+        obtain ⟨v, -, rfl⟩ := (Nat.dvd_prime_pow hp).mp (Dvd.intro_left _ hj.symm)
+        exact ⟨v, rfl⟩
+  · simp_rw [ofPowerSeries_apply p hp.one_lt]
+    rw [Function.extend_apply', Pi.zero_apply, Function.extend_apply' _ _ _ hm,
+      Pi.zero_apply, zero_mul]
+    contrapose! hm
+    obtain ⟨i, hi⟩ := hm
+    obtain ⟨j, -, rfl⟩ := (Nat.dvd_prime_pow hp).mp ⟨n, hi⟩
+    exact ⟨j, rfl⟩
 
 end PowerSeries
 
