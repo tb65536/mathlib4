@@ -86,78 +86,75 @@ set_option backward.isDefEq.respectTransparency false in
 For example, if `f = 1 + X + X² + ...` and `q = p`, then `f(q⁻ˢ) = 1 + p⁻ˢ + p⁻²ˢ + ...`.
 
 If `q ≤ 1` then `k ↦ q ^ k` is not injective, so we use the junk value `f.constantCoeff`. -/
-noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →+* ArithmeticFunction R where
+noncomputable def ofPowerSeries (q : ℕ) : PowerSeries R →ₐ[R] ArithmeticFunction R where
   toFun f := if hq : 1 < q then
     ⟨Function.extend (q ^ ·) (f.coeff ·) 0, by simp [Nat.ne_zero_of_lt hq]⟩ else
       f.constantCoeff • 1
-  map_zero' := by
-    split_ifs with hq
-    · rw [← coe_inj]
-      apply Function.extend_zero
-    · simp
+  map_zero' := by ext; split_ifs <;> simp [Function.extend]
   map_one' := by
+    ext n
     split_ifs with hq
-    · ext k
-      rw [coe_mk]
-      by_cases h : ∃ a, q ^ a = k
-      · obtain ⟨a, rfl⟩ := h
+    · by_cases hn : ∃ k, q ^ k = n
+      · obtain ⟨a, rfl⟩ := hn
         simp [(Nat.pow_right_injective hq).extend_apply, one_apply, hq.ne']
-      · simp [h, ArithmeticFunction.one_apply_ne (fun H ↦ h ⟨0, H.symm⟩)]
-    · ext k
-      simp [ArithmeticFunction.one_apply]
+      · simp [hn, one_apply_ne (fun H ↦ hn ⟨0, H.symm⟩)]
+    · simp
   map_add' f g := by
+    ext n
     split_ifs with hq
-    · ext k
-      by_cases h : ∃ a, q ^ a = k
+    · by_cases h : ∃ a, q ^ a = n
       · obtain ⟨a, rfl⟩ := h
         simp [(Nat.pow_right_injective hq).extend_apply]
       · simp [h]
-    · ext k
-      by_cases hk : k = 1 <;> simp [hk]
+    · by_cases hn : n = 1 <;> simp [hn]
   map_mul' f g := by
+    ext n
     split_ifs with hq
-    · ext k
-      let i₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
-      let i : ℕ × ℕ ↪ ℕ × ℕ := i₀.prodMap i₀
-      simp only [coe_mk, mul_apply]
-      by_cases h : ∃ a, q ^ a = k
-      · obtain ⟨k, rfl⟩ := h
+    · simp_rw [mul_apply, coe_mk]
+      by_cases hn : ∃ a, q ^ a = n
+      · obtain ⟨k, rfl⟩ := hn
         rw [(Nat.pow_right_injective hq).extend_apply]
-        let ι₀ : ℕ ↪ ℕ := ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
-        let ι : ℕ × ℕ ↪ ℕ × ℕ := ι₀.prodMap ι₀
-        have hs : (Finset.antidiagonal k).map ι ⊆ (q ^ k).divisorsAntidiagonal := by
+        have hs : (Finset.antidiagonal k).map (.prodMap ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩
+            ⟨fun k ↦ q ^ k, Nat.pow_right_injective hq⟩) ⊆ (q ^ k).divisorsAntidiagonal := by
           intro k hk
-          rw [Finset.mem_map] at hk
-          obtain ⟨k, hk, rfl⟩ := hk
-          rw [Finset.mem_antidiagonal] at hk
-          simp [Nat.mem_divisorsAntidiagonal, ι, ι₀, ← pow_add, hk, ne_zero_of_lt hq]
+          obtain ⟨i, hi, rfl⟩ := Finset.mem_map.mp hk
+          rw [Finset.mem_antidiagonal] at hi
+          simp [Nat.mem_divisorsAntidiagonal, ← hi, pow_add, ne_zero_of_lt hq]
         rw [PowerSeries.coeff_mul k f g, ← Finset.sum_subset hs]
-        · simp [ι, ι₀, (Nat.pow_right_injective hq).extend_apply]
+        · simp [(Nat.pow_right_injective hq).extend_apply]
         · intro (a, b) hab h
           by_cases ha : ∃ i, q ^ i = a
           · by_cases hb : ∃ j, q ^ j = b
-            · obtain ⟨i, hi⟩ := ha
-              obtain ⟨j, hj⟩ := hb
-              rw [Nat.mem_divisorsAntidiagonal, ← hi, ← hj, ← pow_add, Nat.pow_right_inj hq] at hab
+            · obtain ⟨i, rfl⟩ := ha
+              obtain ⟨j, rfl⟩ := hb
+              rw [Nat.mem_divisorsAntidiagonal, ← pow_add, Nat.pow_right_inj hq] at hab
               simp_rw [Finset.mem_map, not_exists, not_and, Finset.mem_antidiagonal] at h
-              specialize h (i, j) hab.1
-              simp [ι, ι₀, ← hi, ← hj] at h
-            · rw [Function.extend_apply' _ _ _ hb, Pi.zero_apply, mul_zero]
+              simpa using h (i, j) hab.1
+            · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
           · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
-      · rw [Function.extend_apply' _ _ _ h, Pi.zero_apply, Finset.sum_eq_zero]
+      · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, Finset.sum_eq_zero]
         intro (a, b) hk
         obtain ⟨hab, -⟩ := Nat.mem_divisorsAntidiagonal.mp hk
         by_cases ha : ∃ i, q ^ i = a
         · by_cases hb : ∃ j, q ^ j = b
-          · obtain ⟨i, hi⟩ := ha
-            obtain ⟨j, hj⟩ := hb
-            contrapose! h
-            use i + j
-            rwa [pow_add, hi, hj]
-          · rw [Function.extend_apply' _ _ _ hb, Pi.zero_apply, mul_zero]
-        · rw [Function.extend_apply' _ _ _ ha, Pi.zero_apply, zero_mul]
-    · ext
-      simp [one_apply, mul_comm]
+          · obtain ⟨i, rfl⟩ := ha
+            obtain ⟨j, rfl⟩ := hb
+            rw [← pow_add] at hab
+            exact (hn ⟨i + j, hab⟩).elim
+          · rwa [mul_comm, Function.extend_apply', Pi.zero_apply, zero_mul]
+        · rwa [Function.extend_apply', Pi.zero_apply, zero_mul]
+    · simp [one_apply, mul_comm]
+  commutes' x := by
+    ext n
+    split_ifs with hq
+    · simp only [PowerSeries.algebraMap_eq, Algebra.algebraMap_eq_smul_one, coe_mk]
+      by_cases hn : ∃ k, q ^ k = n
+      · obtain ⟨k, rfl⟩ := hn
+        simp [(Nat.pow_right_injective hq).extend_apply, PowerSeries.coeff_C, one_apply, hq.ne']
+      · rw [Function.extend_apply' _ _ _ hn, Pi.zero_apply, smul_map, one_apply_ne, smul_zero]
+        contrapose! hn
+        exact ⟨0, by simp [hn]⟩
+    · simp [Algebra.algebraMap_eq_smul_one]
 
 theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ) :
     ofPowerSeries q f n = Function.extend (q ^ ·) (f.coeff ·) 0 n := by
@@ -166,22 +163,18 @@ theorem ofPowerSeries_apply (q : ℕ) (hq : 1 < q) (f : PowerSeries R) (n : ℕ)
 theorem ofPowerSeries_apply_zero (q : ℕ) (f : PowerSeries R) : ofPowerSeries q f 0 = 0 := by
   simp
 
-theorem ofPowerSeries_apply_one (q : ℕ) (hq : 1 < q) (f : PowerSeries R) :
+theorem ofPowerSeries_apply_one (q : ℕ) (f : PowerSeries R) :
     ofPowerSeries q f 1 = f.constantCoeff := by
-  rw [ofPowerSeries_apply q hq, ← pow_zero q, (Nat.pow_right_injective hq).extend_apply]
-  rw [PowerSeries.coeff_zero_eq_constantCoeff]
-
-theorem ofPowerSeries_apply_one' (q : ℕ) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
-    ofPowerSeries q f 1 = 1 := by
   by_cases hq : 1 < q
-  · exact (ofPowerSeries_apply_one q hq f).trans hf
-  · simpa [ofPowerSeries, dif_neg hq]
+  · rw [ofPowerSeries_apply q hq, ← pow_zero q, (Nat.pow_right_injective hq).extend_apply,
+      PowerSeries.coeff_zero_eq_constantCoeff]
+  · simp [ofPowerSeries, dif_neg hq]
 
 theorem multiplicative_ofPowerSeries
     (q : ℕ) (hq : IsPrimePow q) (f : PowerSeries R) (hf : f.constantCoeff = 1) :
     IsMultiplicative (ofPowerSeries q f) := by
   have hq' : 1 < q := hq.one_lt
-  refine ⟨ofPowerSeries_apply_one' q f hf, ?_⟩
+  refine ⟨(ofPowerSeries_apply_one q f).trans hf, ?_⟩
   intro m n hmn
   rw [ofPowerSeries_apply q hq.one_lt, ofPowerSeries_apply q hq.one_lt,
     ofPowerSeries_apply q hq.one_lt]
