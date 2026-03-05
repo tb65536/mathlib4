@@ -48,7 +48,6 @@ For context, here is a diagram of possible routes from polynomials to L-function
 [multivariate power series] ---> [Dirichlet series] ---> [L-function in s] (the Euler product)
 
 ## TODO
-* If `q` is a prime power, then `ArithmeticFunction.ofPowerSeries q f` is multiplicative.
 * If each `f i` is multiplicative, then `ArithmeticFunction.eulerProduct f` is multiplicative.
 -/
 
@@ -301,9 +300,23 @@ instance : CompleteSpace (ArithmeticFunction R) where
     simp_rw [uniformity_eq, comap_iInf, comap_principal, le_iInf_iff, le_principal_iff,
       Set.preimage_setOf_eq] at hf ⊢
     obtain ⟨hf0, hf⟩ := hf
-    replace hf (i : ℕ) : _ := hf {i}
-    simp_rw [Finset.coe_singleton, Set.eqOn_singleton, mem_prod_self_iff] at hf
-    sorry
+    have hf' (i : ℕ) : _ := hf {i}
+    simp_rw [Finset.coe_singleton, Set.eqOn_singleton, mem_prod_self_iff] at hf'
+    replace hf' : ∀ i, ∃ x : R, {a | x = a i} ∈ f := by
+      intro i
+      obtain ⟨t, htf, ht⟩ := hf' i
+      obtain ⟨g₁, hg₁⟩ := hf0.nonempty_of_mem htf
+      use g₁ i
+      apply Filter.mem_of_superset htf
+      intro g₂ hg₂
+      exact @ht (g₁, g₂) ⟨hg₁, hg₂⟩
+    choose g hg using hf'
+    refine ⟨⟨g, ?_⟩, fun s ↦ ?_⟩
+    · specialize hg 0
+      contrapose! hg
+      simp [hg]
+    · simp_rw [coe_mk, Set.EqOn, Finset.mem_coe, Set.setOf_forall, biInter_finset_mem]
+      exact fun i hi ↦ hg i
 
 /-- The Euler product of a family of arithmetic functions. Defined as a `tprod`, but see
 `tendsTo_eulerProduct_of_tendsTo` for the outward facing `eulerProduct` API. -/
