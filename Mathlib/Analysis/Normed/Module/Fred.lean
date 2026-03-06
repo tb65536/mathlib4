@@ -11,6 +11,7 @@ import Mathlib.LinearAlgebra.Eigenspace.Basic
 
 open Module.End
 
+-- PRed
 instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
     [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
     [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
@@ -19,25 +20,13 @@ instance ContinuousLinearMap.isClosed_genEigenspace {R M : Type*}
   rw [genEigenspace_nat, one_eq_id, ← coe_id, ← coe_smul, ← coe_sub, ← coe_pow]
   apply ContinuousLinearMap.isClosed_ker
 
+-- PRed
 instance ContinuousLinearMap.isClosed_eigenspace {R M : Type*}
     [CommRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M] [T1Space M]
     [ContinuousConstSMul R M] [IsTopologicalAddGroup M]
     (f : M →L[R] M)
     (μ : R) : IsClosed (eigenspace (f : Module.End R M) μ : Set M) :=
   isClosed_genEigenspace f μ 1
-
--- PRed
-theorem ContinuousLinearMap.isHomeomorph_of_isUnit
-    {𝕜 X : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup X]
-    [NormedSpace 𝕜 X] {T : X →L[𝕜] X} (hT : IsUnit T) :
-    IsHomeomorph T := by
-  obtain ⟨u, rfl⟩ := hT
-  let f : X ≃ₜ X :=
-  { toFun := u.1
-    invFun := u⁻¹.1
-    left_inv x := by rw [← mul_apply, Units.inv_mul, one_apply]
-    right_inv x := by rw [← mul_apply, Units.mul_inv, one_apply] }
-  exact f.isHomeomorph
 
 section spectral
 
@@ -104,7 +93,7 @@ theorem ContinuousLinearMap.spectralRadius_eq_nnnorm
     spectralRadius 𝕜 T = ‖T‖₊ := by
   cases subsingleton_or_nontrivial X
   · simp
-  apply le_antisymm (spectrum.spectralRadius_le_nnnorm T) -- does this actually require complete?
+  apply le_antisymm (spectrum.spectralRadius_le_nnnorm T)
   suffices h : algebraMap ℝ 𝕜 ‖T‖ ∈ spectrum 𝕜 T ∨ algebraMap ℝ 𝕜 (-‖T‖) ∈ spectrum 𝕜 T by
     rcases h with h | h <;> exact le_trans (by simp) (le_biSup _ h)
   simp_rw [spectrum, Set.mem_compl_iff]
