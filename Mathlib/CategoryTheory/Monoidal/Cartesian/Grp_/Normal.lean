@@ -19,15 +19,26 @@ namespace CategoryTheory.GrpObj
 open MonObj MonoidalCategory CartesianMonoidalCategory
 
 variable {X : Type*} [Category* X] [CartesianMonoidalCategory X] {G H : X} [GrpObj G] [GrpObj H]
-  (φ : G ⟶ H) [IsMonHom φ]
+  (φ : H ⟶ G) [IsMonHom φ]
 
 /-- An `IsMonHom φ : G ⟶ H` is normal if its functor of points has normal ranges. We do not assume
 that `φ` is injective, which would correspond to the additional assumption `[Mono φ]`. -/
 class IsNormalHom : Prop where
   normal : ∀ S : X, ((yonedaGrp.map (Grp.ofHom φ)).app (.op S)).hom.range.Normal
 
-#check conj
+variable {φ}
 
-/- conj `G × G → G` restricted to `G × H` factors through `H`. -/
+theorem isNormalHom_def :
+    IsNormalHom φ ↔ ∀ S : X, ((yonedaGrp.map (Grp.ofHom φ)).app (.op S)).hom.range.Normal :=
+  ⟨fun h ↦ h.normal, fun h ↦ ⟨h⟩⟩
+
+theorem isNormalHom_iff :
+    IsNormalHom φ ↔ ∃ ψ : G ⊗ H ⟶ H, ψ ≫ φ = whiskerLeft G φ ≫ conj G := by
+  rw [isNormalHom_def]
+  constructor
+  · intro h
+    sorry
+  · rintro ⟨ψ, hψ⟩ S
+    sorry
 
 end CategoryTheory.GrpObj
