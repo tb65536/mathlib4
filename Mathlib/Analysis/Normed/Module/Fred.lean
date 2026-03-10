@@ -1,13 +1,6 @@
-import Mathlib.Analysis.CStarAlgebra.ContinuousLinearMap
-import Mathlib.Analysis.CStarAlgebra.Spectrum
 import Mathlib.Analysis.InnerProductSpace.Spectrum
 import Mathlib.Analysis.Normed.Algebra.GelfandFormula
-import Mathlib.Analysis.Normed.Module.Bhavik
-import Mathlib.Analysis.Normed.Module.RCLike.Basic
-import Mathlib.Analysis.Normed.Module.RieszLemma
-import Mathlib.Analysis.Normed.Operator.Banach
-import Mathlib.Analysis.Normed.Operator.Compact
-import Mathlib.LinearAlgebra.Eigenspace.Basic
+import Mathlib.Analysis.Normed.Operator.FredholmAlternative
 
 open Module.End
 
@@ -32,6 +25,7 @@ section spectral
 
 open Module.End
 
+-- PRed
 section pain
 
 open Complex TensorProduct
