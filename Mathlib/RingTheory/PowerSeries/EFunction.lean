@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Algebra.EuclideanDomain.Int
 public import Mathlib.Analysis.Complex.Norm
+public import Mathlib.FieldTheory.Minpoly.Basic
 public import Mathlib.RingTheory.Algebraic.Integral
 public import Mathlib.RingTheory.Ideal.Colon
 public import Mathlib.RingTheory.PowerSeries.Derivative
@@ -82,10 +83,6 @@ open Nat Polynomial
 
 variable {R : Type*} [CommRing R] [Nontrivial R]
 
-#check Multiset.lcm
-
-#check Multiset.map
-
 set_option backward.isDefEq.respectTransparency false in
 /-- An E-Function is a power series `f = ∑ (a_n / n!)` satisfying the following four properties:
 * `f` satisfies a linear differential equation,
@@ -95,8 +92,8 @@ set_option backward.isDefEq.respectTransparency false in
 structure IsEFunction (f : R⟦X⟧) : Prop where
   satisfies : ∃ p ∈ nonZeroDivisors R[X], p.aeval (d⁄dX R).toLinearMap f = 0
   algebraic : ∀ n, IsAlgebraic ℤ (f.coeff n)
-  growth : ∃ p : ℕ[X], ∀ n (S : Subalgebra ℤ R) (hn : (n)! • f.coeff n ∈ S) (σ : S →+* ℂ),
-    ‖σ ⟨(n)! • f.coeff n, hn⟩‖ ≤ p.eval n
+  growth : ∃ p : ℕ[X], ∀ n k : ℕ, ∀ x ∈ (minpoly ℤ (k • f.coeff n)).aroots ℂ,
+    (n)! • ‖x‖ ≤ k • p.eval n
   denominators : ∃ p : ℕ[X], ∀ n,
     ((Multiset.range n).map (fun n ↦ IsAlgebraic.natDenominator ((n)! • f.coeff n))).lcm ≤ p.eval n
 
