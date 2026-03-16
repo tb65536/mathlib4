@@ -81,69 +81,70 @@ namespace PowerSeries
 
 open Nat Polynomial
 
-variable {R : Type*} [CommRing R] [Nontrivial R]
+variable {F : Type*} [Field F] [CharZero F]
 
 set_option backward.isDefEq.respectTransparency false in
 /-- An E-Function is a power series `f = ∑ (a_n / n!)` satisfying the following four properties:
-* `f` satisfies a linear differential equation,
+* `f` satisfies a nonzero linear differential equation with algebraic coefficients,
 * the coefficients `a_n` of `f` are algebraic numbers,
 * the conjugates of `a_n` in `ℂ` grow at most polynomially in `n`,
 * the common denominators of `{a_0,...,a_{n-1}}` grow at most polynomially in `n`. -/
-structure IsEFunction (f : R⟦X⟧) : Prop where
-  satisfies : ∃ p ∈ nonZeroDivisors R[X], p.aeval (d⁄dX R).toLinearMap f = 0
-  algebraic : ∀ n, IsAlgebraic ℤ (f.coeff n)
-  growth : ∃ p : ℕ[X], ∀ n k : ℕ, ∀ x ∈ (minpoly ℤ (k • f.coeff n)).aroots ℂ,
-    (n)! • ‖x‖ ≤ k • p.eval n
+structure IsEFunction (f : F⟦X⟧) : Prop where
+  satisfies : ∃ p : F[X][X], p ≠ 0 ∧ p.eval₂ (Module.toModuleEnd F F⟦X⟧) (d⁄dX F) f = 0 ∧
+    ∀ i j, IsIntegral ℚ ((p.coeff i).coeff j)
+  algebraic : ∀ n, IsIntegral ℚ (f.coeff n)
+  growth : ∃ p : ℕ[X], ∀ n, ∀ x ∈ (minpoly ℚ ((n)! • f.coeff n)).aroots ℂ, ‖x‖ ≤ p.eval n
   denominators : ∃ p : ℕ[X], ∀ n,
     ((Multiset.range n).map (fun n ↦ IsAlgebraic.natDenominator ((n)! • f.coeff n))).lcm ≤ p.eval n
 
 namespace IsEFunction
 
 set_option backward.isDefEq.respectTransparency false in
-theorem coe_of_isAlgebraic (f : R[X]) (hf : ∀ n, IsAlgebraic ℤ (f.coeff n)) :
-    IsEFunction (f : R⟦X⟧) where
+theorem coe_of_isIntegral (f : F[X]) (hf : ∀ n, IsIntegral ℚ (f.coeff n)) :
+    IsEFunction (f : F⟦X⟧) where
   satisfies := by
-    use .X ^ (f.natDegree + 1)
-    use  pow_mem X_mem_nonzeroDivisors (f.natDegree + 1)
-    rw [map_pow, aeval_X, Module.End.coe_pow, Derivation.coeFn_coe]
-    change derivativeFun^[f.natDegree + 1] (f : R⟦X⟧) = 0
+    refine ⟨.X ^ (f.natDegree + 1), by simp, ?_⟩
+    rw [eval₂_X_pow, Module.End.coe_pow, Derivation.coeFn_coe]
+    change derivativeFun^[f.natDegree + 1] (f : F⟦X⟧) = 0 ∧ _
     have : Polynomial.derivative^[f.natDegree + 1] f = 0 := by
       apply Polynomial.iterate_derivative_eq_zero
       simp
     rw [← coe_inj] at this
-    convert this
-    sorry
+    constructor
+    · convert this
+      sorry
+    · sorry
   algebraic := by simpa
   growth := by
     sorry
   denominators := by
     sorry
 
-protected theorem coe [h : Algebra.IsAlgebraic ℤ R] (f : R[X]) :
-    IsEFunction (f : R⟦X⟧) :=
-  coe_of_isAlgebraic f fun n ↦ h.isAlgebraic (f.coeff n)
+protected theorem coe [h : Algebra.IsAlgebraic ℚ F] (f : F[X]) :
+    IsEFunction (f : F⟦X⟧) :=
+  coe_of_isIntegral f fun n ↦ h.isIntegral.isIntegral (f.coeff n)
 
-protected theorem algebraMap {x : R} (hx : IsAlgebraic ℤ x) :
-    IsEFunction (algebraMap R R⟦X⟧ x) := by
-  rw [IsScalarTower.algebraMap_apply R R[X] R⟦X⟧]
-  apply coe_of_isAlgebraic (algebraMap R R[X] x) fun n ↦ ?_
+protected theorem algebraMap {x : F} (hx : IsIntegral ℚ x) :
+    IsEFunction (algebraMap F F⟦X⟧ x) := by
+  rw [IsScalarTower.algebraMap_apply F F[X] F⟦X⟧]
+  apply coe_of_isIntegral (algebraMap F F[X] x) fun n ↦ ?_
   cases n
   · simpa
-  · simp [isAlgebraic_zero]
+  · simp [isIntegral_zero]
 
-protected theorem zero : IsEFunction (0 : R⟦X⟧) := by
-  simpa using IsEFunction.algebraMap (R := R) isAlgebraic_zero
+protected theorem zero : IsEFunction (0 : F⟦X⟧) := by
+  simpa using IsEFunction.algebraMap (F := F) isIntegral_zero
 
-protected theorem one : IsEFunction (1 : R⟦X⟧) := by
-  simpa using IsEFunction.algebraMap (R := R) isAlgebraic_one
+protected theorem one : IsEFunction (1 : F⟦X⟧) := by
+  simpa using IsEFunction.algebraMap (F := F) isIntegral_one
 
 set_option backward.isDefEq.respectTransparency false in
-protected theorem add {f g : R⟦X⟧} (hf : IsEFunction f) (hg : IsEFunction g) :
+protected theorem add {f g : F⟦X⟧} (hf : IsEFunction f) (hg : IsEFunction g) :
     IsEFunction (f + g) where
   satisfies := by
     obtain ⟨p, hp0, hp⟩ := hf.satisfies
     obtain ⟨q, hq0, hq⟩ := hg.satisfies
-    refine ⟨p * q, mul_mem hp0 hq0, ?_⟩
+    refine ⟨p * q, mul_ne_zero hp0 hq0, ?_⟩
     rw [map_add, mul_comm, map_mul, Module.End.mul_apply, hp, map_zero, zero_add,
       ← map_mul, mul_comm, map_mul, Module.End.mul_apply, hq, map_zero]
   algebraic := fun n ↦ (hf.algebraic n).add (hg.algebraic n)
@@ -157,10 +158,10 @@ protected theorem add {f g : R⟦X⟧} (hf : IsEFunction f) (hg : IsEFunction g)
     sorry
   denominators := sorry
 
-variable (R)
+variable (F)
 
 /-- E-functions with coefficients in a commutative ring `R` form a subrinf of `R⟦X⟧`. -/
-protected def subring : Subring R⟦X⟧ where
+protected def subring : Subring F⟦X⟧ where
   carrier := {f | IsEFunction f}
   zero_mem' := .zero
   one_mem' := .one
@@ -169,8 +170,8 @@ protected def subring : Subring R⟦X⟧ where
   mul_mem' := sorry
 
 /-- E-Functions with coefficients in a -/
-protected def subalgebra [Algebra.IsAlgebraic ℤ R] : Subalgebra R[X] R⟦X⟧ where
-  __ := IsEFunction.subring R
+protected def subalgebra [Algebra.IsAlgebraic ℚ F] : Subalgebra F[X] F⟦X⟧ where
+  __ := IsEFunction.subring F
   algebraMap_mem' := .coe
 
 end IsEFunction
