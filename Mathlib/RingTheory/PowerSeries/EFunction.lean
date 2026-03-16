@@ -10,6 +10,7 @@ public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.FieldTheory.Minpoly.Basic
 public import Mathlib.RingTheory.Algebraic.Integral
 public import Mathlib.RingTheory.Ideal.Colon
+public import Mathlib.RingTheory.LaurentSeries
 public import Mathlib.RingTheory.PowerSeries.Derivative
 
 /-!
@@ -79,6 +80,19 @@ end IsAlgebraic
 
 namespace PowerSeries
 
+open Polynomial
+
+set_option backward.isDefEq.respectTransparency false in
+theorem derivative_pow_coe (R : Type*) [CommSemiring R] (f : R[X]) (n : ℕ) :
+    ((derivative R).toLinearMap ^ n) f = (Polynomial.derivative ^ n) f := by
+  induction n
+  case zero => simp
+  case succ n ih => simp [pow_succ', ih, derivative_coe]
+
+end PowerSeries
+
+namespace PowerSeries
+
 open Nat Polynomial
 
 variable {F : Type*} [Field F] [CharZero F]
@@ -95,7 +109,11 @@ structure IsEFunction (f : F⟦X⟧) : Prop where
   algebraic : ∀ n, IsIntegral ℚ (f.coeff n)
   growth : ∃ p : ℕ[X], ∀ n, ∀ x ∈ (minpoly ℚ ((n)! • f.coeff n)).aroots ℂ, ‖x‖ ≤ p.eval n
   denominators : ∃ p : ℕ[X], ∀ n,
-    ((Multiset.range n).map (fun n ↦ IsAlgebraic.natDenominator ((n)! • f.coeff n))).lcm ≤ p.eval n
+    ((Multiset.range n).map fun n ↦ IsAlgebraic.natDenominator ((n)! • f.coeff n)).lcm ≤ p.eval n
+
+-- replace satisfies with "derivatives span finite dimensional `F[X]`-subspace of `F⟦X⟧`"?
+
+#check Module.Finite (RatFunc F) (LaurentSeries F)
 
 namespace IsEFunction
 
@@ -104,16 +122,10 @@ theorem coe_of_isIntegral (f : F[X]) (hf : ∀ n, IsIntegral ℚ (f.coeff n)) :
     IsEFunction (f : F⟦X⟧) where
   satisfies := by
     refine ⟨.X ^ (f.natDegree + 1), by simp, ?_⟩
-    rw [eval₂_X_pow, Module.End.coe_pow, Derivation.coeFn_coe]
-    change derivativeFun^[f.natDegree + 1] (f : F⟦X⟧) = 0 ∧ _
-    have : Polynomial.derivative^[f.natDegree + 1] f = 0 := by
-      apply Polynomial.iterate_derivative_eq_zero
-      simp
-    rw [← coe_inj] at this
-    constructor
-    · convert this
-      sorry
-    · sorry
+    rw [eval₂_X_pow, derivative_pow_coe, Module.End.coe_pow, coe_eq_zero_iff]
+    use Polynomial.iterate_derivative_eq_zero f.natDegree.lt_add_one
+    intro i j
+    simp [apply_ite, ite_apply, Polynomial.coeff_one, isIntegral_zero, isIntegral_one]
   algebraic := by simpa
   growth := by
     sorry
@@ -145,7 +157,10 @@ protected theorem add {f g : F⟦X⟧} (hf : IsEFunction f) (hg : IsEFunction g)
     obtain ⟨p, hp0, hp⟩ := hf.satisfies
     obtain ⟨q, hq0, hq⟩ := hg.satisfies
     refine ⟨p * q, mul_ne_zero hp0 hq0, ?_⟩
-    rw [map_add, mul_comm, map_mul, Module.End.mul_apply, hp, map_zero, zero_add,
+    rw [map_add, mul_comm]
+    have := eval₂_mul (p := q) (q := p) (Module.toModuleEnd F F⟦X⟧) (d⁄dX F).toLinearMap
+    erw [eval₂_mul]
+    rw [map_add, mul_comm, eval₂_mul, Module.End.mul_apply, hp, map_zero, zero_add,
       ← map_mul, mul_comm, map_mul, Module.End.mul_apply, hq, map_zero]
   algebraic := fun n ↦ (hf.algebraic n).add (hg.algebraic n)
   growth := by
