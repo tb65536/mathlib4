@@ -728,7 +728,7 @@ lemma QuasiFiniteAt.of_quasiFiniteAt_residueField
     [FiniteType R S] (p : Ideal R) (q : Ideal S) [q.IsPrime]
     [p.IsPrime] [q.LiesOver p]
     (Q : Ideal (p.Fiber S)) [Q.IsPrime]
-    (hQ : Q.comap Algebra.TensorProduct.includeRight.toRingHom = q)
+    (hQ : Q.comap (algebraMap S (p.Fiber S)) = q)
     [Algebra.QuasiFiniteAt p.ResidueField Q] :
     Algebra.QuasiFiniteAt R q :=
   have : Algebra.WeaklyQuasiFiniteAt R q := .of_quasiFiniteAt_residueField p q Q hQ

@@ -370,6 +370,17 @@ lemma QuasiFiniteAt.baseChange (p : Ideal S) [p.IsPrime] [QuasiFiniteAt R p]
   rw [this, IsLocalization.mk'_spec_mk]
   exact ⟨g x, this x⟩
 
+-- lemma QuasiFiniteAt.fiber (p : Ideal S) [p.IsPrime] [QuasiFiniteAt R p] (p₀ : Ideal R) [p₀.IsPrime]
+--     (q : Ideal (p₀.Fiber S)) [q.IsPrime] (hq : p = q.under S) :
+--     QuasiFiniteAt p₀.ResidueField q := by
+--   let e := Ideal.Fiber.algEquivTensor p₀ S
+--   have := QuasiFiniteAt.baseChange p (q.comap e.symm) ?_
+--   rw [QuasiFiniteAt] at this ⊢
+--   suffices Localization.AtPrime q ≃ₐ[p₀.ResidueField] Localization.AtPrime (q.comap e.symm) from
+--     QuasiFinite.of_surjective_algHom this.symm.toAlgHom this.symm.surjective
+
+--   sorry
+
 set_option backward.isDefEq.respectTransparency false in
 omit [Algebra S T] in
 lemma QuasiFiniteAt.of_surjectiveOnStalks (p : Ideal S) [p.IsPrime] [QuasiFiniteAt R p]
@@ -508,12 +519,11 @@ lemma QuasiFiniteAt.of_isOpen_singleton
   exact QuasiFinite.iff_finite_comap_preimage_singleton.mpr fun _ ↦
     Set.subsingleton_of_subsingleton.finite
 
-attribute [local instance] RingHom.ker_isPrime in
-lemma _root_.Ideal.exists_not_mem_forall_mem_of_ne_of_liesOver
-    (p : Ideal R) [p.IsPrime] (q : Ideal S) [q.IsPrime] [q.LiesOver p]
-    [Algebra.EssFiniteType R S] [Algebra.QuasiFiniteAt R q] :
-    ∃ s ∉ q, ∀ q' : Ideal S, q'.IsPrime → q' ≠ q → q'.LiesOver p → s ∈ q' := by
-  sorry
+-- attribute [local instance] RingHom.ker_isPrime in
+-- lemma _root_.Ideal.exists_not_mem_forall_mem_of_ne_of_liesOver
+--     (p : Ideal R) [p.IsPrime] (q : Ideal S) [q.IsPrime] [q.LiesOver p]
+--     [Algebra.EssFiniteType R S] [Algebra.QuasiFiniteAt R q] :
+--     ∃ s ∉ q, ∀ q' : Ideal S, q'.IsPrime → q' ≠ q → q'.LiesOver p → s ∈ q' := by
   -- classical
   -- let e := PrimeSpectrum.preimageHomeomorphFiber _ S ⟨p, inferInstance⟩
   -- let qF : PrimeSpectrum (p.Fiber S) := e ⟨⟨q, ‹_›⟩, PrimeSpectrum.ext (q.over_def p).symm⟩
@@ -541,12 +551,11 @@ lemma _root_.Ideal.exists_not_mem_forall_mem_of_ne_of_liesOver
   -- · simpa
   -- · simpa [IsScalarTower.algebraMap_apply R S q'.ResidueField, ← Ideal.mem_comap, ← q'.over_def p]
 
-lemma _root_.Ideal.Fiber.lift_residueField_surjective [Algebra.FiniteType R S]
-    (p : Ideal R) [p.IsPrime] (q : Ideal S) [q.IsPrime] [q.LiesOver p] [Algebra.QuasiFiniteAt R q] :
-    Function.Surjective ((Algebra.TensorProduct.lift (Algebra.ofId _ _)
-      (IsScalarTower.toAlgHom _ _ _) fun _ _ ↦ .all _ _).comp (Ideal.Fiber.algEquivTensor p S).toAlgHom :
-      p.Fiber S →ₐ[p.ResidueField] q.ResidueField) := by
-  sorry
+-- lemma _root_.Ideal.Fiber.lift_residueField_surjective [Algebra.FiniteType R S]
+--     (p : Ideal R) [p.IsPrime] (q : Ideal S) [q.IsPrime] [q.LiesOver p] [Algebra.QuasiFiniteAt R q] :
+--     Function.Surjective ((Algebra.TensorProduct.lift (Algebra.ofId _ _)
+--       (IsScalarTower.toAlgHom _ _ _) fun _ _ ↦ .all _ _).comp (Ideal.Fiber.algEquivTensor p S).toAlgHom :
+--       p.Fiber S →ₐ[p.ResidueField] q.ResidueField) := by
   -- let q' : Ideal (p.Fiber S) := (PrimeSpectrum.primesOverOrderIsoFiber R S p ⟨q, ‹_›, ‹_›⟩).asIdeal
   -- have hq' : q = q'.comap Algebra.TensorProduct.includeRight.toRingHom :=
   --   congr($((PrimeSpectrum.primesOverOrderIsoFiber R S p).symm_apply_apply ⟨q, ‹_›, ‹_›⟩).1).symm

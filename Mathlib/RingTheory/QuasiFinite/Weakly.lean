@@ -201,6 +201,12 @@ lemma baseChange (p : Ideal S) [p.IsPrime] [WeaklyQuasiFiniteAt R p]
   rw [← Ideal.map_coe e.toRingEquiv, Ideal.map_map]
   rfl
 
+/-- Use `Algebra.QuasiFiniteAt.baseChange` instead for `Algebra.QuasiFiniteAt R p`. -/
+lemma fiber (p : Ideal S) [p.IsPrime] [WeaklyQuasiFiniteAt R p] (p₀ : Ideal R) [p₀.IsPrime]
+    (q : Ideal (p₀.Fiber S)) [q.IsPrime] (hq : p = q.comap (algebraMap S (p₀.Fiber S))) :
+    WeaklyQuasiFiniteAt p₀.ResidueField q := by
+  sorry
+
 open _root_.TensorProduct in
 variable (R S) in
 /-- Use `Algebra.QuasiFinite.of_restrictScalars` instead for `Algebra.QuasiFiniteAt R p`. -/
@@ -225,42 +231,43 @@ lemma of_restrictScalars [Algebra S T] [IsScalarTower R S T]
 for `Algebra.QuasiFiniteAt R q`. -/
 lemma of_quasiFiniteAt_residueField [p.IsPrime] [q.LiesOver p]
     (Q : Ideal (p.Fiber S)) [Q.IsPrime]
-    (hQ : Q.comap Algebra.TensorProduct.includeRight.toRingHom = q)
+    (hQ : Q.comap (algebraMap S (p.Fiber S)) = q)
     [Algebra.QuasiFiniteAt p.ResidueField Q] :
     Algebra.WeaklyQuasiFiniteAt R q := by
-  rw [Algebra.weaklyQuasiFiniteAt_iff]
-  let Sq := Localization.AtPrime q
-  let φ₁ : p.ResidueField →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
-    Ideal.quotientMapₐ _ (IsScalarTower.toAlgHom _ _ _) (by
-    rw [← IsLocalization.AtPrime.map_eq_maximalIdeal p, Ideal.map_le_iff_le_comap,
-      ← Ideal.comap_coe (F := AlgHom _ _ _), Ideal.comap_comap]
-    simpa [← IsScalarTower.algebraMap_eq] using Ideal.le_comap_map)
-  let φ₂ : p.Fiber S →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
-    Algebra.TensorProduct.lift φ₁ (IsScalarTower.toAlgHom _ _ _) fun _ _ ↦ .all _ _
-  let φ₃ : Localization.AtPrime Q →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
-    IsLocalization.liftAlgHom (M := Q.primeCompl) (f := φ₂) <| by
-      rintro ⟨y, hy⟩
-      obtain ⟨r, hrp, s, H⟩ := Ideal.Fiber.exists_smul_eq_one_tmul _ y
-      suffices IsUnit (φ₂ (1 ⊗ₜ s)) by
-        rw [← H, map_smul, Algebra.smul_def, IsUnit.mul_iff] at this
-        exact this.2
-      suffices s ∉ q by
-        have := (IsLocalization.map_units (M := q.primeCompl) Sq ⟨_, this⟩).map
-          (algebraMap _ (Sq ⧸ p.map (algebraMap R Sq)))
-        simpa [φ₂, ← IsScalarTower.algebraMap_apply] using this
-      suffices algebraMap _ _ r * y ∉ Q by simpa [← hQ, ← H, Algebra.smul_def]
-      refine Q.primeCompl.mul_mem ?_ hy
-      simpa only [Ideal.mem_primeCompl_iff, ← Ideal.mem_comap, ← Q.over_def p]
-  have : Function.Surjective φ₃ := by
-    intro x
-    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
-    obtain ⟨x, ⟨s, hs⟩, rfl⟩ := IsLocalization.exists_mk'_eq q.primeCompl x
-    refine ⟨IsLocalization.mk' (M := Q.primeCompl) _ (1 ⊗ₜ x) ⟨1 ⊗ₜ s, ?_⟩, ?_⟩
-    · simpa [← hQ] using hs
-    · simp [φ₃, IsLocalization.lift_mk'_spec, φ₂, IsScalarTower.algebraMap_apply S Sq (Sq ⧸ _),
-        -Ideal.Quotient.mk_algebraMap, ← map_mul]
-  have inst : QuasiFiniteAt R Q := .trans _ p.ResidueField _
-  obtain rfl := q.over_def p
-  exact .of_surjective_algHom φ₃ this
+  sorry
+  -- rw [Algebra.weaklyQuasiFiniteAt_iff]
+  -- let Sq := Localization.AtPrime q
+  -- let φ₁ : p.ResidueField →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
+  --   Ideal.quotientMapₐ _ (IsScalarTower.toAlgHom _ _ _) (by
+  --   rw [← IsLocalization.AtPrime.map_eq_maximalIdeal p, Ideal.map_le_iff_le_comap,
+  --     ← Ideal.comap_coe (F := AlgHom _ _ _), Ideal.comap_comap]
+  --   simpa [← IsScalarTower.algebraMap_eq] using Ideal.le_comap_map)
+  -- let φ₂ : p.Fiber S →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
+  --   Algebra.TensorProduct.lift φ₁ (IsScalarTower.toAlgHom _ _ _) fun _ _ ↦ .all _ _
+  -- let φ₃ : Localization.AtPrime Q →ₐ[R] Sq ⧸ p.map (algebraMap R Sq) :=
+  --   IsLocalization.liftAlgHom (M := Q.primeCompl) (f := φ₂) <| by
+  --     rintro ⟨y, hy⟩
+  --     obtain ⟨r, hrp, s, H⟩ := Ideal.Fiber.exists_smul_eq_one_tmul _ y
+  --     suffices IsUnit (φ₂ (1 ⊗ₜ s)) by
+  --       rw [← H, map_smul, Algebra.smul_def, IsUnit.mul_iff] at this
+  --       exact this.2
+  --     suffices s ∉ q by
+  --       have := (IsLocalization.map_units (M := q.primeCompl) Sq ⟨_, this⟩).map
+  --         (algebraMap _ (Sq ⧸ p.map (algebraMap R Sq)))
+  --       simpa [φ₂, ← IsScalarTower.algebraMap_apply] using this
+  --     suffices algebraMap _ _ r * y ∉ Q by simpa [← hQ, ← H, Algebra.smul_def]
+  --     refine Q.primeCompl.mul_mem ?_ hy
+  --     simpa only [Ideal.mem_primeCompl_iff, ← Ideal.mem_comap, ← Q.over_def p]
+  -- have : Function.Surjective φ₃ := by
+  --   intro x
+  --   obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+  --   obtain ⟨x, ⟨s, hs⟩, rfl⟩ := IsLocalization.exists_mk'_eq q.primeCompl x
+  --   refine ⟨IsLocalization.mk' (M := Q.primeCompl) _ (1 ⊗ₜ x) ⟨1 ⊗ₜ s, ?_⟩, ?_⟩
+  --   · simpa [← hQ] using hs
+  --   · simp [φ₃, IsLocalization.lift_mk'_spec, φ₂, IsScalarTower.algebraMap_apply S Sq (Sq ⧸ _),
+  --       -Ideal.Quotient.mk_algebraMap, ← map_mul]
+  -- have inst : QuasiFiniteAt R Q := .trans _ p.ResidueField _
+  -- obtain rfl := q.over_def p
+  -- exact .of_surjective_algHom φ₃ this
 
 end Algebra.WeaklyQuasiFiniteAt
