@@ -44,7 +44,7 @@ theorem arithFrobAt_mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRin
     (G : Type*) [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (Q : Ideal S) [Finite G]
     [Algebra.IsInvariant R S G] [Q.IsPrime] [Finite (S ⧸ Q)] :
     arithFrobAt R G Q ∈ MulAction.stabilizer G Q := by
-  apply (IsArithFrobAt.arithFrobAt R G Q).mem_stabilizer R
+  apply (IsArithFrobAt.arithFrobAt R G Q).mem_stabilizer
 
 namespace Representation
 
@@ -57,97 +57,89 @@ instance
 open ArithmeticFunction IsDedekindDomain
 open scoped NumberField Pointwise Polynomial
 
-variable (L K : Type*) [Field K] [NumberField K] [Field L] [NumberField L] [Algebra K L]
-  {k G V : Type*}
-  [Field k]
-  [Group G] [MulSemiringAction G L] [IsGaloisGroup G K L]
-  [AddCommGroup V] [Module k V] [Module.Finite k V]
-  (ρ : Representation k G V)
+variable {k G V : Type*} [Field k] [Group G]
+  [AddCommGroup V] [Module k V] [Module.Finite k V] (ρ : Representation k G V)
+  (K L : Type*) [Field K] [NumberField K] [Field L] [NumberField L] [Algebra K L]
+  [MulSemiringAction G L] [IsGaloisGroup G K L] [Finite G] (p : HeightOneSpectrum (𝓞 K))
 
--- todo: restrict from `k` to algebraic integers
-/-- The polynomial associated to a Galois representation. -/
-noncomputable def localPolynomial [Finite G] (p : HeightOneSpectrum (𝓞 K)) : k[X] :=
-  let q : p.1.primesOver (𝓞 L) := p.1.nonempty_primesOver.some
-  let D : Subgroup G := MulAction.stabilizer G q.1
-  let I : Subgroup D := (q.1.inertia G).subgroupOf D
-  let σ : G := arithFrobAt (𝓞 K) G q.1
-  have hσ : σ ∈ D := by apply arithFrobAt_mem_stabilizer
-  let σ' : D := ⟨σ, hσ⟩
+/-- The local polynomial associated to a Galois representation `ρ : Gal(L/K) → GL(V)`, defined as
+`det((1 - FrobₚT) | V_Iₚ)` where `V_Iₚ` is the coinvariants of some inertia subgroup `Iₚ` at `p`.
+
+See `localPolynomial_eq` for a proof that this does not depend on the choice of `Iₚ` or `Frobₚ`. -/
+noncomputable def localPolynomial : k[X] :=
+  letI q : Ideal (𝓞 L) := p.1.nonempty_primesOver.some.1
+  letI D : Subgroup G := MulAction.stabilizer G q
+  letI I : Subgroup D := (q.inertia G).subgroupOf D
+  letI ρ' : Representation k D V := ρ.comp D.subtype
+  letI σ : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+  (ρ'.quotientToCoinvariants I σ).charpoly.reverse
+
+theorem localPolynomial_def :
+    letI q : Ideal (𝓞 L) := p.1.nonempty_primesOver.some.1
+    letI D : Subgroup G := MulAction.stabilizer G q
+    letI I : Subgroup D := (q.inertia G).subgroupOf D
+    letI ρ' : Representation k D V := ρ.comp D.subtype
+    ∀ (σ : G) (hσ : IsArithFrobAt (𝓞 K) σ q),
+    letI σ' : D := ⟨σ, hσ.mem_stabilizer⟩
+    ρ.localPolynomial K L p = (ρ'.toCoinvariants I σ').charpoly.reverse := by
+  let q : Ideal (𝓞 L) := p.1.nonempty_primesOver.some.1
+  let D : Subgroup G := MulAction.stabilizer G q
+  let I : Subgroup D := (q.inertia G).subgroupOf D
   let ρ' : Representation k D V := ρ.comp D.subtype
-  (ρ'.quotientToCoinvariants I σ').charpoly.reverse -- could drop the quotient, but current formulation makes it easier to prove API
+  intro σ hσ
+  let σ' : D := ⟨σ, hσ.mem_stabilizer⟩
+  letI σ₀ : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+  change ρ.localPolynomial K L p = (ρ'.quotientToCoinvariants I σ').charpoly.reverse
+  have : (σ₀ : D ⧸ I) = (σ' : D ⧸ I) := by
+    rw [QuotientGroup.eq_iff_div_mem, div_eq_mul_inv]
+    exact (IsArithFrobAt.arithFrobAt (𝓞 K) G q).mul_inv_mem_inertia hσ
+  rw [localPolynomial]
+  congr
 
-/-- The polynomial associated to a Galois representation. -/
-noncomputable def localPowerSeries [Finite G] (p : HeightOneSpectrum (𝓞 K)) : PowerSeries k :=
-  PowerSeries.invOfUnit (ρ.localPolynomial L K p) 1
+theorem localPolynomial_eq (q : Ideal (𝓞 L)) [q.LiesOver p.1] [q.IsMaximal]
+    (σ : G) (hσ : IsArithFrobAt (𝓞 K) σ q) :
+    letI D : Subgroup G := MulAction.stabilizer G q
+    letI I : Subgroup D := (q.inertia G).subgroupOf D
+    letI ρ' : Representation k D V := ρ.comp D.subtype
+    letI σ' : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+    ρ.localPolynomial K L p = (ρ'.toCoinvariants I σ').charpoly.reverse := by
+  let q' : Ideal (𝓞 L) := p.1.nonempty_primesOver.some.1
+  obtain ⟨τ, hτ⟩ := Ideal.exists_smul_eq_of_isGaloisGroup p.1 q q' G
+  let σ' := τ * σ * τ⁻¹
+  have hσ' : IsArithFrobAt (𝓞 K) σ' q' := by
+    rw [← hτ]
+    exact hσ.conj τ
+  letI D : Subgroup G := MulAction.stabilizer G q
+  letI I : Subgroup D := (q.inertia G).subgroupOf D
+  letI ρ' : Representation k D V := ρ.comp D.subtype
+  letI σ'' : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+  change ρ.localPolynomial K L p = (ρ'.toCoinvariants I σ'').charpoly.reverse
+  rw [ρ.localPolynomial_def K L p σ' hσ']
+  letI D' : Subgroup G := MulAction.stabilizer G q'
+  letI I' : Subgroup D' := (q'.inertia G).subgroupOf D'
+  letI ρ'' : Representation k D' V := ρ.comp D'.subtype
+  letI σ''' : D' := ⟨σ', hσ'.mem_stabilizer⟩
+  change (ρ''.toCoinvariants I' σ''').charpoly.reverse = (ρ'.toCoinvariants I σ'').charpoly.reverse
+  congr 1
+  -- conjugation invariance of `charpoly`
+  sorry
 
-/-- The local Euler factor associated to a Weierstrass curve over a nonarchimedean local field. -/
-noncomputable def localEulerFactor [Finite G] (p : HeightOneSpectrum (𝓞 K)) : ArithmeticFunction k :=
-  .ofPowerSeries p.1.absNorm (ρ.localPowerSeries L K p)
+/-- The local power series associated to a Galois representation `ρ : Gal(L/K) → GL(V)`. -/
+noncomputable def localPowerSeries : PowerSeries k :=
+  PowerSeries.invOfUnit (ρ.localPolynomial K L p) 1
 
-/-- The Artin L-function of a representation `ρ` is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
-* `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` where `aₚ = ‖p‖ + 1 - |E(K_p)|` if `E` has good reduction at `p`,
-* `fₚ = 1 - T` if `E` has split multiplicative reduction at `p`,
-* `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
-* `fₚ = 1` if `E` has additive reduction at `p`.
--/
-noncomputable def LFunction : ArithmeticFunction ℤ :=
-  eulerProduct fun p : HeightOneSpectrum (𝓞 K) ↦
-      (W.baseChange (p.adicCompletion K)).localEulerFactor (p.adicCompletionIntegers K)
+/-- The local Euler factor associated to a Galois representation `ρ : Gal(L/K) → GL(V)`. -/
+noncomputable def localEulerFactor : ArithmeticFunction k :=
+  .ofPowerSeries p.1.absNorm (ρ.localPowerSeries K L p)
 
-/-- The L-series of a Weierstrass curve. -/
-protected noncomputable def LSeries (W : WeierstrassCurve K) (s : ℂ) :=
-  LSeries ((↑) ∘ W.LFunction) s
+/-- The Artin L-function of a Galois representation `ρ : Gal(L/K) → GL(V)` is the product over
+places of `1 / fₚ(‖p‖⁻ˢ)` where `fₚ(T) = det((1 - FrobₚT) | V_Iₚ)` where `V_Iₚ` is the coinvariants
+of some inertia subgroup `Iₚ` at `p`. -/
+noncomputable def LFunction : ArithmeticFunction k :=
+  eulerProduct (ρ.localEulerFactor K L)
+
+/-- The Artin L-function of a of a Galois representation `ρ : Gal(L/K) → GL(V)`. -/
+protected noncomputable def LSeries [Algebra k ℂ] (s : ℂ) :=
+  LSeries (algebraMap k ℂ ∘ ρ.LFunction K L) s
 
 end Representation
-
-namespace WeierstrassCurve
-
-section LocalField
-
-variable (R : Type*) [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] {K : Type*}
-  [Field K] [Algebra R K] [IsFractionRing R K] (W : WeierstrassCurve K)
-
-open Classical Polynomial in
-/-- The polynomial associated to a Weierstrass curve over a nonarchimedean local field. -/
-noncomputable def localPolynomial : ℤ[X] :=
-  letI W' := W.minimal R
-  letI q : ℤ := Nat.card (IsLocalRing.ResidueField R)
-  letI a : ℤ := q + 1 - (Nat.card (W'.reduction R).toAffine.Point)
-  if W'.HasGoodReduction R then 1 - C a * X + C q * X ^ 2
-  else if W'.HasSplitMultiplicativeReduction R then 1 - X
-  else if W'.HasMultiplicativeReduction R then 1 + X
-  else 1
-
-/-- The power series associated to a Weierstrass curve over a nonarchimedean local field. -/
-noncomputable def localPowerSeries : PowerSeries ℤ :=
-  PowerSeries.invOfUnit (W.localPolynomial R) 1
-
-/-- The local Euler factor associated to a Weierstrass curve over a nonarchimedean local field. -/
-noncomputable def localEulerFactor : ArithmeticFunction ℤ :=
-  .ofPowerSeries (Nat.card (IsLocalRing.ResidueField R)) (W.localPowerSeries R)
-
-end LocalField
-
-section NumberField
-
-open ArithmeticFunction IsDedekindDomain NumberField
-
-variable {K : Type*} [Field K] [NumberField K] (W : WeierstrassCurve K)
-
-/-- The L-function of a Weierstrass curve is the product over places of `1 / fₚ(‖p‖⁻ˢ)` where:
-* `fₚ = 1 - aₚ T + ‖p‖ T ^ 2` where `aₚ = ‖p‖ + 1 - |E(K_p)|` if `E` has good reduction at `p`,
-* `fₚ = 1 - T` if `E` has split multiplicative reduction at `p`,
-* `fₚ = 1 + T` if `E` has nonsplit multiplicative reduction at `p`,
-* `fₚ = 1` if `E` has additive reduction at `p`.
--/
-noncomputable def LFunction : ArithmeticFunction ℤ :=
-  eulerProduct fun p : HeightOneSpectrum (𝓞 K) ↦
-      (W.baseChange (p.adicCompletion K)).localEulerFactor (p.adicCompletionIntegers K)
-
-/-- The L-series of a Weierstrass curve. -/
-protected noncomputable def LSeries (W : WeierstrassCurve K) (s : ℂ) :=
-  LSeries ((↑) ∘ W.LFunction) s
-
-end NumberField
-
-end WeierstrassCurve
