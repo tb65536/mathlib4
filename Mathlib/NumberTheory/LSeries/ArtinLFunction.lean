@@ -55,20 +55,13 @@ theorem quotientToCoinvariants_apply_coe {k G V : Type*} [CommRing k] [Group G] 
     ρ.quotientToCoinvariants S g = ρ.toCoinvariants S g :=
   rfl
 
--- PRed
-instance
-    {k G V : Type*} [CommRing k] [Monoid G] [AddCommGroup V] [Module k V] [Module.Finite k V]
-    (ρ : Representation k G V) :
-    Module.Finite k ρ.Coinvariants :=
-  inferInstanceAs <| Module.Finite k (V ⧸ Coinvariants.ker ρ)
-
 open ArithmeticFunction IsDedekindDomain
 open scoped NumberField Pointwise Polynomial
 
 variable {k G V : Type*} [Field k] [Group G]
   [AddCommGroup V] [Module k V] (ρ : Representation k G V)
   (K L : Type*) [Field K] [NumberField K] [Field L] [NumberField L] [Algebra K L]
-  [MulSemiringAction G L] [IsGaloisGroup G K L] (p : HeightOneSpectrum (𝓞 K))
+  [MulSemiringAction G L] [IsGaloisGroup G K L] [Module.Finite k V] (p : HeightOneSpectrum (𝓞 K))
 
 noncomputable def foo1 (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1] :
     letI D : Subgroup G := MulAction.stabilizer G q
@@ -85,6 +78,7 @@ noncomputable def foo2 (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
     Module.End k (Coinvariants ρ') :=
   quotientToCoinvariants _ _ (⟨σ, hσ.mem_stabilizer⟩ : MulAction.stabilizer G q)
 
+omit [Module.Finite k V] in
 theorem foo2_congr (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
     (σ₁ σ₂ : G) (hσ₁ : IsArithFrobAt (𝓞 K) σ₁ q) (hσ₂ : IsArithFrobAt (𝓞 K) σ₂ q) :
     ρ.foo2 K L p q σ₁ hσ₁ = ρ.foo2 K L p q σ₂ hσ₂ := by
@@ -98,6 +92,7 @@ theorem foo2_congr (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
   dsimp only [foo2]
   congr
 
+omit [Module.Finite k V] in
 theorem foo2_congr' (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
     (τ : G) [(τ • q).IsMaximal]
     (σ : G) (hσ : IsArithFrobAt (𝓞 K) σ q) :
@@ -121,8 +116,6 @@ theorem foo2_congr' (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
   --   exact hσ₁.mul_inv_mem_inertia hσ₂
   -- dsimp only [foo2]
   -- congr
-
-variable [Module.Finite k V] -- actually, finiteness of `G` should be automatic
 
 /-- The local polynomial associated to a Galois representation `ρ : Gal(L/K) → GL(V)`, defined as
 `det((1 - FrobₚT) | V_Iₚ)` where `V_Iₚ` is the coinvariants of some inertia subgroup `Iₚ` at `p`.
