@@ -7,7 +7,7 @@ module
 
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Point
 public import Mathlib.AlgebraicGeometry.EllipticCurve.Reduction
-public import Mathlib.LinearAlgebra.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Charpoly.ToMatrix
 public import Mathlib.LinearAlgebra.FixedSubmodule
 public import Mathlib.NumberTheory.ArithmeticFunction.LFunction
 public import Mathlib.NumberTheory.LSeries.Basic
@@ -92,30 +92,93 @@ theorem foo2_congr (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
   dsimp only [foo2]
   congr
 
-omit [Module.Finite k V] in
+/-- Descend an  -/
+noncomputable def Coinvariants.map' {k G V₁ V₂ : Type*} [Field k] [AddCommGroup V₁] [AddCommGroup V₂]
+    [Module k V₁] [Module k V₂] [Group G]
+    (ρ₁ : Representation k G V₁) (ρ₂ : Representation k G V₂)
+    (e : IntertwiningMap ρ₁ ρ₂) :
+    ρ₁.Coinvariants →ₗ[k] ρ₂.Coinvariants :=
+  map ρ₁ ρ₂ e e.isIntertwining'
+
+/-- Descend an  -/
+noncomputable def Coinvariants.congr {k G V₁ V₂ : Type*} [Field k] [AddCommGroup V₁] [AddCommGroup V₂]
+    [Module k V₁] [Module k V₂] [Group G]
+    (ρ₁ : Representation k G V₁) (ρ₂ : Representation k G V₂)
+    (e : ρ₁.Equiv ρ₂) :
+    ρ₁.Coinvariants ≃ₗ[k] ρ₂.Coinvariants := by
+  apply LinearEquiv.ofLinear (map' ρ₁ ρ₂ e.toIntertwiningMap) (map' ρ₂ ρ₁ e.symm.toIntertwiningMap)
+    (by
+      rw [map', map']
+      simp [Equiv.symm]
+      ext
+      simp
+      congr
+      apply e.apply_symm_apply
+      )
+    (by
+      rw [map', map']
+      simp [Equiv.symm]
+      ext
+      simp
+      congr
+      apply e.symm_apply_apply
+      )
+
+/-- Descend an  -/
+def tada {k G H VG VH : Type*} [Field k] [AddCommGroup VG] [AddCommGroup VH]
+    [Module k VG] [Module k VH] [Group G] [Group H] (e : G ≃* H)
+    (ρG : Representation k G VG) (ρH : Representation k H VH)
+    (hV : ρG.Equiv (ρH.comp e.toMonoidHom)) :
+    ρG.Coinvariants ≃ₗ[k] ρH.Coinvariants := by
+  sorry
+
 theorem foo2_congr' (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
     (τ : G) [(τ • q).IsMaximal]
     (σ : G) (hσ : IsArithFrobAt (𝓞 K) σ q) :
     letI f₁ := ρ.foo2 K L p q σ hσ
     letI f₂ := ρ.foo2 K L p (τ • q) (τ * σ * τ⁻¹) (hσ.conj τ)
-    False := by
+    f₁.charpoly = f₂.charpoly := by
   let D₁ : Subgroup G := MulAction.stabilizer G q
-  let I₁ : Subgroup D₁ := (q.inertia G).subgroupOf D₁
   let D₂ : Subgroup G := MulAction.stabilizer G (τ • q)
+  let I₁ : Subgroup D₁ := (q.inertia G).subgroupOf D₁
   let I₂ : Subgroup D₂ := ((τ • q).inertia G).subgroupOf D₂
-  have key : D₂ = MulAut.conj τ • D₁ :=
+  let V₁ := Coinvariants ((ρ.comp D₁.subtype).comp I₁.subtype)
+  let V₂ := Coinvariants ((ρ.comp D₂.subtype).comp I₂.subtype)
+  let fV₁ : V →ₗ[k] V₁ := Coinvariants.mk ((ρ.comp D₁.subtype).comp I₁.subtype)
+  let fV₂ : V →ₗ[k] V₂ := Coinvariants.mk ((ρ.comp D₂.subtype).comp I₂.subtype)
+  let f₁ : Module.End k V₁ := ρ.foo2 K L p q σ hσ
+  let f₂ : Module.End k V₂ := ρ.foo2 K L p (τ • q) (τ * σ * τ⁻¹) (hσ.conj τ)
+  have hf₁ v : f₁ (fV₁ v) = fV₁ (ρ σ v) := rfl
+  have hf₂ v : f₂ (fV₂ v) = fV₂ (ρ (τ * σ * τ⁻¹) v) := rfl
+  have keyD : D₂ = MulAut.conj τ • D₁ :=
     MulAction.stabilizer_smul_eq_stabilizer_map_conj τ q
-  have key : (τ • q).inertia G = MulAut.conj τ • q.inertia G := by
+  have keyI : (τ • q).inertia G = MulAut.conj τ • q.inertia G := by
+    ext g
+    simp_rw [Subgroup.mem_pointwise_smul_iff_inv_smul_mem, AddSubgroup.mem_inertia,
+      AddSubgroup.mem_mk, Submodule.mem_toAddSubmonoid, Ideal.mem_pointwise_smul_iff_inv_smul_mem]
+    refine ⟨fun h x ↦ ?_, fun h x ↦ ?_⟩
+    · simpa [smul_sub, mul_smul] using h (τ • x)
+    · simpa [smul_sub, mul_smul] using h (τ⁻¹ • x)
+  let e₀ : D₁ ≃* D₂ :=
+      (D₁.equivSMul (MulAut.conj τ)).trans (MulEquiv.subgroupCongr keyD).symm
+  let e₁ : I₁ ≃* I₂ :=
+      (I₁.equivSMul (MulAut.conj τ)).trans (MulEquiv.subgroupCongr keyI).symm
+  let e : V₁ ≃ₗ[k] V₂ := by
+
     sorry
-
-
-  -- let σ₁' : D := ⟨σ₁, hσ₁.mem_stabilizer⟩
-  -- let σ₂' : D := ⟨σ₂, hσ₂.mem_stabilizer⟩
-  -- have : (σ₁' : D ⧸ I) = (σ₂' : D ⧸ I) := by
-  --   rw [QuotientGroup.eq_iff_div_mem, div_eq_mul_inv]
-  --   exact hσ₁.mul_inv_mem_inertia hσ₂
-  -- dsimp only [foo2]
-  -- congr
+  have he v : e (fV₁ v) = fV₂ (ρ τ v) := by
+    sorry
+  have key : e.conj f₁ = f₂ := by
+    ext v
+    change e (f₁ (e.symm (fV₂ v))) = f₂ (fV₂ v)
+    rw [hf₂]
+    have he' := he (ρ τ⁻¹ v)
+    simp only [self_inv_apply] at he'
+    rw [← he', e.symm_apply_apply, hf₁]
+    simpa using he (ρ (σ * τ⁻¹) v)
+  change f₁.charpoly = f₂.charpoly
+  rw [← key]
+  exact (e.charpoly_conj f₁).symm
 
 /-- The local polynomial associated to a Galois representation `ρ : Gal(L/K) → GL(V)`, defined as
 `det((1 - FrobₚT) | V_Iₚ)` where `V_Iₚ` is the coinvariants of some inertia subgroup `Iₚ` at `p`.
