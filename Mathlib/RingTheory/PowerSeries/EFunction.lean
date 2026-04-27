@@ -56,6 +56,17 @@ theorem denominator_ne_zero_iff [IsReduced R] {x : S} : denominator R x ≠ 0 �
 theorem denominator_eq_zero_iff [IsReduced R] {x : S} : denominator R x = 0 ↔ ¬ IsAlgebraic R x :=
   iff_not_comm.mp denominator_ne_zero_iff.symm
 
+theorem denominator_add_dvd_mul {x y : S} :
+    denominator R (x + y) ∣ denominator R x * denominator R y := by
+  rw [denominator_dvd_iff, smul_add]
+  exact (denominator_dvd_iff.mp (dvd_mul_right _ _)).add
+    ((denominator_dvd_iff.mp (dvd_mul_left _ _)))
+
+theorem denominator_mul_dvd_mul {x y : S} :
+    denominator R (x * y) ∣ denominator R x * denominator R y := by
+  rw [denominator_dvd_iff, mul_smul_mul_comm]
+  exact (isIntegral_denominator_smul x).mul (isIntegral_denominator_smul y)
+
 /-- The natural number valued denominator of an algebraic number. -/
 noncomputable def natDenominator (x : S) : ℕ :=
   (denominator ℤ x).natAbs
@@ -76,7 +87,89 @@ theorem natDenominator_ne_zero_iff {x : S} : natDenominator x ≠ 0 ↔ IsAlgebr
 theorem natDenominator_ne_zero {x : S} (hx : IsAlgebraic ℤ x) : natDenominator x ≠ 0 :=
   natDenominator_ne_zero_iff.mpr hx
 
+theorem natDenominator_add_dvd_mul {x y : S} :
+    natDenominator (x + y) ∣ natDenominator x * natDenominator y := by
+  rw [natDenominator_dvd_iff, smul_add]
+  exact (natDenominator_dvd_iff.mp (dvd_mul_right _ _)).add
+    ((natDenominator_dvd_iff.mp (dvd_mul_left _ _)))
+
+theorem natDenominator_mul_dvd_mul {x y : S} :
+    natDenominator (x * y) ∣ natDenominator x * natDenominator y := by
+  rw [natDenominator_dvd_iff, mul_smul_mul_comm]
+  exact (isIntegral_natDenominator_smul x).mul (isIntegral_natDenominator_smul y)
+
 end IsAlgebraic
+
+section
+
+theorem Finset.lcm_mul_dvd {α β : Type*} [CommMonoidWithZero β] [NormalizedGCDMonoid β]
+    (s : Finset α) (f g : α → β) :
+    s.lcm (f * g) ∣ s.lcm f * s.lcm g :=
+  Finset.lcm_dvd_iff.mpr fun _ hi ↦ mul_dvd_mul (dvd_lcm hi) (dvd_lcm hi)
+
+theorem Finset.lcm_dvd_lcm {α β : Type*} [CommMonoidWithZero β] [NormalizedGCDMonoid β]
+    (s : Finset α) (f g : α → β) (hfg : ∀ a ∈ s, f a ∣ g a) :
+    s.lcm f ∣ s.lcm g :=
+  Finset.lcm_dvd_iff.mpr fun i hi ↦ (hfg i hi).trans (dvd_lcm hi)
+
+
+variable {R : Type*} [CommRing R]
+
+open Algebra Polynomial
+
+/-- An E-sequence is a sequence `a₀,a₁,...` in a commutative ring `R` satisfying:
+* Each `aᵢ` is algebraic over `ℤ`.
+* The conjugates of `aₙ` in `ℂ` grow at most polynomially in `n`.
+* The common denominators of `{a₀,...,aₙ₋₁}` grow at most polynomially in `n`.
+
+E-sequences `a₀,a₁,...` are used to define E-functions `∑ aₙzⁿ/n!`.
+-/
+structure IsESeq (f : ℕ → R) : Prop where
+  growth : ∃ p : ℕ[X], ∀ n, ∃ q : ℤ[X], q ≠ 0 ∧ q.aeval (f n) = 0 ∧ ∀ x ∈ q.aroots ℂ, ‖x‖ ≤ p.eval n
+  denominators : ∃ p : ℕ[X], ∀ n, (Finset.range n).lcm (IsAlgebraic.natDenominator ∘ f) ≤ p.eval n
+
+namespace IsESeq
+
+protected theorem isAlgebraic {f : ℕ → R} (hf : IsESeq f) (n : ℕ) : IsAlgebraic ℤ (f n) := by
+  obtain ⟨p, hp⟩ := hf.growth
+  obtain ⟨q, hq0, hq, -⟩ := hp n
+  exact ⟨q, hq0, hq⟩
+
+protected theorem add {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq (f + g) where
+  growth := by
+    obtain ⟨p, hp⟩ := hf.growth
+    obtain ⟨q, hq⟩ := hg.growth
+    refine ⟨p + q, fun n ↦ ?_⟩
+    specialize hp n
+    specialize hq n
+    sorry
+  denominators := by
+    obtain ⟨p, hp⟩ := hf.denominators
+    obtain ⟨q, hq⟩ := hg.denominators
+    refine ⟨p * q, fun n ↦ ?_⟩
+    specialize hp n
+    specialize hq n
+    rw [eval_mul]
+    have h1 := (Finset.range n).lcm_mul_dvd
+      (IsAlgebraic.natDenominator ∘ f) (IsAlgebraic.natDenominator ∘ g)
+    refine le_trans ?_ (mul_le_mul' hp hq)
+    apply Nat.le_of_dvd
+    · simp_rw [pos_iff_ne_zero, mul_ne_zero_iff, Finset.lcm_ne_zero_iff]
+      exact ⟨fun k hk ↦ (hf.isAlgebraic k).natDenominator_ne_zero,
+        fun k hk ↦ (hg.isAlgebraic k).natDenominator_ne_zero⟩
+    · refine dvd_trans ?_ h1
+      apply Finset.lcm_dvd_lcm
+      intro i hi
+      apply IsAlgebraic.natDenominator_add_dvd_mul
+
+end IsESeq
+
+#check IsAlgebraic.add
+#check IsAlgebraic.mul
+
+end
+
+#exit
 
 namespace PowerSeries
 
