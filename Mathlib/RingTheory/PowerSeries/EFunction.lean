@@ -12,6 +12,7 @@ public import Mathlib.RingTheory.Algebraic.Integral
 public import Mathlib.RingTheory.Ideal.Colon
 public import Mathlib.RingTheory.LaurentSeries
 public import Mathlib.RingTheory.PowerSeries.Derivative
+public import Mathlib.RingTheory.Polynomial.Resultant.Basic
 
 /-!
 # EFunction
@@ -102,6 +103,134 @@ end IsAlgebraic
 
 section
 
+open Polynomial
+
+set_option linter.unusedVariables false in
+-- the variable names are used in the code action of `induction`.
+/-- An induction principle useful to prove statements about resultants.
+Let `P` be a predicate on a polynomial.
+If `R → S` injective implies `(∀ p : S[X], P p) → (∀ p : R[X], P p)`,
+and if `R → S` surjective implies `(∀ p : R[X], P p) → (∀ p : S[X], P p)`,
+then we may reduce to the case where `R` is a field and `p` splits. -/
+nonrec lemma Polynomial.induction_of_Splits_of_injective_of_surjective'.{u}
+    {R : Type u} [CommRing R] (p q : R[X])
+    (P : ∀ {R : Type u} [CommRing R], R[X] → R[X] → Prop)
+    (Splits : ∀ (R : Type u) [Field R] (p q : R[X]) (hp : p.Splits) (hq : q.Splits), P p q)
+    (injective : ∀ (R S : Type u) [CommRing R] [CommRing S]
+      (φ : R →+* S) (hφ : Function.Injective φ) (p q : R[X]) (IH : P (p.map φ) (q.map φ)), P p q)
+    (surjective : ∀ (R S : Type u) [CommRing R] [CommRing S]
+      (φ : R →+* S) (hφ : Function.Surjective φ) (p q : S[X]) (IH : ∀ p q : R[X], P p q), P p q) :
+      P p q := by
+  wlog hR : IsDomain R generalizing R
+  · apply surjective _ _ (MvPolynomial.eval₂Hom (algebraMap ℤ R) id)
+      (fun x ↦ ⟨.X x, by simp [MvPolynomial.eval₂Hom]⟩) p q
+      (fun _ _ ↦ this _ _ inferInstance)
+  wlog hR : IsField R generalizing R
+  · apply injective _ _ _ (FaithfulSMul.algebraMap_injective R (FractionRing R)) _ _
+      (this _ _ inferInstance (Field.toIsField _))
+  wlog hp : p.Splits generalizing R
+  · letI inst := hR.toField
+    exact injective _ _ _ (algebraMap R p.SplittingField).injective _ _
+      (this _ _ inferInstance (Field.toIsField _) (SplittingField.splits _))
+  wlog hq : q.Splits generalizing R
+  · letI inst := hR.toField
+    exact injective _ _ _ (algebraMap R q.SplittingField).injective _ _
+      (this _ _ inferInstance (Field.toIsField _) (hp.map _) (SplittingField.splits _))
+  letI inst := hR.toField
+  exact Splits _ _  _ hp hq
+
+noncomputable def Polynomial.resultantAdd {R : Type*} [CommRing R] (f g : R[X]) : R[X] :=
+  ((f.map C).comp (C X - X)).resultant (g.map C)
+
+theorem Polynomial.resultantAdd_def {R : Type*} [CommRing R] (f g : R[X]) (m n : ℕ)
+    (hm : f.natDegree = m) (hn : g.natDegree = n) :
+    f.resultantAdd g = ((f.map C).comp (C X - X)).resultant (g.map C) m n := by
+  nontriviality R
+  by_cases hf : f = 0
+  · rw [hf, resultantAdd, Polynomial.map_zero, zero_comp]
+    rw [resultant, resultant, ← hm, ← hn, hf, natDegree_map_eq_of_injective C_injective]
+    rfl
+  rw [resultantAdd]
+  congr
+  · rw [natDegree_comp_eq_of_mul_ne_zero]
+    · suffices (C X - X : R[X][X]).natDegree = 1 by
+        rwa [this, mul_one, natDegree_map_eq_of_injective C_injective]
+      rw [natDegree_sub_eq_right_of_natDegree_lt, natDegree_X]
+      simp
+    · rw [leadingCoeff_sub_of_degree_lt', leadingCoeff_X]
+      · rw [leadingCoeff_map_of_injective C_injective]
+        rwa [ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
+      · simp
+  · rwa [natDegree_map_eq_of_injective C_injective]
+
+
+noncomputable def Polynomial.resultantAdd_map {R S : Type*} [CommRing R] [CommRing S] (f g : R[X])
+    (φ : R →+* S) (hf : (f.map φ).natDegree = f.natDegree) (hg : (g.map φ).natDegree = g.natDegree) :
+    (f.resultantAdd g).map φ = (f.map φ).resultantAdd (g.map φ) := by
+  rw [resultantAdd_def f g f.natDegree g.natDegree rfl rfl,
+    resultantAdd_def (f.map φ) (g.map φ) f.natDegree g.natDegree hf hg]
+  rw [← coe_mapRingHom φ]
+  rw [← resultant_map_map _ _ _ _ (mapRingHom φ)]
+  congr
+  · rw [map_comp, map_map, mapRingHom_comp_C, ← map_map]
+    simp
+  · rw [map_map, mapRingHom_comp_C, coe_mapRingHom, map_map]
+
+-- maybe need to generalize to say that it's in the span or something?
+theorem resultantAdd_eval_eq_zero {R : Type*} [CommRing R] {f g : R[X]} {x y : R}
+    (hx : f.eval x = 0) (hy : g.eval y = 0) : (resultantAdd f g).eval (x + y) = 0 := by
+  revert x y
+  apply Polynomial.induction_of_Splits_of_injective_of_surjective' f g
+  · intro R _ f g hf hg x y hx hy
+    rw [resultantAdd, Polynomial.resultant_eq_prod_eval]
+    ·
+      sorry
+    · exact le_rfl
+    · apply (hf.map C).comp_of_natDegree_le_one_of_invertible
+      · compute_degree
+      · rw [leadingCoeff_sub_of_degree_lt']
+        simp only [monic_X, Monic.leadingCoeff]
+        have : Invertible (1 : R[X]) := invertibleOne
+        apply invertibleNeg 1
+        simp
+  · intro R S _ _ φ hφ f g h x y hx hy
+    specialize @h (φ x) (φ y) (by simp [hx]) (by simp [hy])
+    rwa [← resultantAdd_map f g φ (f.natDegree_map_eq_of_injective hφ)
+      (g.natDegree_map_eq_of_injective hφ), ← map_add, eval_map_apply, map_eq_zero_iff φ hφ] at h
+  · intro R S _ _ φ hφ f g h x y hx hy
+    have hf : f ∈ lifts φ := by exact (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
+    have hg : g ∈ lifts φ := by exact (lifts_iff_coeff_lifts g).mpr fun n ↦ hφ (g.coeff n)
+    obtain ⟨f, rfl, hf⟩ := Polynomial.exists_degree_eq_of_mem_lifts hf
+    obtain ⟨g, rfl, hg⟩ := Polynomial.exists_degree_eq_of_mem_lifts hg
+    obtain ⟨x, rfl⟩ := hφ x
+    obtain ⟨y, rfl⟩ := hφ y
+    rw [← resultantAdd_map f g φ, ← map_add, eval_map_apply]
+    sorry
+
+variable {R : Type*} [CommRing R]
+
+structure BoundedConjugates (x : R) (B : ℝ) : Prop where
+  bounded : ∃ q : ℤ[X], q ≠ 0 ∧ q.aeval x = 0 ∧ ∀ x ∈ q.aroots ℂ, ‖x‖ ≤ B
+
+namespace BoundedConjugates
+
+protected theorem add {x y : R} {B C : ℝ}
+    (hx : BoundedConjugates x B) (hy : BoundedConjugates y C) :
+    BoundedConjugates (x + y) (B + C) := by
+
+  sorry
+
+protected theorem mul {x y : R} {B C : ℝ}
+    (hx : BoundedConjugates x B) (hy : BoundedConjugates y C) :
+    BoundedConjugates (x * y) (B * C) := by
+  sorry
+
+end BoundedConjugates
+
+end
+
+section
+
 theorem Finset.lcm_mul_dvd {α β : Type*} [CommMonoidWithZero β] [NormalizedGCDMonoid β]
     (s : Finset α) (f g : α → β) :
     s.lcm (f * g) ∣ s.lcm f * s.lcm g :=
@@ -125,7 +254,7 @@ open Algebra Polynomial
 E-sequences `a₀,a₁,...` are used to define E-functions `∑ aₙzⁿ/n!`.
 -/
 structure IsESeq (f : ℕ → R) : Prop where
-  growth : ∃ p : ℕ[X], ∀ n, ∃ q : ℤ[X], q ≠ 0 ∧ q.aeval (f n) = 0 ∧ ∀ x ∈ q.aroots ℂ, ‖x‖ ≤ p.eval n
+  growth : ∃ p : ℝ[X], ∀ n, BoundedConjugates (f n) (p.eval n)
   denominators : ∃ p : ℕ[X], ∀ n, (Finset.range n).lcm (IsAlgebraic.natDenominator ∘ f) ≤ p.eval n
 
 namespace IsESeq
@@ -140,9 +269,8 @@ protected theorem add {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
     obtain ⟨p, hp⟩ := hf.growth
     obtain ⟨q, hq⟩ := hg.growth
     refine ⟨p + q, fun n ↦ ?_⟩
-    specialize hp n
-    specialize hq n
-    sorry
+    rw [eval_add]
+    exact (hp n).add (hq n)
   denominators := by
     obtain ⟨p, hp⟩ := hf.denominators
     obtain ⟨q, hq⟩ := hg.denominators
@@ -162,10 +290,35 @@ protected theorem add {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
       intro i hi
       apply IsAlgebraic.natDenominator_add_dvd_mul
 
-end IsESeq
+protected theorem mul {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq (f * g) where
+  growth := by
+    obtain ⟨p, hp⟩ := hf.growth
+    obtain ⟨q, hq⟩ := hg.growth
+    refine ⟨p * q, fun n ↦ ?_⟩
+    rw [eval_mul]
+    exact (hp n).mul (hq n)
+  denominators := by
+    obtain ⟨p, hp⟩ := hf.denominators
+    obtain ⟨q, hq⟩ := hg.denominators
+    refine ⟨p * q, fun n ↦ ?_⟩
+    specialize hp n
+    specialize hq n
+    rw [eval_mul]
+    have h1 := (Finset.range n).lcm_mul_dvd
+      (IsAlgebraic.natDenominator ∘ f) (IsAlgebraic.natDenominator ∘ g)
+    refine le_trans ?_ (mul_le_mul' hp hq)
+    apply Nat.le_of_dvd
+    · simp_rw [pos_iff_ne_zero, mul_ne_zero_iff, Finset.lcm_ne_zero_iff]
+      exact ⟨fun k hk ↦ (hf.isAlgebraic k).natDenominator_ne_zero,
+        fun k hk ↦ (hg.isAlgebraic k).natDenominator_ne_zero⟩
+    · refine dvd_trans ?_ h1
+      apply Finset.lcm_dvd_lcm
+      intro i hi
+      apply IsAlgebraic.natDenominator_mul_dvd_mul
 
-#check IsAlgebraic.add
-#check IsAlgebraic.mul
+-- also need Cauchy product
+
+end IsESeq
 
 end
 
