@@ -163,7 +163,6 @@ theorem Polynomial.resultantAdd_def {R : Type*} [CommRing R] (f g : R[X]) (m n :
       · simp
   · rwa [natDegree_map_eq_of_injective C_injective]
 
-
 noncomputable def Polynomial.resultantAdd_map {R S : Type*} [CommRing R] [CommRing S] (f g : R[X])
     (φ : R →+* S) (hf : (f.map φ).natDegree = f.natDegree) (hg : (g.map φ).natDegree = g.natDegree) :
     (f.resultantAdd g).map φ = (f.map φ).resultantAdd (g.map φ) := by
@@ -176,15 +175,65 @@ noncomputable def Polynomial.resultantAdd_map {R S : Type*} [CommRing R] [CommRi
     simp
   · rw [map_map, mapRingHom_comp_C, coe_mapRingHom, map_map]
 
+-- theorem Polynomial.resultantAdd_eval_eq_zero_iff {R S : Type*} [CommRing R] [IsDomain R]
+--     (f g : R[X]) (hf : f.Splits) (hf0 : f ≠ 0) (hg0 : f ≠ 0) (x : R) :
+--     (f.resultantAdd g).eval x = 0 ↔ ∃ y z, x = y + z ∧ f.eval x = 0 ∧ g.eval y = 0 := by
+--   rw [resultantAdd, Polynomial.resultant_eq_prod_eval, eval_mul]
+--   · rw [mul_eq_zero, eval_pow, pow_eq_zero_iff', leadingCoeff_comp]
+--     · rw [leadingCoeff_sub_of_degree_lt', eval_mul, leadingCoeff_map_of_injective C_injective,
+--         eval_C, mul_eq_zero]
+--       · simp only [leadingCoeff_ne_zero.mpr hf0, false_or]
+--         rw [natDegree_map_eq_of_injective C_injective,
+--           natDegree_map_eq_of_injective C_injective, leadingCoeff_X, eval_pow,
+--           eval_neg, eval_one, pow_eq_zero_iff', neg_eq_zero]
+--         simp only [one_ne_zero]
+--         rw [false_and, false_and, false_or]
+--         rw [eval_multiset_prod, Multiset.prod_eq_zero_iff]
+--         simp [eval_sub]
+
+--         sorry
+--       · simp
+--     · rw [natDegree_sub_eq_right_of_natDegree_lt] <;> simp
+--   · exact le_rfl
+--   · apply (hf.map C).comp_of_degree_le_one_of_invertible
+--     · compute_degree
+--     · let : Invertible (1 : R[X]) := invertibleOne
+--       let : Invertible (-1 : R[X]) := invertibleNeg 1
+--       rw [leadingCoeff_sub_of_degree_lt' (by simp)]
+--       rwa [leadingCoeff_X]
+
+
 -- maybe need to generalize to say that it's in the span or something?
 theorem resultantAdd_eval_eq_zero {R : Type*} [CommRing R] {f g : R[X]} {x y : R}
+    (hf : f ≠ 0) (hg : g ≠ 0)
     (hx : f.eval x = 0) (hy : g.eval y = 0) : (resultantAdd f g).eval (x + y) = 0 := by
-  revert x y
+  revert x y hf hg
   apply Polynomial.induction_of_Splits_of_injective_of_surjective' f g
-  · intro R _ f g hf hg x y hx hy
+  · intro R _ f g hf hg x y hf' hg' hx hy
     rw [resultantAdd, Polynomial.resultant_eq_prod_eval]
-    ·
-      sorry
+    · rw [eval_mul, eval_pow, leadingCoeff_comp, eval_mul,
+        leadingCoeff_map_of_injective C_injective, eval_C, eval_pow,
+        natDegree_map_eq_of_injective C_injective, natDegree_map_eq_of_injective C_injective,
+        leadingCoeff_sub_of_degree_lt', leadingCoeff_X, eval_neg, eval_one,
+        eval_multiset_prod]
+      · apply mul_eq_zero_of_right
+        rw [Multiset.prod_eq_zero_iff, Multiset.mem_map]
+        simp only [Multiset.map_map, Function.comp_apply, Multiset.prod_eq_zero_iff,
+          Multiset.mem_map, mem_roots', ne_eq, IsRoot.def, eval_comp, eval_sub, eval_C, eval_X]
+        simp
+        use X - C x
+        simp [hx]
+        rw [eval_map]
+        rw [comp_eq_zero_iff, Polynomial.map_eq_zero_iff C_injective]
+        simp only [hf']
+        simp only [coeff_sub, coeff_C_zero, coeff_X_zero, sub_zero, sub_eq_self, X_ne_zero,
+          and_false, or_self, not_false_eq_true, true_and]
+        rw [← eval_map]
+        sorry
+      · simp
+      · rw [natDegree_sub_eq_right_of_natDegree_lt]
+        simp
+        simp
     · exact le_rfl
     · apply (hf.map C).comp_of_natDegree_le_one_of_invertible
       · compute_degree
@@ -193,19 +242,68 @@ theorem resultantAdd_eval_eq_zero {R : Type*} [CommRing R] {f g : R[X]} {x y : R
         have : Invertible (1 : R[X]) := invertibleOne
         apply invertibleNeg 1
         simp
-  · intro R S _ _ φ hφ f g h x y hx hy
-    specialize @h (φ x) (φ y) (by simp [hx]) (by simp [hy])
+  · intro R S _ _ φ hφ f g h x y hf hg hx hy
+    specialize @h (φ x) (φ y) ((Polynomial.map_ne_zero_iff hφ).mpr hf)
+      ((Polynomial.map_ne_zero_iff hφ).mpr hg) (by simp [hx]) (by simp [hy])
     rwa [← resultantAdd_map f g φ (f.natDegree_map_eq_of_injective hφ)
       (g.natDegree_map_eq_of_injective hφ), ← map_add, eval_map_apply, map_eq_zero_iff φ hφ] at h
-  · intro R S _ _ φ hφ f g h x y hx hy
+  · intro R S _ _ φ hφ f g h x y hf hg hx hy
     have hf : f ∈ lifts φ := by exact (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
     have hg : g ∈ lifts φ := by exact (lifts_iff_coeff_lifts g).mpr fun n ↦ hφ (g.coeff n)
     obtain ⟨f, rfl, hf⟩ := Polynomial.exists_degree_eq_of_mem_lifts hf
     obtain ⟨g, rfl, hg⟩ := Polynomial.exists_degree_eq_of_mem_lifts hg
     obtain ⟨x, rfl⟩ := hφ x
     obtain ⟨y, rfl⟩ := hφ y
-    rw [← resultantAdd_map f g φ, ← map_add, eval_map_apply]
-    sorry
+    let f' := f - C (f.eval x)
+    let g' := g - C (g.eval y)
+    have key1 : (f.map φ).natDegree ≠ 0 := by
+      intro h
+      have := eq_C_of_natDegree_eq_zero h
+      rw [this, eval_C] at hx
+      rw [hx, C_0] at this
+      contradiction
+    have key2 : (g.map φ).natDegree ≠ 0 := by
+      intro h
+      have := eq_C_of_natDegree_eq_zero h
+      rw [this, eval_C] at hy
+      rw [hy, C_0] at this
+      contradiction
+    by_cases hf' : f' = 0
+    · rw [sub_eq_zero] at hf'
+      rw [hf', map_C, resultantAdd, map_C, C_comp, resultant_C_left]
+      simp [natDegree_map_eq_of_injective C_injective]
+      rwa [← eval_map_apply, hx, zero_pow]
+    by_cases hg' : g' = 0
+    · rw [sub_eq_zero] at hg'
+      rw [hg', map_C, resultantAdd, map_C, resultant_C_right]
+      simp
+      rw [← eval_map_apply, hy, zero_pow]
+      rw [natDegree_comp_eq_of_mul_ne_zero, natDegree_map_eq_of_injective C_injective,
+        mul_ne_zero_iff]
+      simp [key1]
+      rw [natDegree_sub_eq_right_of_natDegree_lt]
+      have : Nontrivial S := by (expose_names; exact Nontrivial.of_polynomial_ne hf_1)
+      have : Nontrivial S[X] := by exact Polynomial.nontrivial_iff.mpr this
+      simp
+      simp
+      have : Nontrivial S := by (expose_names; exact Nontrivial.of_polynomial_ne hf_1)
+      rw [natDegree_X]
+      simp
+      rw [leadingCoeff_map_of_injective C_injective]
+      rw [leadingCoeff_sub_of_degree_lt', leadingCoeff_X]
+      rwa [ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
+      have : Nontrivial S := by (expose_names; exact Nontrivial.of_polynomial_ne hf_1)
+      simp
+    specialize @h f' g' x y hf' hg' (by simp [f']) (by simp [g'])
+    apply_fun φ at h
+    rw [eval_map_apply] at hx hy
+    rw [← eval_map_apply, resultantAdd_map] at h
+    simp only [f', g'] at h
+    rw [Polynomial.map_sub,Polynomial.map_sub, map_C, map_C, hx, hy, C_0, sub_zero, sub_zero,
+      map_add, map_zero] at h
+    exact h
+    · rw [Polynomial.map_sub, map_C, natDegree_sub_C, natDegree_sub_C, natDegree, natDegree, hf]
+    · rw [Polynomial.map_sub, map_C, natDegree_sub_C, natDegree_sub_C, natDegree, natDegree, hg]
 
 variable {R : Type*} [CommRing R]
 
