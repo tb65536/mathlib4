@@ -31,22 +31,22 @@ In this file, we define Artin L-functions.
 @[expose] public section
 
 -- PRed
-open scoped Pointwise in
-theorem IsArithFrobAt.mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (g : G) (Q : Ideal S)
-    [Q.IsPrime]
-    (h : IsArithFrobAt R g Q) : g ∈ MulAction.stabilizer G Q := by
-  rw [MulAction.mem_stabilizer_iff]
-  conv_lhs => rw [← h.comap_eq]
-  exact Q.map_comap_eq_self_of_equiv (MulSemiringAction.toRingEquiv G S g)
+-- open scoped Pointwise in
+-- theorem IsArithFrobAt.mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+--     {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (g : G) (Q : Ideal S)
+--     [Q.IsPrime]
+--     (h : IsArithFrobAt R g Q) : g ∈ MulAction.stabilizer G Q := by
+--   rw [MulAction.mem_stabilizer_iff]
+--   conv_lhs => rw [← h.comap_eq]
+--   exact Q.map_comap_eq_self_of_equiv (MulSemiringAction.toRingEquiv G S g)
 
--- PRed
-open scoped Pointwise in
-theorem arithFrobAt_mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    (G : Type*) [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (Q : Ideal S) [Finite G]
-    [Algebra.IsInvariant R S G] [Q.IsPrime] [Finite (S ⧸ Q)] :
-    arithFrobAt R G Q ∈ MulAction.stabilizer G Q := by
-  apply (IsArithFrobAt.arithFrobAt R G Q).mem_stabilizer
+-- -- PRed
+-- open scoped Pointwise in
+-- theorem arithFrobAt_mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+--     (G : Type*) [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (Q : Ideal S) [Finite G]
+--     [Algebra.IsInvariant R S G] [Q.IsPrime] [Finite (S ⧸ Q)] :
+--     arithFrobAt R G Q ∈ MulAction.stabilizer G Q := by
+--   exact IsArithFrobAt.arithFrobAt_mem_stabilizer R G Q
 
 namespace Representation
 
@@ -209,7 +209,7 @@ theorem localPolynomial_eq (q : Ideal (𝓞 L)) [q.LiesOver p.1] [q.IsMaximal]
     letI D : Subgroup G := MulAction.stabilizer G q
     letI I : Subgroup D := (q.inertia G).subgroupOf D
     letI ρ' : Representation k D V := ρ.comp D.subtype
-    letI σ' : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+    letI σ' : D := ⟨arithFrobAt (𝓞 K) G q, IsArithFrobAt.arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
     ρ.localPolynomial K L p = (ρ'.toCoinvariants I σ').charpoly.reverse := by
   letI : Finite G := IsGaloisGroup.finite G K L
   let q' : Ideal (𝓞 L) := p.1.nonempty_primesOver.some.1
@@ -219,7 +219,7 @@ theorem localPolynomial_eq (q : Ideal (𝓞 L)) [q.LiesOver p.1] [q.IsMaximal]
   letI D : Subgroup G := MulAction.stabilizer G q
   letI I : Subgroup D := (q.inertia G).subgroupOf D
   letI ρ' : Representation k D V := ρ.comp D.subtype
-  letI σ'' : D := ⟨arithFrobAt (𝓞 K) G q, arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
+  letI σ'' : D := ⟨arithFrobAt (𝓞 K) G q, IsArithFrobAt.arithFrobAt_mem_stabilizer (𝓞 K) G q⟩
   change ρ.localPolynomial K L p = (ρ'.toCoinvariants I σ'').charpoly.reverse
   rw [ρ.localPolynomial_def K L p σ' hσ']
   letI D' : Subgroup G := MulAction.stabilizer G q'
