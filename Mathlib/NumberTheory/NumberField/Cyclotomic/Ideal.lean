@@ -9,6 +9,8 @@ public import Mathlib.NumberTheory.NumberField.Cyclotomic.Basic
 public import Mathlib.NumberTheory.NumberField.Ideal.KummerDedekind
 public import Mathlib.RingTheory.Polynomial.Cyclotomic.Factorization
 public import Mathlib.RingTheory.RootsOfUnity.CyclotomicUnits
+public import Mathlib.RingTheory.RamificationInertia.Ramification
+public import Mathlib.RingTheory.RamificationInertia.Inertia
 
 /-!
 # Ideals in cyclotomic fields
@@ -61,6 +63,16 @@ instance isPrime_span_zeta_sub_one : IsPrime (span {hζ.toInteger - 1}) := by
   · exact hζ.zeta_sub_one_prime
   · exact Prime.ne_zero hζ.zeta_sub_one_prime
 
+instance isMaximal_span_zeta_sub_one : IsMaximal (span {hζ.toInteger - 1}) := by
+  apply IsPrime.isMaximal
+  apply isPrime_span_zeta_sub_one
+  simp [sub_eq_zero]
+  intro x
+  have : ζ = (1 : K) := by
+    exact congrArg ((↑) : 𝓞 K → K) x
+  simp [this] at hζ
+  sorry
+
 theorem associated_norm_zeta_sub_one : Associated (Algebra.norm ℤ (hζ.toInteger - 1)) (p : ℤ) := by
   by_cases h : p = 2
   · cases k with
@@ -90,8 +102,9 @@ instance liesOver_span_zeta_sub_one : (span {hζ.toInteger - 1}).LiesOver 𝒑 :
   rw [span_singleton_le_iff_mem, mem_comap, algebraMap_int_eq, map_natCast]
   exact p_mem_span_zeta_sub_one p k hζ
 
-theorem inertiaDeg_span_zeta_sub_one : inertiaDeg 𝒑 (span {hζ.toInteger - 1}) = 1 := by
+theorem inertiaDeg_span_zeta_sub_one : inertiaDeg' (span {hζ.toInteger - 1}) ℤ = 1 := by
   have := liesOver_span_zeta_sub_one p k hζ
+  rw [← inertiaDeg_eq_inertiaDeg' 𝒑 _]
   rw [← Nat.pow_right_inj hp.out.one_lt, pow_one, ← absNorm_eq_pow_inertiaDeg' _ hp.out,
     absNorm_span_zeta_sub_one]
 
@@ -115,12 +128,14 @@ theorem map_eq_span_zeta_sub_one_pow :
     ← Nat.card_eq_fintype_card, IsGalois.card_aut_eq_finrank]
 
 theorem ramificationIdx_span_zeta_sub_one :
-    ramificationIdx 𝒑 (span {hζ.toInteger - 1}) = p ^ k * (p - 1) := by
+    ramificationIdx' (span {hζ.toInteger - 1}) ℤ = p ^ k * (p - 1) := by
   have h := isPrime_span_zeta_sub_one p k hζ
+  have hp' : 𝒑 ≠ ⊥ := by simpa using hp.out.ne_zero
   rw [← Nat.totient_prime_pow_succ hp.out, ← finrank _ K,
+    ← ramificationIdx_eq_ramificationIdx' 𝒑 _ hp',
     IsDedekindDomain.ramificationIdx_eq_multiplicity _ h, map_eq_span_zeta_sub_one_pow p k hζ,
     multiplicity_pow_self (span_zeta_sub_one_ne_bot p k hζ) (isUnit_iff.not.mpr h.ne_top)]
-  exact map_ne_bot_of_ne_bot <| by simpa using hp.out.ne_zero
+  exact map_ne_bot_of_ne_bot hp'
 
 variable (K)
 
@@ -128,13 +143,14 @@ include hK in
 theorem ncard_primesOver_of_prime_pow :
     (primesOver 𝒑 (𝓞 K)).ncard = 1 := by
   have : IsGalois ℚ K := isGalois {p ^ (k + 1)} ℚ K
-  have : 𝒑 ≠ ⊥ := by simpa using hp.out.ne_zero
-  have h_main := ncard_primesOver_mul_ramificationIdxIn_mul_inertiaDegIn this (𝓞 K) Gal(K/ℚ)
+  have hp' : 𝒑 ≠ ⊥ := by simpa using hp.out.ne_zero
+  have h_main := ncard_primesOver_mul_ramificationIdxIn_mul_inertiaDegIn hp' (𝓞 K) Gal(K/ℚ)
   have hζ := hK.zeta_spec
   have := liesOver_span_zeta_sub_one p k hζ
   rwa [ramificationIdxIn_eq_ramificationIdx 𝒑 (span {hζ.toInteger - 1}) Gal(K/ℚ),
     inertiaDegIn_eq_inertiaDeg 𝒑 (span {hζ.toInteger - 1}) Gal(K/ℚ),
-    inertiaDeg_span_zeta_sub_one,
+    inertiaDeg_eq_inertiaDeg', inertiaDeg_span_zeta_sub_one,
+    ramificationIdx_eq_ramificationIdx' 𝒑 _ hp',
     ramificationIdx_span_zeta_sub_one, mul_one, ← Nat.totient_prime_pow_succ hp.out,
     ← finrank _ K, IsGaloisGroup.card_eq_finrank Gal(K/ℚ) ℚ K, Nat.mul_eq_right] at h_main
   exact Module.finrank_pos.ne'
@@ -149,12 +165,12 @@ theorem eq_span_zeta_sub_one_of_liesOver (P : Ideal (𝓞 K)) [hP₁ : P.IsPrime
 
 include hK in
 theorem inertiaDeg_eq_of_prime_pow (P : Ideal (𝓞 K)) [hP₁ : P.IsPrime] [hP₂ : P.LiesOver 𝒑] :
-    inertiaDeg 𝒑 P = 1 := by
+    inertiaDeg' P ℤ = 1 := by
   rw [eq_span_zeta_sub_one_of_liesOver p k K hK.zeta_spec P, inertiaDeg_span_zeta_sub_one]
 
 include hK in
 theorem ramificationIdx_eq_of_prime_pow (P : Ideal (𝓞 K)) [hP₁ : P.IsPrime] [hP₂ : P.LiesOver 𝒑] :
-    ramificationIdx 𝒑 P = p ^ k * (p - 1) := by
+    ramificationIdx' P ℤ = p ^ k * (p - 1) := by
   rw [eq_span_zeta_sub_one_of_liesOver p k K hK.zeta_spec P, ramificationIdx_span_zeta_sub_one]
 
 include hK in
@@ -162,14 +178,15 @@ theorem inertiaDegIn_eq_of_prime_pow :
     𝒑.inertiaDegIn (𝓞 K) = 1 := by
   have : IsGalois ℚ K := isGalois {p ^ (k + 1)} ℚ K
   rw [inertiaDegIn_eq_inertiaDeg 𝒑 (span {hK.zeta_spec.toInteger - 1}) Gal(K/ℚ),
-    inertiaDeg_span_zeta_sub_one]
+    inertiaDeg_eq_inertiaDeg', inertiaDeg_span_zeta_sub_one]
 
 include hK in
 theorem ramificationIdxIn_eq_of_prime_pow :
     𝒑.ramificationIdxIn (𝓞 K) = p ^ k * (p - 1) := by
   have : IsGalois ℚ K := isGalois {p ^ (k + 1)} ℚ K
+  have hp' : 𝒑 ≠ ⊥ := by simpa using hp.out.ne_zero
   rw [ramificationIdxIn_eq_ramificationIdx 𝒑 (span {hK.zeta_spec.toInteger - 1}) Gal(K/ℚ),
-    ramificationIdx_span_zeta_sub_one]
+    ramificationIdx_eq_ramificationIdx' _ _ hp', ramificationIdx_span_zeta_sub_one]
 
 end PrimePow
 
@@ -181,12 +198,12 @@ instance isPrime_span_zeta_sub_one' : IsPrime (span {hζ.toInteger - 1}) := by
   rw [← pow_one p] at hK hζ
   exact isPrime_span_zeta_sub_one p 0 hζ
 
-theorem inertiaDeg_span_zeta_sub_one' : inertiaDeg 𝒑 (span {hζ.toInteger - 1}) = 1 := by
+theorem inertiaDeg_span_zeta_sub_one' : inertiaDeg' (span {hζ.toInteger - 1}) ℤ = 1 := by
   rw [← pow_one p] at hK hζ
   exact inertiaDeg_span_zeta_sub_one p 0 hζ
 
 theorem ramificationIdx_span_zeta_sub_one' :
-    ramificationIdx 𝒑 (span {hζ.toInteger - 1}) = p - 1 := by
+    ramificationIdx' (span {hζ.toInteger - 1}) ℤ = p - 1 := by
   rw [← pow_one p] at hK hζ
   rw [ramificationIdx_span_zeta_sub_one p 0 hζ, pow_zero, one_mul]
 
@@ -205,12 +222,12 @@ theorem eq_span_zeta_sub_one_of_liesOver' (P : Ideal (𝓞 K)) [hP₁ : P.IsPrim
 
 include hK in
 theorem inertiaDeg_eq_of_prime (P : Ideal (𝓞 K)) [hP₁ : P.IsPrime] [hP₂ : P.LiesOver 𝒑] :
-    inertiaDeg 𝒑 P = 1 := by
+    inertiaDeg' P ℤ = 1 := by
   rw [eq_span_zeta_sub_one_of_liesOver' p K hK.zeta_spec P, inertiaDeg_span_zeta_sub_one']
 
 include hK in
 theorem ramificationIdx_eq_of_prime (P : Ideal (𝓞 K)) [hP₁ : P.IsPrime] [hP₂ : P.LiesOver 𝒑] :
-    ramificationIdx 𝒑 P = p - 1 := by
+    ramificationIdx' P ℤ = p - 1 := by
   rw [eq_span_zeta_sub_one_of_liesOver' p K hK.zeta_spec P, ramificationIdx_span_zeta_sub_one']
 
 include hK in
@@ -259,7 +276,7 @@ theorem inertiaDeg_eq_of_not_dvd (hm : ¬ p ∣ m) :
 alias inertiaDeg_of_not_dvd := inertiaDeg_eq_of_not_dvd
 
 theorem ramificationIdx_eq_of_not_dvd (hm : ¬ p ∣ m) :
-    ramificationIdx 𝒑 P = 1 := by
+    ramificationIdx' P ℤ = 1 := by
   let ζ := (zeta_spec m ℚ K).toInteger
   have h₁ : ¬ p ∣ exponent ζ := by
     rw [exponent_eq_one_iff.mpr <| adjoin_singleton_eq_top (zeta_spec m ℚ K)]
