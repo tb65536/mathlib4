@@ -103,6 +103,16 @@ end IsAlgebraic
 
 namespace Polynomial
 
+theorem mem_lifts_of_surjective {R S : Type*} [CommRing R] [CommRing S]
+    {φ : R →+* S} (hφ : Function.Surjective φ) (f : S[X]) :
+    f ∈ lifts φ :=
+  (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
+
+theorem exists_natDegree_eq_of_mem_lifts {R S : Type*} [Semiring R] [Semiring S]
+    {f : R →+* S}
+    {p : S[X]} (hp : p ∈ lifts f) : ∃ q, map f q = p ∧ q.natDegree = p.natDegree :=
+  (exists_degree_eq_of_mem_lifts hp).imp fun _ ↦ And.imp_right natDegree_eq_of_degree_eq
+
 variable {R S : Type*} [CommRing R] [CommRing S] (f g : R[X]) (φ : R →+* S)
 
 /-- A polynomial whose roots are the sums of the roots of `f` and `g`. -/
@@ -139,6 +149,69 @@ theorem addRoots_zero_right (hf : f.natDegree ≠ 0) : addRoots f 0 = 0 := by
   contrapose! hf
   rw [hf, natDegree_zero]
 
+theorem map_comp_neg_X : (f.comp (-X)).map φ = (f.map φ).comp (-X) := by
+  rw [map_comp, Polynomial.map_neg, map_X]
+
+theorem natDegree_comp_neg_X : (f.comp (-X)).natDegree = f.natDegree := by
+  exact natDegree_eq_of_degree_eq (f.degree_comp_neg_X)
+
+theorem roots_comp_neg_X [IsDomain R] : (f.comp (-X)).roots = f.roots.map (fun x ↦ -x) := by
+  sorry
+
+theorem resultant_comp_neg_X : (f.comp (-X)).resultant (g.comp (-X)) = g.resultant f := by
+  revert g
+  apply induction_of_Splits_of_injective_of_surjective f
+  · intro R _ f hf g
+    rw [resultant_eq_prod_eval _ _ _ le_rfl hf.comp_neg_X, resultant_comm,
+      resultant_eq_prod_eval _ _ _ le_rfl hf, comp_neg_X_leadingCoeff_eq,
+      natDegree_comp_neg_X]
+    rw [mul_pow, ← pow_mul', ← mul_assoc, roots_comp_neg_X]
+    simp
+  · intro R S _ _ φ hφ f h g
+    apply hφ
+    specialize h (g.map φ)
+    rw [← map_comp_neg_X, ← map_comp_neg_X, resultant_map_map, resultant_map_map,
+      map_comp_neg_X, map_comp_neg_X, natDegree_comp_neg_X, natDegree_comp_neg_X,
+      natDegree_map_eq_of_injective hφ, natDegree_map_eq_of_injective hφ] at h
+    rwa [natDegree_comp_neg_X, natDegree_comp_neg_X]
+  · intro R S _ _ φ hφ f h g
+    obtain ⟨f, rfl, hf'⟩ := exists_natDegree_eq_of_mem_lifts (mem_lifts_of_surjective hφ f)
+    obtain ⟨g, rfl, hg'⟩ := exists_natDegree_eq_of_mem_lifts (mem_lifts_of_surjective hφ g)
+    rw [← map_comp_neg_X, ← map_comp_neg_X, resultant_map_map, resultant_map_map,
+      map_comp_neg_X, map_comp_neg_X, natDegree_comp_neg_X, natDegree_comp_neg_X, ← hf', ← hg',
+      ← h, natDegree_comp_neg_X, natDegree_comp_neg_X]
+
+theorem addRoots_comm' : f.addRoots g = g.addRoots f := by
+  nontriviality R
+  by_cases hf0 : f = 0
+  · rw [hf0]
+    by_cases hg : g.natDegree = 0
+    · rw [addRoots_def, addRoots_def]
+      simp [natDegree_map_eq_of_injective C_injective, hg]
+      rw [eq_comm, zero_pow_eq_one₀]
+      rw [← le_zero_iff]
+      grw [natDegree_comp_le]
+      rw [natDegree_map_eq_of_injective C_injective, hg, zero_mul]
+    · rw [addRoots_zero_left, addRoots_zero_right] <;> exact hg
+  rw [addRoots_def, resultant_comm, natDegree_comp_eq_of_mul_ne_zero,
+    natDegree_map_eq_of_injective C_injective, natDegree_sub, natDegree_sub_C,
+    natDegree_X, mul_one, natDegree_map_eq_of_injective C_injective]
+  · congr 1
+    rw [addRoots_def]
+    rw [← resultant_taylor _ _ X, taylor_apply, Polynomial.comp_assoc,
+      sub_comp, C_comp, X_comp, sub_add_cancel_right, taylor_apply]
+    rw [← resultant_comp_neg_X, comp_assoc, comp_neg_X_comp_neg_X, add_comp,
+      X_comp, C_comp, neg_add_eq_sub]
+    rw [← resultant_comm, natDegree_map_eq_of_injective C_injective]
+    congr 1
+    · rw [natDegree_comp_eq_of_mul_ne_zero]
+      · rw [natDegree_map_eq_of_injective C_injective,
+          natDegree_sub_eq_right_of_natDegree_lt (by simp), natDegree_X, mul_one]
+      · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
+          leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
+  · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
+      leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
+
 theorem addRoots_comm : f.addRoots g = (-1) ^ (f.natDegree * g.natDegree) * g.addRoots f := by
   nontriviality R
   by_cases hf0 : f = 0
@@ -156,8 +229,13 @@ theorem addRoots_comm : f.addRoots g = (-1) ^ (f.natDegree * g.natDegree) * g.ad
     natDegree_X, mul_one, natDegree_map_eq_of_injective C_injective]
   · congr 1
     rw [addRoots_def]
-    -- use resultant_taylor
-    sorry
+    rw [← resultant_taylor _ _ X, taylor_apply, Polynomial.comp_assoc,
+      sub_comp, C_comp, X_comp, sub_add_cancel_right, taylor_apply]
+    rw [← resultant_comp_neg_X, comp_assoc, comp_neg_X_comp_neg_X, add_comp,
+      X_comp, C_comp, neg_add_eq_sub]
+    congr 1
+    · sorry
+    · sorry
   · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
       leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
 
@@ -211,17 +289,6 @@ theorem eval_eval_X_sub_C_map_C {R : Type*} [CommRing R] {x y : R} {f : R[X]} :
     eval x (eval (X - C y) (map C f)) = eval (x - y) f := by
   simp_rw [eval_map, eval₂_def, eval_sum, eval_mul, eval_pow, eval_sub]
   simp [eval_eq_sum]
-
-
-theorem Polynomial.mem_lifts_of_surjective {R S : Type*} [CommRing R] [CommRing S]
-    {φ : R →+* S} (hφ : Function.Surjective φ) (f : S[X]) :
-    f ∈ lifts φ :=
-  (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
-
-theorem Polynomial.exists_natDegree_eq_of_mem_lifts {R S : Type*} [Semiring R] [Semiring S]
-    {f : R →+* S}
-    {p : S[X]} (hp : p ∈ lifts f) : ∃ q, map f q = p ∧ q.natDegree = p.natDegree :=
-  (exists_degree_eq_of_mem_lifts hp).imp fun _ ↦ And.imp_right natDegree_eq_of_degree_eq
 
 theorem Polynomial.degree_pos_of_eval_root {R : Type*} [Semiring R] {p : R[X]} (hp : p ≠ 0)
     {z : R} (hz : p.eval z = 0) : 0 < p.degree :=
