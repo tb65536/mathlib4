@@ -101,24 +101,39 @@ theorem natDenominator_mul_dvd_mul {x y : S} :
 
 end IsAlgebraic
 
-section
+namespace Polynomial
 
-open Polynomial
+variable {R : Type*} [CommRing R] (f g : R[X])
 
-noncomputable def Polynomial.resultantAdd {R : Type*} [CommRing R] (f g : R[X]) : R[X] :=
+/-- A polynomial whose roots are the sums of the roots of `f` and `g`. -/
+noncomputable def addRoots : R[X] :=
   ((f.map C).comp (C X - X)).resultant (g.map C)
 
-theorem Polynomial.resultantAdd_zero_left
-    {R : Type*} [CommRing R] (f : R[X]) (hf : f.natDegree ≠ 0) :
-    resultantAdd 0 f = 0 := by
-  simp [resultantAdd, natDegree_map_eq_of_injective C_injective, zero_pow hf]
+theorem addRoots_def :
+    f.addRoots g = ((f.map C).comp (C X - X)).resultant (g.map C) := by
+  rfl
 
-theorem Polynomial.resultantAdd_zero_right
-    {R : Type*} [CommRing R] (f : R[X]) (hf : f.natDegree ≠ 0) :
-    resultantAdd f 0 = 0 := by
+theorem addRoots_eq (m n : ℕ) (hm : f.natDegree = m) (hn : g.natDegree = n) :
+    f.addRoots g = ((f.map C).comp (C X - X)).resultant (g.map C) m n := by
   nontriviality R
-  rw [resultantAdd]
-  simp
+  rw [addRoots_def]
+  congr
+  · by_cases hf : f = 0
+    · simpa [hf] using hm
+    · rwa [natDegree_comp_eq_of_mul_ne_zero, natDegree_map_eq_of_injective C_injective,
+        natDegree_sub_eq_right_of_natDegree_lt (by simp), natDegree_X, mul_one]
+      rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
+        leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
+  · rwa [natDegree_map_eq_of_injective C_injective]
+
+theorem addRoots_zero_left (hg : g.natDegree ≠ 0) : addRoots 0 g = 0 := by
+  rw [addRoots_def, Polynomial.map_zero, zero_comp, resultant_zero_left,
+    natDegree_map_eq_of_injective C_injective, zero_pow hg, zero_mul]
+
+theorem addRoots_zero_right (hf : f.natDegree ≠ 0) :
+    addRoots f 0 = 0 := by
+  nontriviality R
+  rw [addRoots_def, Polynomial.map_zero, resultant_zero_right, zero_pow, zero_mul]
   rwa [natDegree_comp_eq_of_mul_ne_zero, natDegree_map_eq_of_injective C_injective,
     natDegree_sub, natDegree_sub_C, natDegree_X, mul_one]
   rw [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
@@ -126,17 +141,23 @@ theorem Polynomial.resultantAdd_zero_right
   contrapose! hf
   rw [hf, natDegree_zero]
 
+end Polynomial
+
+section
+
+open Polynomial
+
 theorem eval_eval_X_sub_C_map_C {R : Type*} [CommRing R] {x y : R} {f : R[X]} :
     eval x (eval (X - C y) (map C f)) = eval (x - y) f := by
   simp_rw [eval_map, eval₂_def, eval_sum, eval_mul, eval_pow, eval_sub]
   simp [eval_eq_sum]
 
-theorem Polynomial.resultantAdd_eq_prod {R : Type*} [CommRing R] [IsDomain R] (f g : R[X]) (hf : f.Splits) :
-    f.resultantAdd g = (C f.leadingCoeff * (-1) ^ f.natDegree) ^ g.natDegree *
+theorem Polynomial.addRoots_eq_prod {R : Type*} [CommRing R] [IsDomain R] (f g : R[X]) (hf : f.Splits) :
+    f.addRoots g = (C f.leadingCoeff * (-1) ^ f.natDegree) ^ g.natDegree *
       (f.roots.map fun x ↦ eval (X - C x) (map C g)).prod := by
   by_cases hf0 : f = 0
-  · simp [hf0, resultantAdd, natDegree_map_eq_of_injective C_injective]
-  rw [resultantAdd, resultant_eq_prod_eval]
+  · simp [hf0, addRoots, natDegree_map_eq_of_injective C_injective]
+  rw [addRoots, resultant_eq_prod_eval]
   · rw [leadingCoeff_comp (by simp [natDegree_sub]), natDegree_map_eq_of_injective C_injective,
       leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
       leadingCoeff_X, natDegree_map_eq_of_injective C_injective, hf.eq_prod_roots,
@@ -159,36 +180,23 @@ theorem Polynomial.resultantAdd_eq_prod {R : Type*} [CommRing R] [IsDomain R] (f
     have : Invertible (1 : R[X]) := invertibleOne
     exact invertibleNeg 1
 
-theorem Polynomial.resultantAdd_def {R : Type*} [CommRing R] (f g : R[X]) (m n : ℕ)
-    (hm : f.natDegree = m) (hn : g.natDegree = n) :
-    f.resultantAdd g = ((f.map C).comp (C X - X)).resultant (g.map C) m n := by
-  nontriviality R
-  rw [resultantAdd]
-  congr
-  · by_cases hf : f = 0
-    · simpa [hf] using hm
-    · rw [natDegree_comp_eq_of_mul_ne_zero]
-      · rwa [natDegree_sub_eq_right_of_natDegree_lt (by simp), natDegree_X, mul_one,
-          natDegree_map_eq_of_injective C_injective]
-      · rwa [leadingCoeff_sub_of_degree_lt' (by simp), leadingCoeff_map_of_injective C_injective,
-          leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
-  · rwa [natDegree_map_eq_of_injective C_injective]
 
--- probably rename to `map_resultantAdd`
-noncomputable def Polynomial.resultantAdd_map {R S : Type*} [CommRing R] [CommRing S] (f g : R[X])
+
+-- probably rename to `map_addRoots`
+noncomputable def Polynomial.addRoots_map {R S : Type*} [CommRing R] [CommRing S] (f g : R[X])
     (φ : R →+* S)
     (hf : (f.map φ).natDegree = f.natDegree) (hg : (g.map φ).natDegree = g.natDegree) :
-    (f.resultantAdd g).map φ = (f.map φ).resultantAdd (g.map φ) := by
-  rw [resultantAdd_def f g f.natDegree g.natDegree rfl rfl,
-    resultantAdd_def (f.map φ) (g.map φ) f.natDegree g.natDegree hf hg, map_map, map_map,
+    (f.addRoots g).map φ = (f.map φ).addRoots (g.map φ) := by
+  rw [addRoots_eq f g f.natDegree g.natDegree rfl rfl,
+    addRoots_eq (f.map φ) (g.map φ) f.natDegree g.natDegree hf hg, map_map, map_map,
     ← mapRingHom_comp_C, ← map_map, ← map_map, ← coe_mapRingHom φ, ← resultant_map_map,
     map_comp, Polynomial.map_sub, map_C, coe_mapRingHom, map_X, map_X]
 
-noncomputable def Polynomial.resultantAdd_map_of_injective
+noncomputable def Polynomial.addRoots_map_of_injective
     {R S : Type*} [CommRing R] [CommRing S] (f g : R[X])
     (φ : R →+* S) (hφ : Function.Injective φ) :
-    (f.resultantAdd g).map φ = (f.map φ).resultantAdd (g.map φ) := by
-  apply Polynomial.resultantAdd_map
+    (f.addRoots g).map φ = (f.map φ).addRoots (g.map φ) := by
+  apply Polynomial.addRoots_map
   · exact natDegree_map_eq_of_injective hφ f
   · exact natDegree_map_eq_of_injective hφ g
 
@@ -210,29 +218,48 @@ theorem Polynomial.natDegree_pos_of_eval_root {R : Type*} [Semiring R] {p : R[X]
     {z : R} (hz : p.eval z = 0) : 0 < p.natDegree :=
   natDegree_pos_of_eval₂_root hp (RingHom.id R) hz (fun _ ↦ id)
 
--- todo: use this to prove that resultantAdd is nonzero
-theorem Polynomial.resultantAdd_eval_eq_zero_iff {R : Type*} [CommRing R] [IsDomain R] {f g : R[X]}
+-- todo: use this to prove that addRoots is nonzero
+theorem Polynomial.addRoots_eval_eq_zero_iff {R : Type*} [CommRing R] [IsDomain R] {f g : R[X]}
     (hf : f ≠ 0) (hf' : f.Splits) {z : R} :
-    (resultantAdd f g).eval z = 0 ↔ ∃ x y, z = x + y ∧ f.eval x = 0 ∧ g.eval y = 0 := by
-  rw [resultantAdd_eq_prod f g hf', eval_mul, mul_eq_zero_iff_left]
+    (addRoots f g).eval z = 0 ↔ ∃ x y, z = x + y ∧ f.eval x = 0 ∧ g.eval y = 0 := by
+  rw [addRoots_eq_prod f g hf', eval_mul, mul_eq_zero_iff_left]
   · rw [eval_multiset_prod, Multiset.map_map]
     simp [eval_eval_X_sub_C_map_C, hf]
     grind
   · simp [hf]
 
+-- todo: use this to prove that addRoots is nonzero
+theorem Polynomial.addRoots_eval_eq_zero_iff' {R : Type*} [CommRing R] [IsDomain R] {f g : R[X]}
+    (hf' : f.Splits) (hg' : g.Splits) {z : R} :
+    (addRoots f g).eval z = 0 ↔ ∃ x y, z = x + y ∧ f.eval x = 0 ∧ g.eval y = 0 := by
+  by_cases hf : f = 0
+  · simp [hf]
+    by_cases hg : g.natDegree = 0
+    · rw [Polynomial.eq_C_of_natDegree_eq_zero hg]
+      simp [addRoots]
+      sorry
+    · rw [addRoots_zero_left]
+      simp
+      · sorry
+      assumption
+
+  · apply Polynomial.addRoots_eval_eq_zero_iff
+    exact hf
+    exact hf'
+
 open Pointwise in
-theorem Polynomial.resultantAdd_ne_zero {R : Type*} [CommRing R] [IsDomain R] {f g : R[X]}
-    (hf : f ≠ 0) (hg : g ≠ 0) : resultantAdd f g ≠ 0 := by
+theorem Polynomial.addRoots_ne_zero {R : Type*} [CommRing R] [IsDomain R] {f g : R[X]}
+    (hf : f ≠ 0) (hg : g ≠ 0) : addRoots f g ≠ 0 := by
   let F := AlgebraicClosure (FractionRing R)
   have : Function.Injective (algebraMap R F) :=
     algebraMap_injective_of_field_isFractionRing R F (FractionRing R) F
   rw [← Polynomial.map_ne_zero_iff this]
   intro h
-  have key : ∀ z : F, (resultantAdd f g).aeval z = 0 := by
+  have key : ∀ z : F, (addRoots f g).aeval z = 0 := by
     intro z
     rw [← eval_map_algebraMap, h, eval_zero]
-  simp_rw [← eval_map_algebraMap, resultantAdd_map_of_injective _ _ _ this,
-    Polynomial.resultantAdd_eval_eq_zero_iff (f := f.map (algebraMap R F))
+  simp_rw [← eval_map_algebraMap, addRoots_map_of_injective _ _ _ this,
+    Polynomial.addRoots_eval_eq_zero_iff (f := f.map (algebraMap R F))
     (g := g.map (algebraMap R F)) (by simpa [Polynomial.map_ne_zero_iff this])
       (IsAlgClosed.splits _)] at key
   replace key : ∀ z : F, z ∈ f.rootSet F + g.rootSet F := by
@@ -250,41 +277,41 @@ theorem Polynomial.resultantAdd_ne_zero {R : Type*} [CommRing R] [IsDomain R] {f
   exact IsAlgClosed.instInfinite
 
 open Pointwise in
-theorem Polynomial.resultantAdd_rootSet {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+theorem Polynomial.addRoots_rootSet {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [IsDomain S] {f g : R[X]} (hf' : (f.map (algebraMap R S)).Splits) {z : R} :
-    (resultantAdd f g).rootSet S = f.rootSet S + g.rootSet S := by
+    (addRoots f g).rootSet S = f.rootSet S + g.rootSet S := by
   have h : Function.Injective (algebraMap R S) := sorry
   by_cases hf0 : f = 0
-  · simp [hf0, resultantAdd, zero_pow_eq]
+  · simp [hf0, addRoots, zero_pow_eq]
     split_ifs <;> simp
   by_cases hg0 : g = 0
-  · simp [hg0, resultantAdd, zero_pow_eq]
+  · simp [hg0, addRoots, zero_pow_eq]
     split_ifs <;> simp
   ext x
-  rw [mem_rootSet', resultantAdd_map _ _ _ (natDegree_map_eq_of_injective h f)
+  rw [mem_rootSet', addRoots_map _ _ _ (natDegree_map_eq_of_injective h f)
       (natDegree_map_eq_of_injective h g)]
   have hf0' : f.map (algebraMap R S) ≠ 0 := by rwa [Polynomial.map_ne_zero_iff h]
   have hg0' : g.map (algebraMap R S) ≠ 0 := by rwa [Polynomial.map_ne_zero_iff h]
-  rw [and_iff_right (resultantAdd_ne_zero hf0' hg0'), ← eval_map_algebraMap,
-    resultantAdd_map _ _ _ (natDegree_map_eq_of_injective h f)
-      (natDegree_map_eq_of_injective h g), resultantAdd_eval_eq_zero_iff hf0' hf',
+  rw [and_iff_right (addRoots_ne_zero hf0' hg0'), ← eval_map_algebraMap,
+    addRoots_map _ _ _ (natDegree_map_eq_of_injective h f)
+      (natDegree_map_eq_of_injective h g), addRoots_eval_eq_zero_iff hf0' hf',
       Set.mem_add]
   simp [mem_rootSet', hf0', hg0']
   grind
 
-theorem Polynomial.resultantAdd_eval_eq_zero
+theorem Polynomial.addRoots_eval_eq_zero
     {R : Type*} [CommRing R] {f g : R[X]} {x y : R} (hf : f ≠ 0) (hg : g ≠ 0)
-    (hx : f.eval x = 0) (hy : g.eval y = 0) : (resultantAdd f g).eval (x + y) = 0 := by
+    (hx : f.eval x = 0) (hy : g.eval y = 0) : (addRoots f g).eval (x + y) = 0 := by
   revert x y hf g
   apply Polynomial.induction_of_Splits_of_injective_of_surjective f
   · intro R _ f hf g x y hf' hg' hx hy
-    rw [resultantAdd_eval_eq_zero_iff]
+    rw [addRoots_eval_eq_zero_iff]
     exact ⟨x, y, rfl, hx, hy⟩
     all_goals assumption
   · intro R S _ _ φ hφ f h g x y hf hg hx hy
     specialize @h (g.map φ) (φ x) (φ y) ((Polynomial.map_ne_zero_iff hφ).mpr hf)
       ((Polynomial.map_ne_zero_iff hφ).mpr hg) (by simp [hx]) (by simp [hy])
-    rwa [← resultantAdd_map_of_injective f g φ hφ,
+    rwa [← addRoots_map_of_injective f g φ hφ,
       ← map_add, eval_map_apply, map_eq_zero_iff φ hφ] at h
   · intro R S _ _ φ hφ f h g x y hf hg hx hy
     obtain ⟨f, rfl, hf'⟩ := exists_natDegree_eq_of_mem_lifts (mem_lifts_of_surjective hφ f)
@@ -303,7 +330,7 @@ theorem Polynomial.resultantAdd_eval_eq_zero
       rw [hg, map_C, hy, C_0]
     specialize @h (f - C (f.eval x)) (g - C (g.eval y)) x y hf hg (by simp) (by simp)
     apply_fun φ at h
-    rwa [← eval_map_apply, resultantAdd_map, Polynomial.map_sub, Polynomial.map_sub, map_C, map_C,
+    rwa [← eval_map_apply, addRoots_map, Polynomial.map_sub, Polynomial.map_sub, map_C, map_C,
       ← eval_map_apply, hx, ← eval_map_apply, hy, C_0, sub_zero, sub_zero, map_zero, map_add] at h
     · simpa using hf'.symm
     · simpa using hg'.symm
@@ -321,10 +348,10 @@ protected theorem add {x y : R} {B C : ℝ}
   by_cases h : Function.Injective (algebraMap ℤ R)
   · obtain ⟨f, hf0, hfx, hf⟩ := hx.bounded
     obtain ⟨g, hg0, hgx, hg⟩ := hy.bounded
-    refine ⟨f.resultantAdd g, ?_, ?_, ?_⟩
-    · exact resultantAdd_ne_zero hf0 hg0
-    · rw [← eval_map_algebraMap, resultantAdd_map]
-      apply resultantAdd_eval_eq_zero
+    refine ⟨f.addRoots g, ?_, ?_, ?_⟩
+    · exact addRoots_ne_zero hf0 hg0
+    · rw [← eval_map_algebraMap, addRoots_map]
+      apply addRoots_eval_eq_zero
       · rwa [Polynomial.map_ne_zero_iff h]
       · rwa [Polynomial.map_ne_zero_iff h]
       · rwa [eval_map_algebraMap]
@@ -333,8 +360,8 @@ protected theorem add {x y : R} {B C : ℝ}
       · exact natDegree_map_eq_of_injective h g
     · intro x hx
       simp_rw [mem_aroots, ← eval_map_algebraMap] at hx hf hg
-      rw [resultantAdd_map_of_injective _ _ _
-        (RingHom.injective_int (algebraMap ℤ ℂ)), resultantAdd_eval_eq_zero_iff] at hx
+      rw [addRoots_map_of_injective _ _ _
+        (RingHom.injective_int (algebraMap ℤ ℂ)), addRoots_eval_eq_zero_iff] at hx
       · obtain ⟨a, b, rfl, ha, hb⟩ := hx.2
         specialize hf a
         specialize hg b
