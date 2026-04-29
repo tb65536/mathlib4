@@ -155,8 +155,25 @@ theorem map_comp_neg_X : (f.comp (-X)).map φ = (f.map φ).comp (-X) := by
 theorem natDegree_comp_neg_X : (f.comp (-X)).natDegree = f.natDegree := by
   exact natDegree_eq_of_degree_eq (f.degree_comp_neg_X)
 
+private theorem rootMultiplicity_comp_neg_X_le [IsDomain R] (a : R) :
+    (f.comp (-X)).rootMultiplicity a ≤ f.rootMultiplicity (-a) := by
+  by_cases hf : f = 0
+  · simp [hf]
+  have h := pow_rootMultiplicity_dvd (f.comp (-X)) a
+  rw [dvd_comp_neg_X_iff, pow_comp, sub_comp, X_comp, C_comp, ← neg_add', neg_pow] at h
+  simpa [le_rootMultiplicity_iff hf, isUnit_neg_one.pow] using h
+
+theorem rootMultiplicity_comp_neg_X [IsDomain R] (a : R) :
+    (f.comp (-X)).rootMultiplicity a = f.rootMultiplicity (-a) := by
+  refine le_antisymm (rootMultiplicity_comp_neg_X_le f a) ?_
+  simpa [comp_neg_X_comp_neg_X] using rootMultiplicity_comp_neg_X_le (f.comp (-X)) (-a)
+
 theorem roots_comp_neg_X [IsDomain R] : (f.comp (-X)).roots = f.roots.map (fun x ↦ -x) := by
-  sorry
+  classical
+  rw [Multiset.ext]
+  intro a
+  rw [count_roots, ← neg_neg a, Multiset.count_map_eq_count' Neg.neg f.roots neg_injective,
+    neg_neg, count_roots, rootMultiplicity_comp_neg_X]
 
 theorem resultant_comp_neg_X : (f.comp (-X)).resultant (g.comp (-X)) = g.resultant f := by
   revert g
@@ -209,33 +226,6 @@ theorem addRoots_comm' : f.addRoots g = g.addRoots f := by
           natDegree_sub_eq_right_of_natDegree_lt (by simp), natDegree_X, mul_one]
       · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
           leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
-  · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
-      leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
-
-theorem addRoots_comm : f.addRoots g = (-1) ^ (f.natDegree * g.natDegree) * g.addRoots f := by
-  nontriviality R
-  by_cases hf0 : f = 0
-  · rw [hf0, natDegree_zero, zero_mul, pow_zero, one_mul]
-    by_cases hg : g.natDegree = 0
-    · rw [addRoots_def, addRoots_def]
-      simp [natDegree_map_eq_of_injective C_injective, hg]
-      rw [eq_comm, zero_pow_eq_one₀]
-      rw [← le_zero_iff]
-      grw [natDegree_comp_le]
-      rw [natDegree_map_eq_of_injective C_injective, hg, zero_mul]
-    · rw [addRoots_zero_left, addRoots_zero_right] <;> exact hg
-  rw [addRoots_def, resultant_comm, natDegree_comp_eq_of_mul_ne_zero,
-    natDegree_map_eq_of_injective C_injective, natDegree_sub, natDegree_sub_C,
-    natDegree_X, mul_one, natDegree_map_eq_of_injective C_injective]
-  · congr 1
-    rw [addRoots_def]
-    rw [← resultant_taylor _ _ X, taylor_apply, Polynomial.comp_assoc,
-      sub_comp, C_comp, X_comp, sub_add_cancel_right, taylor_apply]
-    rw [← resultant_comp_neg_X, comp_assoc, comp_neg_X_comp_neg_X, add_comp,
-      X_comp, C_comp, neg_add_eq_sub]
-    congr 1
-    · sorry
-    · sorry
   · rwa [leadingCoeff_map_of_injective C_injective, leadingCoeff_sub_of_degree_lt' (by simp),
       leadingCoeff_X, ne_eq, mul_neg_one_pow_eq_zero_iff, C_eq_zero, leadingCoeff_eq_zero]
 
