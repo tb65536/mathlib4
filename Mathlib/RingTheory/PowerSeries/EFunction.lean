@@ -108,6 +108,7 @@ theorem mem_lifts_of_surjective {R S : Type*} [CommRing R] [CommRing S]
     f ∈ lifts φ :=
   (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
 
+-- PRed
 theorem exists_natDegree_eq_of_mem_lifts {R S : Type*} [Semiring R] [Semiring S]
     {f : R →+* S}
     {p : S[X]} (hp : p ∈ lifts f) : ∃ q, map f q = p ∧ q.natDegree = p.natDegree :=
