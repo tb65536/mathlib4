@@ -30,24 +30,6 @@ In this file, we define Artin L-functions.
 
 @[expose] public section
 
--- PRed
--- open scoped Pointwise in
--- theorem IsArithFrobAt.mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
---     {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (g : G) (Q : Ideal S)
---     [Q.IsPrime]
---     (h : IsArithFrobAt R g Q) : g ∈ MulAction.stabilizer G Q := by
---   rw [MulAction.mem_stabilizer_iff]
---   conv_lhs => rw [← h.comap_eq]
---   exact Q.map_comap_eq_self_of_equiv (MulSemiringAction.toRingEquiv G S g)
-
--- -- PRed
--- open scoped Pointwise in
--- theorem arithFrobAt_mem_stabilizer (R : Type*) {S : Type*} [CommRing R] [CommRing S] [Algebra R S]
---     (G : Type*) [Group G] [MulSemiringAction G S] [SMulCommClass G R S] (Q : Ideal S) [Finite G]
---     [Algebra.IsInvariant R S G] [Q.IsPrime] [Finite (S ⧸ Q)] :
---     arithFrobAt R G Q ∈ MulAction.stabilizer G Q := by
---   exact IsArithFrobAt.arithFrobAt_mem_stabilizer R G Q
-
 namespace Representation
 
 theorem quotientToCoinvariants_apply_coe {k G V : Type*} [CommRing k] [Group G] [AddCommGroup V]
@@ -161,8 +143,14 @@ theorem foo2_congr' (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
     · simpa [smul_sub, mul_smul] using h (τ⁻¹ • x)
   let e₀ : D₁ ≃* D₂ :=
       (D₁.equivSMul (MulAut.conj τ)).trans (MulEquiv.subgroupCongr keyD).symm
-  let e₁ : I₁ ≃* I₂ :=
-      (I₁.equivSMul (MulAut.conj τ)).trans (MulEquiv.subgroupCongr keyI).symm
+  -- let e₁ : I₁ ≃* I₂ :=
+  --     (I₁.equivSMul (MulAut.conj τ)).trans (MulEquiv.subgroupCongr keyI).symm
+  let e₂ : D₁ ⧸ I₁ ≃* D₂ ⧸ I₂ := by
+    apply QuotientGroup.congr I₁ I₂ e₀
+    rw [← Subgroup.map_subtype_inj, Subgroup.map_subgroupOf_eq_of_le]
+    convert keyI
+    -- use keyI
+    sorry
   let e : V₁ ≃ₗ[k] V₂ := by
 
     sorry
