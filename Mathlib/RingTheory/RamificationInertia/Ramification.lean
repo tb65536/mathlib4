@@ -8,6 +8,7 @@ module
 public import Mathlib.NumberTheory.RamificationInertia.Ramification
 public import Mathlib.RingTheory.Flat.Localization
 public import Mathlib.RingTheory.LocalRing.Length
+public import Mathlib.RingTheory.Unramified.LocalRing
 
 /-!
 # Ramification index
@@ -76,6 +77,39 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] : 0 < q.ramificationIdx' R := by
     -- Sq / pSq Krull dimension zero + Noetherian
     -- q is a minimal prime ideal over pS + Noetherian
     sorry
+
+theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
+    [Algebra.EssFiniteType R S] : q.ramificationIdx' R = 1 := by
+  let p := q.under R
+  let Rp := Localization.AtPrime p
+  let Sq := Localization.AtPrime q
+  let : Algebra Rp Sq := Localization.AtPrime.algebraOfLiesOver p q
+  have : Algebra.EssFiniteType Rp Sq := Algebra.EssFiniteType.of_comp R Rp Sq
+  rw [ramificationIdx'_def, ENat.toNat_eq_iff_eq_coe, Nat.cast_one, Module.length_eq_one_iff,
+    isSimpleModule_iff_isCoatom, ← Ideal.isMaximal_def, IsLocalRing.isMaximal_iff,
+    IsScalarTower.algebraMap_eq R Rp Sq, ← map_map, Localization.AtPrime.map_eq_maximalIdeal]
+  exact Algebra.FormallyUnramified.map_maximalIdeal
+
+theorem ramificationIdx'_eq_one_iff [q.IsPrime] [Algebra.EssFiniteType R S]
+    [PerfectField (q.under R).ResidueField] :
+    q.ramificationIdx' R = 1 ↔ Algebra.IsUnramifiedAt R q := by
+  let p := q.under R
+  let Rp := Localization.AtPrime p
+  let Sq := Localization.AtPrime q
+  let : Algebra Rp Sq := Localization.AtPrime.algebraOfLiesOver p q
+  have : Algebra.EssFiniteType Rp Sq := Algebra.EssFiniteType.of_comp R Rp Sq
+  have : Algebra.IsSeparable p.ResidueField q.ResidueField := by
+    have : Algebra.IsAlgebraic p.ResidueField q.ResidueField := by
+      sorry
+    apply Algebra.IsAlgebraic.isSeparable_of_perfectField
+  rw [ramificationIdx'_def, ENat.toNat_eq_iff_eq_coe, Nat.cast_one, Module.length_eq_one_iff,
+    isSimpleModule_iff_isCoatom, ← Ideal.isMaximal_def, IsLocalRing.isMaximal_iff,
+    IsScalarTower.algebraMap_eq R Rp Sq, ← map_map, Localization.AtPrime.map_eq_maximalIdeal]
+  transitivity Algebra.FormallyUnramified Rp Sq
+  · rw [Algebra.FormallyUnramified.iff_map_maximalIdeal_eq, and_iff_right]
+    assumption
+  · -- add iff version
+    exact ⟨fun _ ↦ Algebra.FormallyUnramified.comp R Rp Sq, fun _ ↦ inferInstance⟩
 
 end
 
