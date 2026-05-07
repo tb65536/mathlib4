@@ -6,6 +6,7 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.NumberTheory.RamificationInertia.Inertia
+public import Mathlib.RingTheory.QuasiFinite.Basic
 
 /-!
 # Inertia degree
@@ -54,6 +55,11 @@ theorem inertiaDeg'_def [hq : q.IsPrime]
 theorem inertiaDeg'_of_not_isPrime (hq : ¬ q.IsPrime) : q.inertiaDeg' R = 0 :=
   dif_neg hq
 
+theorem inertiaDeg'_pos [hq : q.IsPrime] [Module.Finite R S] : 0 < q.inertiaDeg' R := by
+  let := Localization.AtPrime.algebraOfLiesOver (q.under R) q
+  rw [inertiaDeg'_def]
+  apply Module.finrank_pos
+
 end
 
 section
@@ -69,6 +75,17 @@ theorem inertiaDeg'_eq [q.LiesOver p] [q.IsPrime] [p.IsPrime]
   have := Ideal.over_def q p
   subst this
   exact inertiaDeg'_def q R
+
+open Pointwise in
+theorem inertiaDeg'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S]
+    (g : G) : (g • q).inertiaDeg' R = q.inertiaDeg' R := by
+  by_cases hq : q.IsPrime; swap
+  · rw [inertiaDeg'_of_not_isPrime, inertiaDeg'_of_not_isPrime] <;> simpa
+  · let p := q.under R
+    let := Localization.AtPrime.algebraOfLiesOver p q
+    let := Localization.AtPrime.algebraOfLiesOver p (g • q)
+    rw [inertiaDeg'_eq p q, inertiaDeg'_eq p (g • q)]
+    sorry
 
 theorem inertiaDeg_eq_inertiaDeg' [q.LiesOver p] [p.IsMaximal] [q.IsMaximal] :
     p.inertiaDeg q = q.inertiaDeg' R := by

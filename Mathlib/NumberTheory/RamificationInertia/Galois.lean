@@ -7,6 +7,8 @@ module
 
 public import Mathlib.FieldTheory.Galois.IsGaloisGroup
 public import Mathlib.NumberTheory.RamificationInertia.Basic
+public import Mathlib.RingTheory.RamificationInertia.Ramification
+public import Mathlib.RingTheory.RamificationInertia.Inertia
 
 /-!
 # Ramification theory in Galois extensions of Dedekind domains
@@ -58,7 +60,7 @@ open scoped Classical in
   maximal ideal `p` of `A` are the same, which we define as `Ideal.ramificationIdxIn`. -/
 noncomputable def ramificationIdxIn {A : Type*} [CommRing A] (p : Ideal A)
     (B : Type*) [CommRing B] [Algebra A B] : ℕ :=
-  if h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p then p.ramificationIdx h.choose
+  if h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p then h.choose.ramificationIdx' A
   else 0
 
 open scoped Classical in
@@ -67,7 +69,7 @@ open scoped Classical in
   maximal ideal `p` of `A` are the same, which we define as `Ideal.inertiaDegIn`. -/
 noncomputable def inertiaDegIn {A : Type*} [CommRing A] (p : Ideal A)
     (B : Type*) [CommRing B] [Algebra A B] : ℕ :=
-  if h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p then p.inertiaDeg h.choose else 0
+  if h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p then h.choose.inertiaDeg' A else 0
 
 section MulAction
 
@@ -141,22 +143,22 @@ instance isPretransitive_of_isGaloisGroup : MulAction.IsPretransitive G (primesO
 @[deprecated (since := "2025-10-26")]
 alias isPretransitive_of_isGalois := isPretransitive_of_isGaloisGroup
 
-include G in
+include p G in
 /-- All the `Ideal.ramificationIdx` over a fixed maximal ideal are the same. -/
 theorem ramificationIdx_eq_of_isGaloisGroup :
-    ramificationIdx p P = ramificationIdx p Q := by
+    P.ramificationIdx' A = Q.ramificationIdx' A := by
   rcases exists_smul_eq_of_isGaloisGroup p P Q G with ⟨σ, rfl⟩
-  exact (ramificationIdx_map_eq p P (MulSemiringAction.toAlgEquiv A B σ)).symm
+  rw [ramificationIdx'_smul]
 
 @[deprecated (since := "2025-10-26")]
 alias ramificationIdx_eq_of_isGalois := ramificationIdx_eq_of_isGaloisGroup
 
-include G in
+include p G in
 /-- All the `Ideal.inertiaDeg` over a fixed maximal ideal are the same. -/
 theorem inertiaDeg_eq_of_isGaloisGroup :
-    inertiaDeg p P = inertiaDeg p Q := by
+    P.inertiaDeg' A = Q.inertiaDeg' A := by
   rcases exists_smul_eq_of_isGaloisGroup p P Q G with ⟨σ, rfl⟩
-  exact (inertiaDeg_map_eq p P (MulSemiringAction.toAlgEquiv A B σ)).symm
+  rw [inertiaDeg'_smul]
 
 @[deprecated (since := "2025-10-26")]
 alias inertiaDeg_eq_of_isGalois := inertiaDeg_eq_of_isGaloisGroup
@@ -164,7 +166,7 @@ alias inertiaDeg_eq_of_isGalois := inertiaDeg_eq_of_isGaloisGroup
 include G in
 /-- The `ramificationIdxIn` is equal to any ramification index over the same ideal. -/
 theorem ramificationIdxIn_eq_ramificationIdx :
-    ramificationIdxIn p B = ramificationIdx p P := by
+    ramificationIdxIn p B = P.ramificationIdx' A := by
   have h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p := ⟨P, hPp, hp⟩
   obtain ⟨_, _⟩ := h.choose_spec
   rw [ramificationIdxIn, dif_pos h]
@@ -176,24 +178,24 @@ theorem ramificationIdxIn_ne_zero [IsDedekindDomain B] {p : Ideal A} [p.IsPrime]
   have : Algebra.IsIntegral A B := IsGaloisGroup.isInvariant.isIntegral A B G
   obtain ⟨P⟩ := (inferInstance : Nonempty (primesOver p B))
   rw [ramificationIdxIn_eq_ramificationIdx p P G]
-  exact IsDedekindDomain.ramificationIdx_ne_zero_of_liesOver P.1 hp
+  exact (P.1.ramificationIdx'_pos A).ne'
 
 include G in
 /-- The `inertiaDegIn` is equal to any ramification index over the same ideal. -/
 theorem inertiaDegIn_eq_inertiaDeg :
-    inertiaDegIn p B = inertiaDeg p P := by
+    inertiaDegIn p B = P.inertiaDeg' A := by
   have h : ∃ P : Ideal B, P.IsPrime ∧ P.LiesOver p := ⟨P, hPp, hp⟩
   obtain ⟨_, _⟩ := h.choose_spec
   rw [inertiaDegIn, dif_pos h]
   exact inertiaDeg_eq_of_isGaloisGroup p h.choose P G
 
 include G in
-theorem inertiaDegIn_ne_zero {p : Ideal A} [p.IsMaximal] [IsDomain A] [IsTorsionFree A B]
-    [Module.Finite A B] [Nontrivial B] :
+theorem inertiaDegIn_ne_zero {p : Ideal A} [Nonempty (primesOver p B)] [p.IsPrime]
+    [Module.Finite A B] :
     inertiaDegIn p B ≠ 0 := by
   obtain ⟨P⟩ := (inferInstance : Nonempty (primesOver p B))
   rw [inertiaDegIn_eq_inertiaDeg p P G]
-  exact inertiaDeg_ne_zero _ _
+  exact (P.1.inertiaDeg'_pos A).ne'
 
 section tower
 
@@ -202,35 +204,26 @@ variable (C : Type*) [CommRing C] [IsDomain C] [Algebra A C] [Algebra B C] [Modu
   (GAC : Type*) [Group GAC] [Finite GAC] [MulSemiringAction GAC C] [IsGaloisGroup GAC A C]
   (GBC : Type*) [Group GBC] [Finite GBC] [MulSemiringAction GBC C] [IsGaloisGroup GBC B C]
 
+omit hPp in
 include G GAC GBC in
-theorem inertiaDegIn_mul_inertiaDegIn [p.IsMaximal] [P.IsMaximal] :
+theorem inertiaDegIn_mul_inertiaDegIn [p.IsPrime] [P.IsPrime] :
     p.inertiaDegIn B * P.inertiaDegIn C = p.inertiaDegIn C := by
   obtain ⟨⟨Q, _, _⟩⟩ := P.nonempty_primesOver (S := C)
   have : Q.LiesOver p := LiesOver.trans Q P p
   rw [inertiaDegIn_eq_inertiaDeg p P G, inertiaDegIn_eq_inertiaDeg p Q GAC,
-    inertiaDegIn_eq_inertiaDeg P Q GBC, inertiaDeg_algebra_tower p P Q]
+    inertiaDegIn_eq_inertiaDeg P Q GBC, ← inertiaDeg'_tower P Q]
 
 variable {p} in
 include G GAC GBC in
-theorem ramificationIdxIn_mul_ramificationIdxIn [IsDedekindDomain B] [IsDedekindDomain C]
-    (hp : map (algebraMap A C) p ≠ ⊥) (hP : map (algebraMap B C) P ≠ ⊥) :
+theorem ramificationIdxIn_mul_ramificationIdxIn [Module.Flat B C] :
     p.ramificationIdxIn B * P.ramificationIdxIn C = p.ramificationIdxIn C := by
   obtain ⟨⟨Q, _, hQ⟩⟩ := P.nonempty_primesOver (S := C)
   have : Q.LiesOver p := LiesOver.trans Q P p
   rw [ramificationIdxIn_eq_ramificationIdx p P G, ramificationIdxIn_eq_ramificationIdx p Q GAC,
-    ramificationIdxIn_eq_ramificationIdx P Q GBC, ramificationIdx_algebra_tower hP hp]
-  exact over_def Q P ▸ map_comap_le
+    ramificationIdxIn_eq_ramificationIdx P Q GBC, ← ramificationIdx'_tower P Q]
 
-variable {p} in
-omit hp in
-include G GAC GBC in
-theorem ramificationIdxIn_mul_ramificationIdxIn' [IsDomain A] [IsTorsionFree A B]
-    [IsDedekindDomain B] [IsDedekindDomain C] [P.LiesOver p] :
-    p.ramificationIdxIn B * P.ramificationIdxIn C = p.ramificationIdxIn C := by
-  obtain ⟨⟨Q, _, hQ⟩⟩ := P.nonempty_primesOver (S := C)
-  have : Q.LiesOver p := LiesOver.trans Q P p
-  rw [ramificationIdxIn_eq_ramificationIdx p P G, ramificationIdxIn_eq_ramificationIdx p Q GAC,
-    ramificationIdxIn_eq_ramificationIdx P Q GBC, ramificationIdx_algebra_tower' p P Q]
+@[deprecated (since := "2026-05-07")] alias ramificationIdxIn_mul_ramificationIdxIn' :=
+  ramificationIdxIn_mul_ramificationIdxIn
 
 end tower
 
@@ -267,7 +260,7 @@ variable {A B : Type*} [CommRing A] [IsDedekindDomain A] [CommRing B] [IsDedekin
   [Algebra A B] [IsTorsionFree A B] {p : Ideal A} (P : Ideal B) [p.IsMaximal]
   [P.IsMaximal] [P.LiesOver p] (G : Type*) [Group G] [Finite G] [MulSemiringAction G B]
   [IsGaloisGroup G A B] (C : Type*) [CommRing C] [IsDedekindDomain C] [Algebra A C] [Algebra B C]
-  [Module.Finite A B] [Module.Finite A C] [Module.Finite B C] [IsTorsionFree A C]
+  [Module.Finite A B] [Module.Finite A C] [Module.Finite B C] [Module.Flat B C] [IsTorsionFree A C]
   [IsTorsionFree B C] [IsScalarTower A B C]
   (GAC : Type*) [Group GAC] [Finite GAC] [MulSemiringAction GAC C] [IsGaloisGroup GAC A C]
   (GBC : Type*) [Group GBC] [Finite GBC] [MulSemiringAction GBC C] [IsGaloisGroup GBC B C]
@@ -286,7 +279,7 @@ theorem ncard_primesOver_mul_ncard_primesOver (hp : p ≠ ⊥) :
     _ = ((p.primesOver B).ncard * (p.ramificationIdxIn B * p.inertiaDegIn B)) *
           ((P.primesOver C).ncard * (P.ramificationIdxIn C * P.inertiaDegIn C)) := by
       rw [← inertiaDegIn_mul_inertiaDegIn p P G C GAC GBC,
-        ← ramificationIdxIn_mul_ramificationIdxIn' P G C GAC GBC]
+        ← ramificationIdxIn_mul_ramificationIdxIn P G C GAC GBC]
       ring
     _ = Nat.card GAC := by
       rw [ncard_primesOver_mul_ramificationIdxIn_mul_inertiaDegIn hp B G,

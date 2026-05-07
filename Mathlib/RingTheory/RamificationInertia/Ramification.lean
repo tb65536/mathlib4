@@ -60,6 +60,18 @@ theorem ramificationIdx'_def [q.IsPrime] :
 theorem ramificationIdx'_of_not_isPrime (hq : ¬ q.IsPrime) : q.ramificationIdx' R = 0 :=
   dif_neg hq
 
+theorem ramificationIdx'_pos [hq : q.IsPrime] : 0 < q.ramificationIdx' R := by
+  rw [ramificationIdx'_def, Nat.pos_iff_ne_zero, ne_eq, ENat.toNat_eq_zero, not_or]
+  constructor
+  · rw [Module.length_eq_zero_iff, Submodule.Quotient.subsingleton_iff,
+      IsScalarTower.algebraMap_eq R S, ← map_map, ← ne_eq, ← lt_top_iff_ne_top]
+    refine lt_of_le_of_lt (map_mono map_comap_le) ?_
+    rw [Localization.AtPrime.map_eq_maximalIdeal]
+    refine IsMaximal.lt_top ?_
+    exact IsLocalRing.maximalIdeal.isMaximal (Localization q.primeCompl)
+  · rw [← ne_eq, Module.length_ne_top_iff]
+    sorry
+
 end
 
 section
@@ -72,6 +84,18 @@ theorem ramificationIdx'_eq [q.LiesOver p] [q.IsPrime] :
     letI Sq := Localization.AtPrime q
     q.ramificationIdx' R = (Module.length Sq (Sq ⧸ p.map (algebraMap R Sq))).toNat := by
   rw [ramificationIdx'_def, over_def q p]
+
+open Pointwise in
+theorem ramificationIdx'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S]
+    (g : G) : (g • q).ramificationIdx' R = q.ramificationIdx' R := by
+  by_cases hq : q.IsPrime; swap
+  · rw [ramificationIdx'_of_not_isPrime, ramificationIdx'_of_not_isPrime] <;> simpa
+  · let p := q.under R
+    let := Localization.AtPrime.algebraOfLiesOver p q
+    let := Localization.AtPrime.algebraOfLiesOver p (g • q)
+    rw [ramificationIdx'_eq p q, ramificationIdx'_eq p (g • q)]
+    congr 1
+    sorry
 
 open Localization IsLocalization.AtPrime in
 theorem ramificationIdx_eq_ramificationIdx'
