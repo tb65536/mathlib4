@@ -70,6 +70,11 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] : 0 < q.ramificationIdx' R := by
     refine IsMaximal.lt_top ?_
     exact IsLocalRing.maximalIdeal.isMaximal (Localization q.primeCompl)
   · rw [← ne_eq, Module.length_ne_top_iff]
+    -- Sq / pSq finite length as an Sq - module
+    -- Sq / pSq finite length as an Sq / pSq - module
+    -- Sq / pSq Artinian ring
+    -- Sq / pSq Krull dimension zero + Noetherian
+    -- q is a minimal prime ideal over pS + Noetherian
     sorry
 
 end
