@@ -7,6 +7,7 @@ module
 
 public import Mathlib.NumberTheory.RamificationInertia.Ramification
 public import Mathlib.RingTheory.Flat.Localization
+public import Mathlib.RingTheory.HopkinsLevitzki
 public import Mathlib.RingTheory.LocalRing.Length
 public import Mathlib.RingTheory.Unramified.LocalRing
 
@@ -61,7 +62,10 @@ theorem ramificationIdx'_def [q.IsPrime] :
 theorem ramificationIdx'_of_not_isPrime (hq : ¬ q.IsPrime) : q.ramificationIdx' R = 0 :=
   dif_neg hq
 
-theorem ramificationIdx'_pos [hq : q.IsPrime] : 0 < q.ramificationIdx' R := by
+theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S] : 0 < q.ramificationIdx' R := by
+  let p := q.under R
+  let Rp := Localization.AtPrime p
+  let Sq := Localization.AtPrime q
   rw [ramificationIdx'_def, Nat.pos_iff_ne_zero, ne_eq, ENat.toNat_eq_zero, not_or]
   constructor
   · rw [Module.length_eq_zero_iff, Submodule.Quotient.subsingleton_iff,
@@ -70,7 +74,21 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] : 0 < q.ramificationIdx' R := by
     rw [Localization.AtPrime.map_eq_maximalIdeal]
     refine IsMaximal.lt_top ?_
     exact IsLocalRing.maximalIdeal.isMaximal (Localization q.primeCompl)
-  · rw [← ne_eq, Module.length_ne_top_iff]
+  · rw [← ne_eq, Module.length_eq_of_surjective
+        (R := Sq ⧸ p.map (algebraMap R Sq)) (S := Sq) Quotient.mk_surjective,
+      Module.length_ne_top_iff, ← isArtinianRing_iff_isFiniteLength,
+      isArtinianRing_iff_krullDimLE_zero]
+    have : q ∈ (p.map (algebraMap R S)).minimalPrimes := by
+      refine ⟨⟨hq, map_comap_le⟩, ?_⟩
+      intro r ⟨hr, hpr⟩ hrq
+      rw [map_le_iff_le_comap] at hpr
+      replace hpr : p = r.comap (algebraMap R S) :=
+        le_antisymm hpr ((comap_mono hrq).trans (Ideal.over_def q p).ge)
+      have : q.LiesOver p := inferInstance
+      have : r.LiesOver p := ⟨hpr⟩
+      -- going up?
+
+      sorry
     -- Sq / pSq finite length as an Sq - module
     -- Sq / pSq finite length as an Sq / pSq - module
     -- Sq / pSq Artinian ring
