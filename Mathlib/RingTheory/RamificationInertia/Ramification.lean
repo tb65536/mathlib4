@@ -87,14 +87,18 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S] : 0 < q.ramif
       have : q.LiesOver p := inferInstance
       have : r.LiesOver p := ⟨hpr⟩
       -- going up?
-
       sorry
+    have : q.map (algebraMap S Sq) ∈ (p.map (algebraMap R Sq)).minimalPrimes := by
+      rwa [IsScalarTower.algebraMap_eq R S Sq, ← map_map,
+        IsLocalization.minimalPrimes_map q.primeCompl, Set.mem_preimage,
+        Localization.AtPrime.map_eq_maximalIdeal,
+        IsLocalization.AtPrime.comap_maximalIdeal Sq q]
+    sorry
     -- Sq / pSq finite length as an Sq - module
     -- Sq / pSq finite length as an Sq / pSq - module
     -- Sq / pSq Artinian ring
     -- Sq / pSq Krull dimension zero + Noetherian
     -- q is a minimal prime ideal over pS + Noetherian
-    sorry
 
 theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
     [Algebra.EssFiniteType R S] : q.ramificationIdx' R = 1 := by
