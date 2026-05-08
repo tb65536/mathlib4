@@ -9,6 +9,7 @@ public import Mathlib.NumberTheory.RamificationInertia.Ramification
 public import Mathlib.RingTheory.Flat.Localization
 public import Mathlib.RingTheory.HopkinsLevitzki
 public import Mathlib.RingTheory.LocalRing.Length
+public import Mathlib.RingTheory.LocalRing.ResidueField.Instances
 public import Mathlib.RingTheory.Unramified.LocalRing
 
 /-!
@@ -62,7 +63,15 @@ theorem ramificationIdx'_def [q.IsPrime] :
 theorem ramificationIdx'_of_not_isPrime (hq : ¬ q.IsPrime) : q.ramificationIdx' R = 0 :=
   dif_neg hq
 
-theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S] : 0 < q.ramificationIdx' R := by
+-- PRed
+theorem IsIntegral.comap_lt_comap (R : Type*) {A : Type*} [CommRing R] [CommRing A]
+    [Algebra R A] [Algebra.IsIntegral R A] {I J : Ideal A} [I.IsPrime] (I_lt_J : I < J) :
+    I.comap (algebraMap R A) < J.comap (algebraMap R A) :=
+  let ⟨I_le_J, x, hxJ, hxI⟩ := SetLike.lt_iff_le_and_exists.mp I_lt_J
+  comap_lt_comap_of_integral_mem_sdiff I_le_J ⟨hxJ, hxI⟩ (Algebra.IsIntegral.isIntegral x)
+
+theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S]
+    [Algebra.IsIntegral R S] : 0 < q.ramificationIdx' R := by
   let p := q.under R
   let Rp := Localization.AtPrime p
   let Sq := Localization.AtPrime q
@@ -82,23 +91,27 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S] : 0 < q.ramif
       refine ⟨⟨hq, map_comap_le⟩, ?_⟩
       intro r ⟨hr, hpr⟩ hrq
       rw [map_le_iff_le_comap] at hpr
-      replace hpr : p = r.comap (algebraMap R S) :=
-        le_antisymm hpr ((comap_mono hrq).trans (Ideal.over_def q p).ge)
-      have : q.LiesOver p := inferInstance
-      have : r.LiesOver p := ⟨hpr⟩
-      -- going up?
-      sorry
+      contrapose! hpr
+      exact not_le_of_gt (IsIntegral.comap_lt_comap R (lt_of_le_not_ge hrq hpr))
     have : q.map (algebraMap S Sq) ∈ (p.map (algebraMap R Sq)).minimalPrimes := by
       rwa [IsScalarTower.algebraMap_eq R S Sq, ← map_map,
         IsLocalization.minimalPrimes_map q.primeCompl, Set.mem_preimage,
         Localization.AtPrime.map_eq_maximalIdeal,
         IsLocalization.AtPrime.comap_maximalIdeal Sq q]
-    sorry
-    -- Sq / pSq finite length as an Sq - module
-    -- Sq / pSq finite length as an Sq / pSq - module
-    -- Sq / pSq Artinian ring
-    -- Sq / pSq Krull dimension zero + Noetherian
-    -- q is a minimal prime ideal over pS + Noetherian
+    rw [Ring.krullDimLE_zero_iff]
+    intro r hr
+    let r' := r.comap (algebraMap Sq (Sq ⧸ p.map (algebraMap R Sq)))
+    suffices r'.IsMaximal by
+      exact r.isMaximal_of_isIntegral_of_isMaximal_comap this
+    replace hr : r'.IsPrime := hr.comap _
+    have key : p.map (algebraMap R Sq) ≤ r' := by
+      rw [← (p.map (algebraMap R Sq)).mk_ker]
+      apply Ideal.ker_le_comap
+    rw [Localization.AtPrime.map_eq_maximalIdeal] at this
+    have := this.2 ⟨hr, key⟩ (IsLocalRing.le_maximalIdeal_of_isPrime r')
+    rw [← Ideal.IsMaximal.eq_of_le ?_ hr.ne_top this]
+    · exact IsLocalRing.maximalIdeal.isMaximal Sq
+    · exact IsLocalRing.maximalIdeal.isMaximal Sq
 
 theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
     [Algebra.EssFiniteType R S] : q.ramificationIdx' R = 1 := by
@@ -113,17 +126,15 @@ theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
   exact Algebra.FormallyUnramified.map_maximalIdeal
 
 theorem ramificationIdx'_eq_one_iff [q.IsPrime] [Algebra.EssFiniteType R S]
-    [PerfectField (q.under R).ResidueField] :
+    [Algebra.IsIntegral R S] [PerfectField (q.under R).ResidueField] :
     q.ramificationIdx' R = 1 ↔ Algebra.IsUnramifiedAt R q := by
   let p := q.under R
   let Rp := Localization.AtPrime p
   let Sq := Localization.AtPrime q
   let : Algebra Rp Sq := Localization.AtPrime.algebraOfLiesOver p q
   have : Algebra.EssFiniteType Rp Sq := Algebra.EssFiniteType.of_comp R Rp Sq
-  have : Algebra.IsSeparable p.ResidueField q.ResidueField := by
-    have : Algebra.IsAlgebraic p.ResidueField q.ResidueField := by
-      sorry
-    apply Algebra.IsAlgebraic.isSeparable_of_perfectField
+  have : Algebra.IsSeparable p.ResidueField q.ResidueField :=
+    Algebra.IsAlgebraic.isSeparable_of_perfectField
   rw [ramificationIdx'_def, ENat.toNat_eq_iff_eq_coe, Nat.cast_one, Module.length_eq_one_iff,
     isSimpleModule_iff_isCoatom, ← Ideal.isMaximal_def, IsLocalRing.isMaximal_iff,
     IsScalarTower.algebraMap_eq R Rp Sq, ← map_map, Localization.AtPrime.map_eq_maximalIdeal]
