@@ -63,13 +63,6 @@ theorem ramificationIdx'_def [q.IsPrime] :
 theorem ramificationIdx'_of_not_isPrime (hq : ¬ q.IsPrime) : q.ramificationIdx' R = 0 :=
   dif_neg hq
 
--- PRed
-theorem IsIntegral.comap_lt_comap (R : Type*) {A : Type*} [CommRing R] [CommRing A]
-    [Algebra R A] [Algebra.IsIntegral R A] {I J : Ideal A} [I.IsPrime] (I_lt_J : I < J) :
-    I.comap (algebraMap R A) < J.comap (algebraMap R A) :=
-  let ⟨I_le_J, x, hxJ, hxI⟩ := SetLike.lt_iff_le_and_exists.mp I_lt_J
-  comap_lt_comap_of_integral_mem_sdiff I_le_J ⟨hxJ, hxI⟩ (Algebra.IsIntegral.isIntegral x)
-
 theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S]
     [Algebra.IsIntegral R S] : 0 < q.ramificationIdx' R := by
   let p := q.under R
@@ -92,12 +85,12 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S]
       intro r ⟨hr, hpr⟩ hrq
       rw [map_le_iff_le_comap] at hpr
       contrapose! hpr
-      exact not_le_of_gt (IsIntegral.comap_lt_comap R (lt_of_le_not_ge hrq hpr))
+      exact not_le_of_gt (IsIntegral.comap_lt_comap (lt_of_le_not_ge hrq hpr))
     have : q.map (algebraMap S Sq) ∈ (p.map (algebraMap R Sq)).minimalPrimes := by
       rwa [IsScalarTower.algebraMap_eq R S Sq, ← map_map,
         IsLocalization.minimalPrimes_map q.primeCompl, Set.mem_preimage,
         Localization.AtPrime.map_eq_maximalIdeal,
-        IsLocalization.AtPrime.comap_maximalIdeal Sq q]
+        IsLocalization.AtPrime.under_maximalIdeal Sq q]
     rw [Ring.krullDimLE_zero_iff]
     intro r hr
     let r' := r.comap (algebraMap Sq (Sq ⧸ p.map (algebraMap R Sq)))
@@ -113,6 +106,7 @@ theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S]
     · exact IsLocalRing.maximalIdeal.isMaximal Sq
     · exact IsLocalRing.maximalIdeal.isMaximal Sq
 
+-- PRed
 theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
     [Algebra.EssFiniteType R S] : q.ramificationIdx' R = 1 := by
   let p := q.under R
@@ -125,6 +119,7 @@ theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
     IsScalarTower.algebraMap_eq R Rp Sq, ← map_map, Localization.AtPrime.map_eq_maximalIdeal]
   exact Algebra.FormallyUnramified.map_maximalIdeal
 
+-- PRed
 theorem ramificationIdx'_eq_one_iff [q.IsPrime] [Algebra.EssFiniteType R S]
     [Algebra.IsIntegral R S] [PerfectField (q.under R).ResidueField] :
     q.ramificationIdx' R = 1 ↔ Algebra.IsUnramifiedAt R q := by
