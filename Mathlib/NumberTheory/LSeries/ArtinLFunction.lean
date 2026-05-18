@@ -75,36 +75,13 @@ theorem foo2_congr (q : Ideal (𝓞 L)) [q.IsMaximal] [q.LiesOver p.1]
   congr
 
 /-- Descend an  -/
-noncomputable def Coinvariants.map' {k G V₁ V₂ : Type*} [Field k] [AddCommGroup V₁] [AddCommGroup V₂]
-    [Module k V₁] [Module k V₂] [Group G]
-    (ρ₁ : Representation k G V₁) (ρ₂ : Representation k G V₂)
-    (e : IntertwiningMap ρ₁ ρ₂) :
-    ρ₁.Coinvariants →ₗ[k] ρ₂.Coinvariants :=
-  map ρ₁ ρ₂ e e.isIntertwining'
-
-/-- Descend an  -/
 noncomputable def Coinvariants.congr {k G V₁ V₂ : Type*} [Field k] [AddCommGroup V₁] [AddCommGroup V₂]
     [Module k V₁] [Module k V₂] [Group G]
     (ρ₁ : Representation k G V₁) (ρ₂ : Representation k G V₂)
     (e : ρ₁.Equiv ρ₂) :
     ρ₁.Coinvariants ≃ₗ[k] ρ₂.Coinvariants := by
-  apply LinearEquiv.ofLinear (map' ρ₁ ρ₂ e.toIntertwiningMap) (map' ρ₂ ρ₁ e.symm.toIntertwiningMap)
-    (by
-      rw [map', map']
-      simp [Equiv.symm]
-      ext
-      simp
-      congr
-      apply e.apply_symm_apply
-      )
-    (by
-      rw [map', map']
-      simp [Equiv.symm]
-      ext
-      simp
-      congr
-      apply e.symm_apply_apply
-      )
+  apply LinearEquiv.ofLinear (map ρ₁ ρ₂ e.toIntertwiningMap) (map ρ₂ ρ₁ e.symm.toIntertwiningMap)
+    (by ext; simp [map_comp]) (by ext; simp [map_comp])
 
 /-- Descend an  -/
 def tada {k G H VG VH : Type*} [Field k] [AddCommGroup VG] [AddCommGroup VH]
