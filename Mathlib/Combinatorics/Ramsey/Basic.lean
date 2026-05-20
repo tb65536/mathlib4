@@ -120,10 +120,189 @@ theorem neighborFinset_disjoint {G H : SimpleGraph V} {x : V} [Fintype (G.neighb
 
 end SimpleGraph
 
+namespace SimpleGraph
+
+open Finset
+
+variable {V V' : Type*} {G : SimpleGraph V} {G' : SimpleGraph V'} {K K' : Type*}
+
+namespace EdgeLabeling
+
+/-- `χ.MonochromaticOf m c` says that every edge in `m` is assigned the colour `c` by `m`. -/
+def MonochromaticOf (C : EdgeLabeling G K) (m : Set V) (c : K) : Prop :=
+  ∀ ⦃x⦄, x ∈ m → ∀ ⦃y⦄, y ∈ m → (h : G.Adj x y) → C.get x y h = c
+
+theorem monochromaticOf_iff_pairwise (C : EdgeLabeling G K) {m : Set V} {c : K} :
+    C.MonochromaticOf m c ↔ m.Pairwise fun x y ↦ ∀ h : G.Adj x y, C.get x y h = c := by
+  grind [MonochromaticOf, Set.Pairwise, Adj.ne]
+
+end EdgeLabeling
+
+namespace TopEdgeLabeling
+
+@[simp]
+lemma monochromaticOf_iff_ne_of_adj (C : TopEdgeLabeling V K) (m : Set V) (c : K) :
+    C.MonochromaticOf m c ↔ ∀ ⦃x⦄, x ∈ m → ∀ ⦃y⦄, y ∈ m → (h : x ≠ y) → C.get x y h = c := by
+  simp_rw [EdgeLabeling.MonochromaticOf, top_adj]
+
+end TopEdgeLabeling
+
+variable {m : Set V} {c : K} {C : EdgeLabeling G K}
+
+namespace EdgeLabeling.MonochromaticOf
+
+@[simp]
+protected theorem empty : C.MonochromaticOf ∅ c := nofun
+
+@[simp]
+protected theorem singleton {x : V} : C.MonochromaticOf {x} c := by
+  simp [MonochromaticOf]
+
+theorem finset_singleton {x : V} : C.MonochromaticOf ({x} : Finset V) c := by
+  simp [MonochromaticOf]
+
+theorem subsingleton (hm : m.Subsingleton) : C.MonochromaticOf m c :=
+  fun _ hx _ hy h ↦ (h.ne (hm hx hy)).elim
+
+theorem subsingleton_colours [Subsingleton K] : C.MonochromaticOf m c :=
+  fun _ _ _ _ _ ↦ Subsingleton.elim _ _
+
+theorem compRight (e : K → K') (h : C.MonochromaticOf m c) :
+    (C.compRight e).MonochromaticOf m (e c) := by
+  intro x hx y hy h'
+  rw [EdgeLabeling.compRight_get, h hx hy h']
+
+protected theorem injective (e : K → K') (he : Function.Injective e) :
+    (C.compRight e).MonochromaticOf m (e c) ↔ C.MonochromaticOf m c := by
+  simp_rw [EdgeLabeling.compRight, MonochromaticOf, get_eq, Function.comp_apply, he.eq_iff]
+
+theorem subset {m' : Set V} (h' : m' ⊆ m) (h : C.MonochromaticOf m c) :
+    C.MonochromaticOf m' c :=
+  fun _ hx _ hy h'' ↦ h (h' hx) (h' hy) h''
+
+theorem image {C : EdgeLabeling G' K} {f : G ↪g G'}
+    (h : (C.pullback f.toHom).MonochromaticOf m c) : C.MonochromaticOf (f '' m) c := by
+  simpa [EdgeLabeling.MonochromaticOf]
+
+theorem map {C : EdgeLabeling G' K} {f : G ↪g G'} {m : Finset V}
+    (h : (C.pullback f.toHom).MonochromaticOf m c) : C.MonochromaticOf (m.map f.toEmbedding) c := by
+  rw [coe_map]
+  exact h.image
+
+theorem image_top {C : TopEdgeLabeling V' K} {f : V ↪ V'}
+    (h : (C.pullback f).MonochromaticOf m c) : C.MonochromaticOf (f '' m) c := by
+  simpa
+
+theorem map_top {C : TopEdgeLabeling V' K} {f : V ↪ V'} {m : Finset V}
+    (h : (C.pullback f).MonochromaticOf m c) : C.MonochromaticOf (m.map f) c := by
+  rw [coe_map]
+  exact h.image_top
+
+end MonochromaticOf
+
+/-- The predicate `χ.MonochromaticBetween X Y k` says every edge between `X` and `Y` is labelled
+`k` by the labelling `χ`. -/
+def MonochromaticBetween (C : EdgeLabeling G K) (X Y : Set V) (k : K) : Prop :=
+  ∀ ⦃x⦄, x ∈ X → ∀ ⦃y⦄, y ∈ Y → (h : G.Adj x y) → C.get x y h = k
+
+namespace MonochromaticBetween
+
+instance [DecidableEq K] [DecidableRel G.Adj] {X Y : Finset V} {k : K} :
+    Decidable (MonochromaticBetween C X Y k) := by
+  simp only [MonochromaticBetween, mem_coe]
+  exact Multiset.decidableForallMultiset
+
+@[simp]
+theorem empty_left {Y : Set V} {k : K} : C.MonochromaticBetween ∅ Y k := by
+  simp [MonochromaticBetween]
+
+@[simp]
+theorem empty_right {X : Set V} {k : K} :
+    C.MonochromaticBetween X ∅ k := by
+  simp [MonochromaticBetween]
+
+theorem singleton_left {x : V} {Y : Set V} {k : K} :
+    C.MonochromaticBetween {x} Y k ↔ ∀ ⦃y⦄, y ∈ Y → (h : G.Adj x y) → C.get x y h = k := by
+  simp [MonochromaticBetween]
+
+theorem singleton_right {y : V} {X : Set V} {k : K} :
+    C.MonochromaticBetween X {y} k ↔ ∀ ⦃x⦄, x ∈ X → (h : G.Adj x y) → C.get x y h = k := by
+  simp [MonochromaticBetween]
+
+theorem union_left {X Y Z : Set V} {k : K} :
+    C.MonochromaticBetween (X ∪ Y) Z k ↔
+      C.MonochromaticBetween X Z k ∧ C.MonochromaticBetween Y Z k :=
+  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
+
+theorem union_right {X Y Z : Set V} {k : K} :
+    C.MonochromaticBetween X (Y ∪ Z) k ↔
+      C.MonochromaticBetween X Y k ∧ C.MonochromaticBetween X Z k :=
+  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
+
+protected theorem self {X : Set V} {k : K} :
+    C.MonochromaticBetween X X k ↔ C.MonochromaticOf X k := by
+  simp only [MonochromaticBetween, MonochromaticOf]
+
+protected theorem subset_left {X Y Z : Set V} {k : K}
+    (hYZ : C.MonochromaticBetween Y Z k) (hXY : X ⊆ Y) : C.MonochromaticBetween X Z k :=
+  fun _ hx _ hy _ => hYZ (hXY hx) hy _
+
+protected theorem subset_right {X Y Z : Set V} {k : K}
+    (hXZ : C.MonochromaticBetween X Z k) (hXY : Y ⊆ Z) : C.MonochromaticBetween X Y k :=
+  fun _ hx _ hy _ => hXZ hx (hXY hy) _
+
+protected theorem subset {W X Y Z : Set V} {k : K}
+    (hWX : C.MonochromaticBetween W X k) (hYW : Y ⊆ W) (hZX : Z ⊆ X) :
+    C.MonochromaticBetween Y Z k := fun _ hx _ hy _ => hWX (hYW hx) (hZX hy) _
+
+protected theorem image {C : EdgeLabeling G' K} {X Y : Set V} {k : K} {f : G ↪g G'}
+    (hXY : (C.pullback f.toHom).MonochromaticBetween X Y k) :
+    C.MonochromaticBetween (f '' X) (f '' Y) k := by
+  simpa [MonochromaticBetween]
+
+protected theorem symm {X Y : Set V} {k : K} (hXY : C.MonochromaticBetween X Y k) :
+    C.MonochromaticBetween Y X k := by
+  intro y hy x hx h
+  rw [get_comm _ _ h]
+  exact hXY hx hy _
+
+protected theorem comm {X Y : Set V} {k : K} :
+    C.MonochromaticBetween Y X k ↔ C.MonochromaticBetween X Y k :=
+  ⟨MonochromaticBetween.symm, MonochromaticBetween.symm⟩
+
+protected theorem union {X Y : Set V} {k : K} :
+    C.MonochromaticOf (X ∪ Y) k ↔
+      C.MonochromaticOf X k ∧ C.MonochromaticOf Y k ∧ C.MonochromaticBetween X Y k := by
+  rw [← and_iff_left_of_imp MonochromaticBetween.symm]
+  simp only [MonochromaticOf, Set.mem_union, or_imp, forall_and, MonochromaticBetween]
+  tauto
+
+protected theorem insert {y : V} :
+    C.MonochromaticOf (insert y m) c ↔ C.MonochromaticOf m c ∧ C.MonochromaticBetween m {y} c := by
+  rw [Set.insert_eq, ← coe_singleton, Set.union_comm]
+  convert MonochromaticBetween.union
+  simp only [coe_singleton, MonochromaticOf.singleton, true_and]
+
+end MonochromaticBetween
+
+end EdgeLabeling
+
+end SimpleGraph
+
+
+
+
+
+
+
+
+
+
+
 namespace Fin
 
 open Function Matrix Fin
-theorem _root_.Function.update_head {α : Type*} {i : ℕ} {x y : α} {t : Fin i → α} :
+theorem update_vecCons_zero {α : Type*} {i : ℕ} {x y : α} {t : Fin i → α} :
     update (vecCons x t) 0 y = vecCons y t := by
   simp [vecCons]
 
@@ -180,168 +359,12 @@ end
 
 variable {V V' : Type*} {G : SimpleGraph V} {G' : SimpleGraph V'} {K K' : Type*}
 
-namespace EdgeLabeling
-
-/-- `χ.MonochromaticOf m c` says that every edge in `m` is assigned the colour `c` by `m`. -/
-def MonochromaticOf (C : EdgeLabeling G K) (m : Set V) (c : K) : Prop :=
-  ∀ ⦃x⦄, x ∈ m → ∀ ⦃y⦄, y ∈ m → (h : G.Adj x y) → C.get x y h = c
-
-theorem monochromaticOf_iff_pairwise (C : EdgeLabeling G K) {m : Set V}
-    {c : K} :
-    C.MonochromaticOf m c ↔ m.Pairwise fun x y => ∀ h : G.Adj x y, C.get x y h = c := by
-  refine forall₄_congr fun _ _ _ _ => ⟨fun _ _ => by simpa , fun ne ad => ?_⟩
-  simp only [ne_eq] at ne
-  exact (ne (G.ne_of_adj ad)) ad
-
-end EdgeLabeling
-
-namespace TopEdgeLabeling
-
-@[simp]
-lemma monochromaticOf_iff_ne_of_adj (C : TopEdgeLabeling V K) (m : Set V) (c : K) :
-C.MonochromaticOf m c ↔ ∀ ⦃x⦄, x ∈ m → ∀ ⦃y⦄, y ∈ m → (h : x ≠ y) → C.get x y h = c := by
-  simp_rw [← top_adj]; exact rfl.to_iff
-
-end TopEdgeLabeling
-
-namespace EdgeLabeling
-
-variable {m : Set V} {c : K} {C : EdgeLabeling G K}
-
-
-@[simp] theorem monochromaticOf_empty : C.MonochromaticOf ∅ c := nofun
-
-@[simp]
-theorem monochromaticOf_singleton {x : V} : C.MonochromaticOf {x} c := by
-  simp [MonochromaticOf]
-
-theorem monochromatic_finset_singleton {x : V} : C.MonochromaticOf ({x} : Finset V) c := by
-  simp [MonochromaticOf]
-
-theorem monochromatic_subsingleton (hm : m.Subsingleton) : C.MonochromaticOf m c :=
-  fun _ hx _ hy h => (h.ne (hm hx hy)).elim
-
-theorem monochromatic_subsingleton_colours [Subsingleton K] : C.MonochromaticOf m c :=
-  fun _ _ _ _ _ => Subsingleton.elim _ _
-
-theorem MonochromaticOf.compRight (e : K → K') (h : C.MonochromaticOf m c) :
-    (C.compRight e).MonochromaticOf m (e c) := fun x hx y hy h' => by
-  rw [EdgeLabeling.compRight_get, h hx hy h']
-
-theorem monochromaticOf_injective (e : K → K') (he : Function.Injective e) :
-    (C.compRight e).MonochromaticOf m (e c) ↔ C.MonochromaticOf m c :=
-  forall₅_congr fun x _ y _ h' => by simp [he.eq_iff]
-
-theorem MonochromaticOf.subset {m' : Set V} (h' : m' ⊆ m) (h : C.MonochromaticOf m c) :
-    C.MonochromaticOf m' c := fun _ hx _ hy h'' => h (h' hx) (h' hy) h''
-
-theorem MonochromaticOf.image {C : EdgeLabeling G' K} {f : G ↪g G'}
-    (h : (C.pullback f.toHom).MonochromaticOf m c) : C.MonochromaticOf (f '' m) c := by
-  simpa [EdgeLabeling.MonochromaticOf]
-
-theorem MonochromaticOf.map {C : EdgeLabeling G' K} {f : G ↪g G'} {m : Finset V}
-    (h : (C.pullback f.toHom).MonochromaticOf m c) : C.MonochromaticOf (m.map f.toEmbedding) c := by
-  rw [coe_map]
-  exact h.image
-
-theorem MonochromaticOf.image' {C : TopEdgeLabeling V' K} {f : V ↪ V'}
-    (h : (C.pullback f).MonochromaticOf m c) : C.MonochromaticOf (f '' m) c := by
-  simpa [EdgeLabeling.MonochromaticOf]
-
-theorem MonochromaticOf.map' {C : TopEdgeLabeling V' K} {f : V ↪ V'} {m : Finset V}
-    (h : (C.pullback f).MonochromaticOf m c) : C.MonochromaticOf (m.map f) c := by
-  rw [coe_map]
-  exact h.image'
-
-/-- The predicate `χ.MonochromaticBetween X Y k` says every edge between `X` and `Y` is labelled
-`k` by the labelling `χ`. -/
-def MonochromaticBetween (C : EdgeLabeling G K) (X Y : Set V) (k : K) : Prop :=
-  ∀ ⦃x⦄, x ∈ X → ∀ ⦃y⦄, y ∈ Y → (h : G.Adj x y) → C.get x y h = k
-
-instance [DecidableEq V] [DecidableEq K] [DecidableRel G.Adj] {X Y : Finset V} {k : K} :
-    Decidable (MonochromaticBetween C X Y k) := by
-  simp only [MonochromaticBetween, mem_coe]
-  exact Multiset.decidableForallMultiset
-
-@[simp]
-theorem monochromaticBetween_empty_left {Y : Set V} {k : K} : C.MonochromaticBetween ∅ Y k := by
-  simp [MonochromaticBetween]
-
-@[simp]
-theorem monochromaticBetween_empty_right {X : Set V} {k : K} :
-    C.MonochromaticBetween X ∅ k := by
-  simp [MonochromaticBetween]
-
-theorem monochromaticBetween_singleton_left {x : V} {Y : Set V} {k : K} :
-    C.MonochromaticBetween {x} Y k ↔ ∀ ⦃y⦄, y ∈ Y → (h : G.Adj x y) → C.get x y h = k := by
-  simp [MonochromaticBetween]
-
-theorem monochromaticBetween_singleton_right {y : V} {X : Set V} {k : K} :
-    C.MonochromaticBetween X {y} k ↔ ∀ ⦃x⦄, x ∈ X → (h : G.Adj x y) → C.get x y h = k := by
-  simp [MonochromaticBetween]
-
-theorem monochromaticBetween_union_left {X Y Z : Set V} {k : K} :
-    C.MonochromaticBetween (X ∪ Y) Z k ↔
-      C.MonochromaticBetween X Z k ∧ C.MonochromaticBetween Y Z k :=
-  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
-
-theorem monochromaticBetween_union_right {X Y Z : Set V} {k : K} :
-    C.MonochromaticBetween X (Y ∪ Z) k ↔
-      C.MonochromaticBetween X Y k ∧ C.MonochromaticBetween X Z k :=
-  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
-
-theorem monochromaticBetween_self {X : Set V} {k : K} :
-    C.MonochromaticBetween X X k ↔ C.MonochromaticOf X k := by
-  simp only [MonochromaticBetween, MonochromaticOf]
-
-theorem MonochromaticBetween.subset_left {X Y Z : Set V} {k : K}
-    (hYZ : C.MonochromaticBetween Y Z k) (hXY : X ⊆ Y) : C.MonochromaticBetween X Z k :=
-  fun _ hx _ hy _ => hYZ (hXY hx) hy _
-
-theorem MonochromaticBetween.subset_right {X Y Z : Set V} {k : K}
-    (hXZ : C.MonochromaticBetween X Z k) (hXY : Y ⊆ Z) : C.MonochromaticBetween X Y k :=
-  fun _ hx _ hy _ => hXZ hx (hXY hy) _
-
-theorem MonochromaticBetween.subset {W X Y Z : Set V} {k : K}
-    (hWX : C.MonochromaticBetween W X k) (hYW : Y ⊆ W) (hZX : Z ⊆ X) :
-    C.MonochromaticBetween Y Z k := fun _ hx _ hy _ => hWX (hYW hx) (hZX hy) _
-
-theorem MonochromaticBetween.image {C : EdgeLabeling G' K} {X Y : Set V} {k : K} {f : G ↪g G'}
-    (hXY : (C.pullback f.toHom).MonochromaticBetween X Y k) :
-    C.MonochromaticBetween (f '' X) (f '' Y) k := by
-  simpa [MonochromaticBetween]
-
-theorem MonochromaticBetween.symm {X Y : Set V} {k : K} (hXY : C.MonochromaticBetween X Y k) :
-    C.MonochromaticBetween Y X k := by
-  intro y hy x hx h
-  rw [get_comm _ _ h]
-  exact hXY hx hy _
-
-theorem MonochromaticBetween.comm {X Y : Set V} {k : K} :
-    C.MonochromaticBetween Y X k ↔ C.MonochromaticBetween X Y k :=
-  ⟨MonochromaticBetween.symm, MonochromaticBetween.symm⟩
-
-theorem monochromaticOf_union {X Y : Set V} {k : K} :
-    C.MonochromaticOf (X ∪ Y) k ↔
-      C.MonochromaticOf X k ∧ C.MonochromaticOf Y k ∧ C.MonochromaticBetween X Y k := by
-  rw [← and_iff_left_of_imp MonochromaticBetween.symm]
-  simp only [MonochromaticOf, Set.mem_union, or_imp, forall_and, MonochromaticBetween]
-  tauto
-
-theorem monochromaticOf_insert {y : V} :
-    C.MonochromaticOf (insert y m) c ↔ C.MonochromaticOf m c ∧ C.MonochromaticBetween m {y} c := by
-  rw [Set.insert_eq, ← coe_singleton, Set.union_comm]
-  convert monochromaticOf_union
-  simp only [coe_singleton, monochromaticOf_singleton, true_and]
-
-end EdgeLabeling
-
 theorem TopEdgeLabeling.monochromaticOf_insert {C : TopEdgeLabeling V K} {c : K}
     {m : Set V} {x : V} (hx : x ∉ m) : C.MonochromaticOf (insert x m) c ↔
     C.MonochromaticOf m c ∧ ∀ ⦃y⦄, (H : y ∈ m) → C.get x y (H.ne_of_notMem hx).symm = c := by
   rw [Set.insert_eq, ← coe_singleton, Set.union_comm]
-  convert EdgeLabeling.monochromaticOf_union
-  simp only [coe_singleton, EdgeLabeling.monochromaticOf_singleton,
+  convert EdgeLabeling.MonochromaticBetween.union
+  simp only [coe_singleton, EdgeLabeling.MonochromaticOf.singleton,
     EdgeLabeling.MonochromaticBetween, Set.mem_singleton_iff, top_adj, ne_eq, forall_eq, true_and]
   constructor
   · intros a y ym _
@@ -459,7 +482,7 @@ theorem IsRamseyValid.equiv_left (n : K → ℕ) (f : V ≃ V') :
 theorem IsRamseyValid.equiv_right {n : K → ℕ} (f : K' ≃ K) (h : IsRamseyValid V n) :
     IsRamseyValid V (n ∘ f) := fun C =>
   let ⟨m, c, hm, hc⟩ := h (C.compRight f)
-  ⟨m, f.symm c, by rwa [← monochromaticOf_injective f f.injective, f.apply_symm_apply], by
+  ⟨m, f.symm c, by rwa [← MonochromaticOf.injective f f.injective, f.apply_symm_apply], by
     simpa using hc⟩
 
 theorem isRamseyValid_equiv_right {n : K → ℕ} (f : K' ≃ K) :
@@ -479,7 +502,7 @@ theorem ramsey_base [Nonempty V] {n : K → ℕ} (hn : ∃ k, n k ≤ 1) : IsRam
   by
   inhabit V
   obtain ⟨k, hk⟩ := hn
-  exact fun C => ⟨{Inhabited.default}, k, monochromatic_finset_singleton, by simpa using hk⟩
+  exact fun C => ⟨{Inhabited.default}, k, MonochromaticOf.finset_singleton, by simpa using hk⟩
 
 theorem ramsey_base' [Fintype V] (n : K → ℕ) (hn : ∃ k, n k ≤ 1) (hV : 1 ≤ card V) :
     IsRamseyValid V n :=
@@ -491,7 +514,7 @@ theorem isRamseyValid_min [Fintype V] [Nonempty K] {n : K → ℕ} {n' : ℕ} (h
   (hn _).trans (hm.trans (Finset.card_le_univ m))
 
 theorem isRamseyValid_unique [Fintype V] [Unique K] {n : K → ℕ} (hV : n default ≤ card V) :
-    IsRamseyValid V n := fun C => ⟨univ, default, monochromatic_subsingleton_colours, by simpa⟩
+    IsRamseyValid V n := fun C => ⟨univ, default, MonochromaticOf.subsingleton_colours, by simpa⟩
 
 theorem IsRamseyValid.remove_twos {n : K → ℕ} (h : IsRamseyValid V n) :
     IsRamseyValid V fun k : { k : K // n k ≠ 2 } => n k := by
@@ -510,7 +533,7 @@ theorem IsRamseyValid.remove_twos {n : K → ℕ} (h : IsRamseyValid V n) :
   obtain ⟨a, b, ha, hb, hab⟩ := this
   have : Subtype.val (C.get a b hab) = c := hm ha hb hab
   refine ⟨m, _, ?_, hc.trans_eq' (congr_arg n this.symm)⟩
-  rwa [← monochromaticOf_injective _ Subtype.val_injective, this]
+  rwa [← MonochromaticOf.injective _ Subtype.val_injective, this]
 
 theorem IsRamseyValid.of_remove_twos {n : K → ℕ}
     (h : IsRamseyValid V fun k : { k : K // n k ≠ 2 } => n k) : IsRamseyValid V n :=
@@ -520,8 +543,8 @@ theorem IsRamseyValid.of_remove_twos {n : K → ℕ}
   by_cases h'' : ∃ (x y : V) (H : x ≠ y), n (C.get x y H) = 2
   · obtain ⟨x, y, H, hxy⟩ := h''
     refine ⟨({x, y} : Finset V), C.get x y H, ?_, ?_⟩
-    · rw [coe_pair, monochromaticOf_insert]
-      refine ⟨monochromaticOf_singleton, ?_⟩
+    · rw [coe_pair, MonochromaticBetween.insert]
+      refine ⟨MonochromaticOf.singleton, ?_⟩
       simp only [MonochromaticBetween, Set.mem_singleton_iff, top_adj, ne_eq, forall_eq]
       exact fun _ => get_comm x y _
     rw [hxy, card_pair H]
@@ -576,7 +599,7 @@ theorem ramsey_fin_induct_aux {V : Type*} [DecidableEq K] {n : K → ℕ} (N : K
   rcases ne_or_eq k k' with (hk | rfl)
   · exact ⟨_, _, hm'.map', by simpa [hk.symm] using hk'⟩
   refine ⟨insert (x : V) (m'.map (Function.Embedding.subtype _)), k, ?_, ?_⟩
-  · rw [coe_insert, monochromaticOf_insert]
+  · rw [coe_insert, MonochromaticBetween.insert]
     refine ⟨hm'.map', ?_⟩
     simp only [MonochromaticBetween, coe_map, Function.Embedding.subtype_apply, Set.mem_image,
       mem_coe, Subtype.exists, exists_and_right, exists_eq_right, Set.mem_singleton_iff, top_adj,
@@ -689,7 +712,7 @@ theorem ramsey_fin_induct_two {i j Ni Nj : ℕ} (hi : 2 ≤ i) (hj : 2 ≤ j)
   · rw [Fin.forall_fin_two]
     exact ⟨hi, hj⟩
   · rw [Fin.forall_fin_two]
-    simp [Function.update_head, Function.update_cons_one, hi', hj']
+    simp [Fin.update_vecCons_zero, Function.update_cons_one, hi', hj']
 
 theorem ramsey_fin_induct_two_evens {i j Ni Nj : ℕ} (hi : 2 ≤ i) (hj : 2 ≤ j) (hNi : Even Ni)
     (hNj : Even Nj) (hi' : IsRamseyValid (Fin Ni) ![i - 1, j])
@@ -750,7 +773,7 @@ theorem ramsey_fin_induct_two_evens {i j Ni Nj : ℕ} (hi : 2 ≤ i) (hj : 2 ≤
     rw [add_add_add_comm, ← add_assoc, e] at this
     simp only [add_le_iff_nonpos_right, le_zero_iff, Nat.one_ne_zero] at this
   refine ramsey_fin_induct_aux ![Ni, Nj] m x ?_ (by simp [m]) ?_ ?_
-  · rw [Fin.forall_fin_two, Function.update_head, Function.update_cons_one]
+  · rw [Fin.forall_fin_two, Fin.update_vecCons_zero, Function.update_cons_one]
     exact ⟨hi', hj'⟩
   · rwa [Fin.exists_fin_two]
   · rw [Fin.forall_fin_two]
@@ -767,7 +790,7 @@ theorem ramsey_fin_induct_three {i j k Ni Nj Nk : ℕ} (hi : 2 ≤ i) (hj : 2 �
   · rwa [this] at h
   · rw [Fin.forall_fin_succ, Fin.forall_fin_two]
     exact ⟨hi, hj, hk⟩
-  · rw [Fin.forall_fin_succ, Fin.forall_fin_two, Function.update_head, Fin.succ_zero_eq_one,
+  · rw [Fin.forall_fin_succ, Fin.forall_fin_two, Fin.update_vecCons_zero, Fin.succ_zero_eq_one,
       Fin.succ_one_eq_two, Function.update_cons_one, Function.update_cons_two]
     exact ⟨hi', hj', hk'⟩
 
