@@ -217,8 +217,7 @@ theorem empty_left {Y : Set V} {k : K} : C.MonochromaticBetween ∅ Y k := by
   simp [MonochromaticBetween]
 
 @[simp]
-theorem empty_right {X : Set V} {k : K} :
-    C.MonochromaticBetween X ∅ k := by
+theorem empty_right {X : Set V} {k : K} : C.MonochromaticBetween X ∅ k := by
   simp [MonochromaticBetween]
 
 theorem singleton_left {x : V} {Y : Set V} {k : K} :
@@ -231,13 +230,13 @@ theorem singleton_right {y : V} {X : Set V} {k : K} :
 
 theorem union_left {X Y Z : Set V} {k : K} :
     C.MonochromaticBetween (X ∪ Y) Z k ↔
-      C.MonochromaticBetween X Z k ∧ C.MonochromaticBetween Y Z k :=
-  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
+      C.MonochromaticBetween X Z k ∧ C.MonochromaticBetween Y Z k := by
+  simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
 
 theorem union_right {X Y Z : Set V} {k : K} :
     C.MonochromaticBetween X (Y ∪ Z) k ↔
-      C.MonochromaticBetween X Y k ∧ C.MonochromaticBetween X Z k :=
-  by simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
+      C.MonochromaticBetween X Y k ∧ C.MonochromaticBetween X Z k := by
+  simp only [MonochromaticBetween, Set.mem_union, or_imp, forall_and]
 
 protected theorem self {X : Set V} {k : K} :
     C.MonochromaticBetween X X k ↔ C.MonochromaticOf X k := by
@@ -245,15 +244,16 @@ protected theorem self {X : Set V} {k : K} :
 
 protected theorem subset_left {X Y Z : Set V} {k : K}
     (hYZ : C.MonochromaticBetween Y Z k) (hXY : X ⊆ Y) : C.MonochromaticBetween X Z k :=
-  fun _ hx _ hy _ => hYZ (hXY hx) hy _
+  fun _ hx _ hy ↦ hYZ (hXY hx) hy
 
 protected theorem subset_right {X Y Z : Set V} {k : K}
     (hXZ : C.MonochromaticBetween X Z k) (hXY : Y ⊆ Z) : C.MonochromaticBetween X Y k :=
-  fun _ hx _ hy _ => hXZ hx (hXY hy) _
+  fun _ hx _ hy ↦ hXZ hx (hXY hy)
 
 protected theorem subset {W X Y Z : Set V} {k : K}
     (hWX : C.MonochromaticBetween W X k) (hYW : Y ⊆ W) (hZX : Z ⊆ X) :
-    C.MonochromaticBetween Y Z k := fun _ hx _ hy _ => hWX (hYW hx) (hZX hy) _
+    C.MonochromaticBetween Y Z k :=
+  fun _ hx _ hy ↦ hWX (hYW hx) (hZX hy)
 
 protected theorem image {C : EdgeLabeling G' K} {X Y : Set V} {k : K} {f : G ↪g G'}
     (hXY : (C.pullback f.toHom).MonochromaticBetween X Y k) :
@@ -268,7 +268,7 @@ protected theorem symm {X Y : Set V} {k : K} (hXY : C.MonochromaticBetween X Y k
 
 protected theorem comm {X Y : Set V} {k : K} :
     C.MonochromaticBetween Y X k ↔ C.MonochromaticBetween X Y k :=
-  ⟨MonochromaticBetween.symm, MonochromaticBetween.symm⟩
+  ⟨.symm, .symm⟩
 
 protected theorem union {X Y : Set V} {k : K} :
     C.MonochromaticOf (X ∪ Y) k ↔
@@ -279,9 +279,8 @@ protected theorem union {X Y : Set V} {k : K} :
 
 protected theorem insert {y : V} :
     C.MonochromaticOf (insert y m) c ↔ C.MonochromaticOf m c ∧ C.MonochromaticBetween m {y} c := by
-  rw [Set.insert_eq, ← coe_singleton, Set.union_comm]
-  convert MonochromaticBetween.union
-  simp only [coe_singleton, MonochromaticOf.singleton, true_and]
+  rw [Set.insert_eq, Set.union_comm, MonochromaticBetween.union]
+  simp
 
 end MonochromaticBetween
 
@@ -382,7 +381,6 @@ theorem TopEdgeLabeling.Disjoint.monochromaticBetween {C : TopEdgeLabeling V K} 
 open EdgeLabeling
 
 variable {C : TopEdgeLabeling V K}
-
 
 -- TODO (BM): I think the `∃` part of this should be its own def...
 /-- The predicate `is_ramsey_valid V n` says that the type `V` is large enough to guarantee a
