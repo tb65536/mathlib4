@@ -79,8 +79,8 @@ noncomputable def Coinvariants.congr {k G V₁ V₂ : Type*} [Field k] [AddCommG
     [Module k V₁] [Module k V₂] [Group G]
     (ρ₁ : Representation k G V₁) (ρ₂ : Representation k G V₂)
     (e : ρ₁.Equiv ρ₂) :
-    ρ₁.Coinvariants ≃ₗ[k] ρ₂.Coinvariants := by
-  apply LinearEquiv.ofLinear (map ρ₁ ρ₂ e.toIntertwiningMap) (map ρ₂ ρ₁ e.symm.toIntertwiningMap)
+    ρ₁.Coinvariants ≃ₗ[k] ρ₂.Coinvariants :=
+  .ofLinear (map ρ₁ ρ₂ e.toIntertwiningMap) (map ρ₂ ρ₁ e.symm.toIntertwiningMap)
     (by ext; simp [map_comp]) (by ext; simp [map_comp])
 
 /-- Descend an  -/
