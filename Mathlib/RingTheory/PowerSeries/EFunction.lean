@@ -103,11 +103,6 @@ end IsAlgebraic
 
 namespace Polynomial
 
-theorem mem_lifts_of_surjective {R S : Type*} [CommRing R] [CommRing S]
-    {φ : R →+* S} (hφ : Function.Surjective φ) (f : S[X]) :
-    f ∈ lifts φ :=
-  (lifts_iff_coeff_lifts f).mpr fun n ↦ hφ (f.coeff n)
-
 -- PRed
 theorem exists_natDegree_eq_of_mem_lifts {R S : Type*} [Semiring R] [Semiring S]
     {f : R →+* S}
