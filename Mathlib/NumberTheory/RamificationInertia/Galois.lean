@@ -137,14 +137,14 @@ instance isPretransitive_of_isGaloisGroup : MulAction.IsPretransitive G (primesO
     rcases exists_smul_eq_of_isGaloisGroup p P Q G with ⟨σ, hs⟩
     exact ⟨σ, Subtype.val_inj.mp hs⟩
 
-include G in
+include p G in
 /-- All the `Ideal.ramificationIdx` over a fixed maximal ideal are the same. -/
 theorem ramificationIdx_eq_of_isGaloisGroup :
     P.ramificationIdx' A = Q.ramificationIdx' A := by
   rcases exists_smul_eq_of_isGaloisGroup p P Q G with ⟨σ, rfl⟩
   rw [ramificationIdx'_smul]
 
-include G in
+include p G in
 /-- All the `Ideal.inertiaDeg` over a fixed maximal ideal are the same. -/
 theorem inertiaDeg_eq_of_isGaloisGroup :
     P.inertiaDeg' A = Q.inertiaDeg' A := by

@@ -63,49 +63,6 @@ theorem ramificationIdx'_def [q.IsPrime] :
 theorem ramificationIdx'_of_not_isPrime (hq : ¬ q.IsPrime) : q.ramificationIdx' R = 0 :=
   dif_neg hq
 
-theorem ramificationIdx'_pos [hq : q.IsPrime] [IsNoetherianRing S]
-    [Algebra.IsIntegral R S] : 0 < q.ramificationIdx' R := by
-  let p := q.under R
-  let Rp := Localization.AtPrime p
-  let Sq := Localization.AtPrime q
-  rw [ramificationIdx'_def, Nat.pos_iff_ne_zero, ne_eq, ENat.toNat_eq_zero, not_or]
-  constructor
-  · rw [Module.length_eq_zero_iff, Submodule.Quotient.subsingleton_iff,
-      IsScalarTower.algebraMap_eq R S, ← map_map, ← ne_eq, ← lt_top_iff_ne_top]
-    refine lt_of_le_of_lt (map_mono map_comap_le) ?_
-    rw [Localization.AtPrime.map_eq_maximalIdeal]
-    refine IsMaximal.lt_top ?_
-    exact IsLocalRing.maximalIdeal.isMaximal (Localization q.primeCompl)
-  · rw [← ne_eq, Module.length_eq_of_surjective
-        (R := Sq ⧸ p.map (algebraMap R Sq)) (S := Sq) Quotient.mk_surjective,
-      Module.length_ne_top_iff, ← isArtinianRing_iff_isFiniteLength,
-      isArtinianRing_iff_krullDimLE_zero]
-    have : q ∈ (p.map (algebraMap R S)).minimalPrimes := by
-      refine ⟨⟨hq, map_comap_le⟩, ?_⟩
-      intro r ⟨hr, hpr⟩ hrq
-      rw [map_le_iff_le_comap] at hpr
-      contrapose! hpr
-      exact not_le_of_gt (IsIntegral.comap_lt_comap (lt_of_le_not_ge hrq hpr))
-    have : q.map (algebraMap S Sq) ∈ (p.map (algebraMap R Sq)).minimalPrimes := by
-      rwa [IsScalarTower.algebraMap_eq R S Sq, ← map_map,
-        IsLocalization.minimalPrimes_map q.primeCompl, Set.mem_preimage,
-        Localization.AtPrime.map_eq_maximalIdeal,
-        IsLocalization.AtPrime.under_maximalIdeal Sq q]
-    rw [Ring.krullDimLE_zero_iff]
-    intro r hr
-    let r' := r.comap (algebraMap Sq (Sq ⧸ p.map (algebraMap R Sq)))
-    suffices r'.IsMaximal by
-      exact r.isMaximal_of_isIntegral_of_isMaximal_comap this
-    replace hr : r'.IsPrime := hr.comap _
-    have key : p.map (algebraMap R Sq) ≤ r' := by
-      rw [← (p.map (algebraMap R Sq)).mk_ker]
-      apply Ideal.ker_le_comap
-    rw [Localization.AtPrime.map_eq_maximalIdeal] at this
-    have := this.2 ⟨hr, key⟩ (IsLocalRing.le_maximalIdeal_of_isPrime r')
-    rw [← Ideal.IsMaximal.eq_of_le ?_ hr.ne_top this]
-    · exact IsLocalRing.maximalIdeal.isMaximal Sq
-    · exact IsLocalRing.maximalIdeal.isMaximal Sq
-
 -- PRed
 theorem ramificationIdx'_eq_one [q.IsPrime] [Algebra.IsUnramifiedAt R q]
     [Algebra.EssFiniteType R S] : q.ramificationIdx' R = 1 := by
