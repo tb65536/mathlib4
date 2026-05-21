@@ -9,6 +9,7 @@ public import Mathlib.Algebra.BigOperators.Fin
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Algebra.CharP.Pi
 public import Mathlib.Combinatorics.SimpleGraph.Coloring.EdgeLabeling
+public import Mathlib.Combinatorics.SimpleGraph.Copy
 public import Mathlib.Combinatorics.SimpleGraph.DegreeSum
 public import Mathlib.Data.DFinsupp.WellFounded
 public import Mathlib.Data.Fin.Basic
@@ -267,7 +268,45 @@ end MonochromaticOf
 
 end EdgeLabeling
 
+section
+
+variable {V V' K : Type*} (G : SimpleGraph V) {G' : SimpleGraph V'} (C : EdgeLabeling G' K) (c : K)
+
+def LabelingContains : Prop :=
+  G ⊑ C.labelGraph c -- should this be `∃ c`?
+
+def LabelingIndContains : Prop :=
+  G ⊴ C.labelGraph c
+
+variable {G C c}
+
+theorem LabelingIndContains.LabelingContains (h : G.LabelingIndContains C c) :
+    G.LabelingContains C c :=
+  h.isContained
+
+end
+
+section
+
+-- todo: add more general defs for graphs in terms of `LabelingContains` and `LabelingIndContains`
+-- but keep this def because it is needed to bootstrap existence of ramsey numbers for graphs
+
+/-- The predicate `IsRamseyValid V n` states that the type `V` is large enough to guarantee a
+clique of size `n k` for some colour `k : K`. -/
+def IsRamseyValid' (V : Type*) (n : K → ℕ) : Prop :=
+  ∀ C : TopEdgeLabeling V K,
+    ∃ (m : Finset V) (k : K), (⊤ : SimpleGraph V).LabelingContains C k ∧ n k ≤ m.card
+
+/-- The predicate `IsRamseyValid N n` states that a complete graph of size `N` is large enough to
+guarantee a clique of size `n k` for some colour `k : K`. -/
+def IsRamseyValid'' (N : ℕ) (n : K → ℕ) : Prop :=
+  ∀ C : TopEdgeLabeling (Fin N) K,
+    ∃ (m : Finset V) (c : K), (⊤ : SimpleGraph V).LabelingContains C c ∧ n c ≤ m.card
+
+end
+
 end SimpleGraph
+
 
 
 
@@ -336,8 +375,6 @@ theorem exists_even_degree [Fintype V] [DecidableRel G.Adj] (hV : Odd (card V)) 
   simpa using this
 
 end
-
-variable {V V' : Type*} {G : SimpleGraph V} {G' : SimpleGraph V'} {K K' : Type*}
 
 theorem TopEdgeLabeling.monochromaticOf_insert {C : TopEdgeLabeling V K} {c : K}
     {m : Set V} {x : V} (hx : x ∉ m) : C.MonochromaticOf (insert x m) c ↔
@@ -467,7 +504,6 @@ theorem IsRamseyValid.equiv_right {n : K → ℕ} (f : K' ≃ K) (h : IsRamseyVa
 theorem isRamseyValid_equiv_right {n : K → ℕ} (f : K' ≃ K) :
     IsRamseyValid V (n ∘ f) ↔ IsRamseyValid V n :=
   ⟨fun h ↦ by convert h.equiv_right f.symm; ext; simp, fun h ↦ h.equiv_right _⟩
-
 
 instance [DecidableEq K] [DecidableEq V] [DecidableRel G.Adj] (C : EdgeLabeling G K) (m : Finset V)
     (c : K) : Decidable (C.MonochromaticOf m c) :=
