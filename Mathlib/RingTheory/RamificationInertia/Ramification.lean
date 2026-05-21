@@ -119,7 +119,27 @@ theorem ramificationIdx'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMu
     let := Localization.AtPrime.algebraOfLiesOver p (g • q)
     rw [ramificationIdx'_eq p q, ramificationIdx'_eq p (g • q)]
     congr 1
-    sorry
+    let f := MulSemiringAction.toAlgAut G R S g
+    let S' := S
+    let : Algebra S S' := f.toRingHom.toAlgebra
+    let q' : Ideal S' := q.map f
+    let Sq := Localization.AtPrime q
+    let Sq' := Localization.AtPrime q'
+    change Module.length Sq' (Sq' ⧸ map (algebraMap R Sq') p) =
+      Module.length Sq (Sq ⧸ map (algebraMap R Sq) p)
+    let : q'.LiesOver q := ⟨(Ideal.comap_map_of_bijective f f.bijective).symm⟩
+    letI : Algebra Sq Sq' := Localization.AtPrime.algebraOfLiesOver q q'
+    let e₀' : Sq →ₐ[Sq] Sq' := Algebra.ofId Sq Sq' -- just in case
+    have he₀' : Function.Bijective e₀' := sorry
+    let e₀ : Sq ≃ₐ[Sq] Sq' := AlgEquiv.ofBijective e₀' he₀'
+    have : IsScalarTower R Sq Sq' := sorry
+    let e : (Sq ⧸ p.map (algebraMap R Sq)) ≃ₐ[Sq] Sq' ⧸ p.map (algebraMap R Sq') := by
+      apply Ideal.quotientEquivAlg _ _ e₀
+      rw [IsScalarTower.algebraMap_eq R Sq Sq', ← map_map]
+      rfl
+    rw [e.toLinearEquiv.length_eq]
+    symm
+    exact Module.length_eq_of_surjective (R := Sq') (S := Sq) he₀'.surjective
 
 open Localization IsLocalization.AtPrime in
 theorem ramificationIdx_eq_ramificationIdx'
