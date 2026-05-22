@@ -27,6 +27,113 @@ to be the degree of the residue field of `q` over the residue field of its preim
 
 @[expose] public section
 
+namespace IsLocalRing.ResidueField
+
+variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
+  [IsLocalRing B] [IsLocalRing C] [Algebra A B] [Algebra A C]
+
+
+attribute [simp] ResidueField.map_residue
+
+noncomputable def mapAlgHom (e : B →ₐ[A] C) [IsLocalHom e] :
+    ResidueField B →ₐ[A] ResidueField C where
+  __ := map e
+  commutes' x := by
+    simp [IsScalarTower.algebraMap_apply A B (ResidueField B),
+      IsScalarTower.algebraMap_apply A C (ResidueField C)]
+
+@[simp]
+theorem mapAlgHom_residue (e : B →ₐ[A] C) [IsLocalHom e] (x : B) :
+    mapAlgHom e (residue B x) = residue C (e x) :=
+  rfl
+
+noncomputable def mapAlgEquiv (e : B ≃ₐ[A] C) :
+    ResidueField B ≃ₐ[A] ResidueField C where
+  __ :=
+    haveI : IsLocalHom e.toRingEquiv := inferInstance
+    haveI : IsLocalHom (e : B →ₐ[A] C) := ⟨this.map_nonunit⟩
+    mapAlgHom e
+  invFun := map e.symm
+  left_inv x := by
+    obtain ⟨x, rfl⟩ := residue_surjective x
+    simp
+  right_inv x := by
+    obtain ⟨x, rfl⟩ := residue_surjective x
+    simp
+
+@[simp]
+theorem mapAlgEquiv_residue (e : B ≃ₐ[A] C) (x : B) :
+    mapAlgEquiv e (residue B x) = residue C (e x) :=
+  rfl
+
+variable [IsLocalRing A] [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)]
+
+noncomputable def mapAlgHom' (e : B →ₐ[A] C) [IsLocalHom e] :
+    ResidueField B →ₐ[ResidueField A] ResidueField C :=
+  (mapAlgHom e).extendScalarsOfSurjective residue_surjective
+
+@[simp]
+theorem mapAlgHom'_residue (e : B →ₐ[A] C) [IsLocalHom e] (x : B) :
+    mapAlgHom' e (residue B x) = residue C (e x) :=
+  rfl
+
+noncomputable def mapAlgEquiv' (e : B ≃ₐ[A] C) :
+    ResidueField B ≃ₐ[ResidueField A] ResidueField C :=
+  (mapAlgEquiv e).extendScalarsOfSurjective residue_surjective
+
+@[simp]
+theorem mapAlgEquiv'_residue (e : B ≃ₐ[A] C) (x : B) :
+    mapAlgEquiv' e (residue B x) = residue C (e x) :=
+  rfl
+
+end IsLocalRing.ResidueField
+
+namespace Localization
+
+open AtPrime
+
+variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C] [Algebra A B] [Algebra A C]
+  (p : Ideal A) (q : Ideal B) (r : Ideal C) [p.IsPrime] [q.IsPrime] [r.IsPrime]
+  [q.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime q)] [IsLiesOverAlgebra p q]
+  [r.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime r)] [IsLiesOverAlgebra p r]
+
+noncomputable def localAlgEquiv' (f : B ≃ₐ[A] C) (h : q = r.comap f) :
+    Localization.AtPrime q ≃ₐ[Localization.AtPrime p] Localization.AtPrime r where
+  __ := localAlgEquiv q r f h
+  commutes' := by
+    let Ap := Localization.AtPrime p
+    let f := (localAlgEquiv q r f h).toAlgHom.comp (IsScalarTower.toAlgHom A Ap _)
+    let g := IsScalarTower.toAlgHom A Ap (Localization.AtPrime r)
+    have : f.toRingHom.comp (algebraMap A Ap) = g.toRingHom.comp (algebraMap A Ap) := by simp
+    suffices f = g by rwa [DFunLike.ext_iff] at this
+    apply Localization.algHom_ext
+    rwa [DFunLike.ext_iff] at this ⊢
+
+end Localization
+
+namespace Ideal
+
+open Localization.AtPrime
+
+variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C] [Algebra A B] [Algebra A C]
+  (p : Ideal A) (q : Ideal B) (r : Ideal C) [p.IsPrime] [q.IsPrime] [r.IsPrime]
+  [q.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime q)] [IsLiesOverAlgebra p q]
+  [r.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime r)] [IsLiesOverAlgebra p r]
+
+noncomputable def residueFieldRingEquiv (f : B ≃+* C) (h : q = r.comap f) :
+    q.ResidueField ≃+* r.ResidueField :=
+  IsLocalRing.ResidueField.mapEquiv (Localization.localRingEquiv q r f h)
+
+noncomputable def residueFieldAlgEquiv (f : B ≃ₐ[A] C) (h : q = r.comap f) :
+    q.ResidueField ≃ₐ[A] r.ResidueField :=
+  IsLocalRing.ResidueField.mapAlgEquiv (Localization.localAlgEquiv q r f h)
+
+noncomputable def residueFieldAlgEquiv' (f : B ≃ₐ[A] C) (h : q = r.comap f) :
+    q.ResidueField ≃ₐ[p.ResidueField] r.ResidueField :=
+  IsLocalRing.ResidueField.mapAlgEquiv' (Localization.localAlgEquiv' p q r f h)
+
+end Ideal
+
 namespace Ideal
 
 section
@@ -76,87 +183,6 @@ theorem inertiaDeg'_eq [q.LiesOver p] [q.IsPrime] [p.IsPrime]
   subst this
   exact inertiaDeg'_def q R
 
-noncomputable def foo₁ (A B : Type*) [CommRing A] [CommRing B]
-    [IsLocalRing A] [IsLocalRing B]
-    (e : A ≃+* B) :
-    IsLocalRing.ResidueField A ≃+* IsLocalRing.ResidueField B := by
-  apply IsLocalRing.ResidueField.mapEquiv e
-
-noncomputable def _root_.IsLocalRing.ResidueField.mapAlgHom
-    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
-    [IsLocalRing A] [IsLocalRing B] [IsLocalRing C] [Algebra A B] [Algebra A C]
-    [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)]
-    (e : B →ₐ[A] C) [IsLocalHom e] :
-    IsLocalRing.ResidueField B →ₐ[IsLocalRing.ResidueField A] IsLocalRing.ResidueField C where
-  __ := IsLocalRing.ResidueField.map e
-  commutes' := sorry
-
-noncomputable def _root_.IsLocalRing.ResidueField.mapAlgHom_mapAlgHom
-    {A B C D : Type*} [CommRing A] [CommRing B] [CommRing C] [CommRing D]
-    [IsLocalRing A] [IsLocalRing B] [IsLocalRing C] [IsLocalRing D]
-    [Algebra A B] [Algebra A C] [Algebra A D]
-    [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)] [IsLocalHom (algebraMap A D)]
-    (e : B →ₐ[A] C) (f : C →ₐ[A] D) [he : IsLocalHom e] [hf : IsLocalHom f]
-    (x : IsLocalRing.ResidueField B) :
-    letI : IsLocalHom (f.comp e) := by
-      sorry
-    (IsLocalRing.ResidueField.mapAlgHom f) (IsLocalRing.ResidueField.mapAlgHom e x) =
-        IsLocalRing.ResidueField.mapAlgHom (f.comp e) x := by
-  have : IsLocalHom e.toRingHom := IsLocalHom.mk he.map_nonunit
-  have : IsLocalHom f.toRingHom := IsLocalHom.mk hf.map_nonunit
-  exact IsLocalRing.ResidueField.map_map e.toRingHom f.toRingHom x
-
-noncomputable def _root_.IsLocalRing.ResidueField.mapAlgHom_comp
-    {A B C D : Type*} [CommRing A] [CommRing B] [CommRing C] [CommRing D]
-    [IsLocalRing A] [IsLocalRing B] [IsLocalRing C] [IsLocalRing D]
-    [Algebra A B] [Algebra A C] [Algebra A D]
-    [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)] [IsLocalHom (algebraMap A D)]
-    (e : B →ₐ[A] C) (f : C →ₐ[A] D) [IsLocalHom e] [IsLocalHom f] [IsLocalHom (f.comp e)] :
-    IsLocalRing.ResidueField.mapAlgHom (f.comp e) =
-      (IsLocalRing.ResidueField.mapAlgHom f).comp (IsLocalRing.ResidueField.mapAlgHom e) := by
-  ext x
-  symm
-  apply IsLocalRing.ResidueField.mapAlgHom_mapAlgHom
-
-noncomputable def _root_.IsLocalRing.ResidueField.mapAlgEquiv
-    {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
-    [IsLocalRing A] [IsLocalRing B] [IsLocalRing C] [Algebra A B] [Algebra A C]
-    [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)]
-    (e : B ≃ₐ[A] C) :
-    IsLocalRing.ResidueField B ≃ₐ[IsLocalRing.ResidueField A] IsLocalRing.ResidueField C :=
-  let : IsLocalHom e.toAlgHom := sorry
-  let : IsLocalHom e.symm.toAlgHom := sorry
-  AlgEquiv.ofAlgHom (IsLocalRing.ResidueField.mapAlgHom e.toAlgHom)
-    (IsLocalRing.ResidueField.mapAlgHom e.symm.toAlgHom)
-    (by
-      have : IsLocalHom (e.toAlgHom.comp e.symm.toAlgHom) := sorry
-      rw [← IsLocalRing.ResidueField.mapAlgHom_comp]
-      sorry) (by
-      sorry)
-
-open Pointwise in
-theorem inertiaDeg'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S]
-    (g : G) : (g • q).inertiaDeg' R = q.inertiaDeg' R := by
-  by_cases hq : q.IsPrime; swap
-  · rw [inertiaDeg'_of_not_isPrime, inertiaDeg'_of_not_isPrime] <;> simpa
-  · let p := q.under R
-    let f₀ := MulSemiringAction.toAlgAut G R S g
-    let := Localization.AtPrime.algebraOfLiesOver p q
-    let := Localization.AtPrime.algebraOfLiesOver p (g • q)
-    let := Localization.AtPrime.algebraOfLiesOver p (q.map f₀)
-    rw [inertiaDeg'_eq p q, inertiaDeg'_eq p (g • q)]
-    change Module.finrank p.ResidueField (q.map f₀).ResidueField = Module.finrank p.ResidueField q.ResidueField
-    let Rp := Localization.AtPrime p
-    let Sq := Localization.AtPrime q
-    let Sq' := Localization.AtPrime (q.map f₀)
-    let f : Sq ≃ₐ[R] Sq' :=
-      Localization.localAlgEquiv q (q.map f₀) f₀ (comap_map_of_bijective f₀ f₀.bijective).symm
-    let e₁ : Sq' ≃ₐ[Rp] Sq := by
-      sorry
-    let e₂ : (g • q).ResidueField ≃ₐ[p.ResidueField] q.ResidueField :=
-      IsLocalRing.ResidueField.mapAlgEquiv e₁
-    exact e₂.toLinearEquiv.finrank_eq
-
 theorem inertiaDeg_eq_inertiaDeg' [q.LiesOver p] [p.IsMaximal] [q.IsMaximal] :
     p.inertiaDeg q = q.inertiaDeg' R := by
   let : Field (R ⧸ p) := Quotient.field p
@@ -185,6 +211,19 @@ theorem inertiaDeg'_tower [r.LiesOver q] :
     rw [inertiaDeg'_def, inertiaDeg'_eq (r.under R), inertiaDeg'_eq q, eq_comm]
     apply Module.finrank_mul_finrank
   · rw [inertiaDeg'_of_not_isPrime r R hr, inertiaDeg'_of_not_isPrime r S hr, mul_zero]
+
+open Pointwise in
+theorem inertiaDeg'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S]
+    (g : G) : (g • q).inertiaDeg' R = q.inertiaDeg' R := by
+  by_cases hq : q.IsPrime; swap
+  · rw [inertiaDeg'_of_not_isPrime, inertiaDeg'_of_not_isPrime] <;> simpa
+  · let p := q.under R
+    let f₀ := MulSemiringAction.toAlgAut G R S g
+    let := Localization.AtPrime.algebraOfLiesOver p q
+    let := Localization.AtPrime.algebraOfLiesOver p (g • q)
+    rw [inertiaDeg'_eq p q, inertiaDeg'_eq p (g • q)]
+    let e₂ := Ideal.residueFieldAlgEquiv' p (g • q) q f₀.symm (comap_symm f₀.toRingEquiv).symm
+    exact e₂.toLinearEquiv.finrank_eq
 
 end
 
