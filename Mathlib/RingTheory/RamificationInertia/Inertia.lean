@@ -96,12 +96,14 @@ noncomputable def _root_.IsLocalRing.ResidueField.mapAlgHom_mapAlgHom
     [IsLocalRing A] [IsLocalRing B] [IsLocalRing C] [IsLocalRing D]
     [Algebra A B] [Algebra A C] [Algebra A D]
     [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)] [IsLocalHom (algebraMap A D)]
-    (e : B →ₐ[A] C) (f : C →ₐ[A] D) [IsLocalHom e] [IsLocalHom f] [IsLocalHom (f.comp e)]
+    (e : B →ₐ[A] C) (f : C →ₐ[A] D) [he : IsLocalHom e] [hf : IsLocalHom f]
     (x : IsLocalRing.ResidueField B) :
+    letI : IsLocalHom (f.comp e) := by
+      sorry
     (IsLocalRing.ResidueField.mapAlgHom f) (IsLocalRing.ResidueField.mapAlgHom e x) =
         IsLocalRing.ResidueField.mapAlgHom (f.comp e) x := by
-  have : IsLocalHom e.toRingHom := sorry
-  have : IsLocalHom f.toRingHom := sorry
+  have : IsLocalHom e.toRingHom := IsLocalHom.mk he.map_nonunit
+  have : IsLocalHom f.toRingHom := IsLocalHom.mk hf.map_nonunit
   exact IsLocalRing.ResidueField.map_map e.toRingHom f.toRingHom x
 
 noncomputable def _root_.IsLocalRing.ResidueField.mapAlgHom_comp
