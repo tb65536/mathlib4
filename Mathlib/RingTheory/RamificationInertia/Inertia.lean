@@ -35,6 +35,7 @@ variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
 
 attribute [simp] ResidueField.map_residue
 
+-- PRed
 noncomputable def mapAlgHom (e : B →ₐ[A] C) [IsLocalHom e] :
     ResidueField B →ₐ[A] ResidueField C where
   __ := map e
@@ -42,11 +43,13 @@ noncomputable def mapAlgHom (e : B →ₐ[A] C) [IsLocalHom e] :
     simp [IsScalarTower.algebraMap_apply A B (ResidueField B),
       IsScalarTower.algebraMap_apply A C (ResidueField C)]
 
+-- PRed
 @[simp]
 theorem mapAlgHom_residue (e : B →ₐ[A] C) [IsLocalHom e] (x : B) :
     mapAlgHom e (residue B x) = residue C (e x) :=
   rfl
 
+-- PRed
 noncomputable def mapAlgEquiv (e : B ≃ₐ[A] C) :
     ResidueField B ≃ₐ[A] ResidueField C where
   __ :=
@@ -61,6 +64,7 @@ noncomputable def mapAlgEquiv (e : B ≃ₐ[A] C) :
     obtain ⟨x, rfl⟩ := residue_surjective x
     simp
 
+-- PRed
 @[simp]
 theorem mapAlgEquiv_residue (e : B ≃ₐ[A] C) (x : B) :
     mapAlgEquiv e (residue B x) = residue C (e x) :=
@@ -68,19 +72,23 @@ theorem mapAlgEquiv_residue (e : B ≃ₐ[A] C) (x : B) :
 
 variable [IsLocalRing A] [IsLocalHom (algebraMap A B)] [IsLocalHom (algebraMap A C)]
 
+-- PRed
 noncomputable def mapAlgHom' (e : B →ₐ[A] C) [IsLocalHom e] :
     ResidueField B →ₐ[ResidueField A] ResidueField C :=
   (mapAlgHom e).extendScalarsOfSurjective residue_surjective
 
+-- PRed
 @[simp]
 theorem mapAlgHom'_residue (e : B →ₐ[A] C) [IsLocalHom e] (x : B) :
     mapAlgHom' e (residue B x) = residue C (e x) :=
   rfl
 
+-- PRed
 noncomputable def mapAlgEquiv' (e : B ≃ₐ[A] C) :
     ResidueField B ≃ₐ[ResidueField A] ResidueField C :=
   (mapAlgEquiv e).extendScalarsOfSurjective residue_surjective
 
+-- PRed
 @[simp]
 theorem mapAlgEquiv'_residue (e : B ≃ₐ[A] C) (x : B) :
     mapAlgEquiv' e (residue B x) = residue C (e x) :=
@@ -97,6 +105,7 @@ variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C] [Algebra A B] [A
   [q.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime q)] [IsLiesOverAlgebra p q]
   [r.LiesOver p] [Algebra (Localization.AtPrime p) (Localization.AtPrime r)] [IsLiesOverAlgebra p r]
 
+-- PRed
 noncomputable def localAlgEquiv' (f : B ≃ₐ[A] C) (h : q = r.comap f) :
     Localization.AtPrime q ≃ₐ[Localization.AtPrime p] Localization.AtPrime r where
   __ := localAlgEquiv q r f h
