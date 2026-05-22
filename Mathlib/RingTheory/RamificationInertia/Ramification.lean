@@ -109,6 +109,7 @@ theorem ramificationIdx'_eq [q.LiesOver p] [q.IsPrime] :
     q.ramificationIdx' R = (Module.length Sq (Sq ⧸ p.map (algebraMap R Sq))).toNat := by
   rw [ramificationIdx'_def, over_def q p]
 
+-- PRed
 open Pointwise in
 theorem ramificationIdx'_smul {G : Type*} [Group G] [MulSemiringAction G S] [SMulCommClass G R S]
     (g : G) : (g • q).ramificationIdx' R = q.ramificationIdx' R := by
