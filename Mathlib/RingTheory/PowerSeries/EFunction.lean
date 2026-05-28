@@ -158,13 +158,6 @@ theorem rootMultiplicity_comp_neg_X [IsDomain R] (a : R) :
   refine le_antisymm (rootMultiplicity_comp_neg_X_le f a) ?_
   simpa [comp_neg_X_comp_neg_X] using rootMultiplicity_comp_neg_X_le (f.comp (-X)) (-a)
 
-theorem roots_comp_neg_X [IsDomain R] : (f.comp (-X)).roots = f.roots.map (fun x ↦ -x) := by
-  classical
-  rw [Multiset.ext]
-  intro a
-  rw [count_roots, ← neg_neg a, Multiset.count_map_eq_count' Neg.neg f.roots neg_injective,
-    neg_neg, count_roots, rootMultiplicity_comp_neg_X]
-
 theorem resultant_comp_neg_X : (f.comp (-X)).resultant (g.comp (-X)) = g.resultant f := by
   revert g
   apply induction_of_Splits_of_injective_of_surjective f
