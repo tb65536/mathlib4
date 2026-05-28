@@ -201,6 +201,8 @@ theorem inertiaDegIn_mul_inertiaDegIn [p.IsPrime] [P.IsPrime] :
   rw [inertiaDegIn_eq_inertiaDeg p P G, inertiaDegIn_eq_inertiaDeg p Q GAC,
     inertiaDegIn_eq_inertiaDeg P Q GBC, ← inertiaDeg'_tower P Q]
 
+set_option linter.overlappingInstances false
+
 variable {p} in
 include G GAC GBC in
 theorem ramificationIdxIn_mul_ramificationIdxIn [Module.Flat B C] :
