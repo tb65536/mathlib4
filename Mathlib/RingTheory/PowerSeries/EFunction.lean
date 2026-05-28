@@ -103,12 +103,6 @@ end IsAlgebraic
 
 namespace Polynomial
 
--- PRed
-theorem exists_natDegree_eq_of_mem_lifts {R S : Type*} [Semiring R] [Semiring S]
-    {f : R →+* S}
-    {p : S[X]} (hp : p ∈ lifts f) : ∃ q, map f q = p ∧ q.natDegree = p.natDegree :=
-  (exists_degree_eq_of_mem_lifts hp).imp fun _ ↦ And.imp_right natDegree_eq_of_degree_eq
-
 variable {R S : Type*} [CommRing R] [CommRing S] (f g : R[X]) (φ : R →+* S)
 
 /-- A polynomial whose roots are the sums of the roots of `f` and `g`. -/
