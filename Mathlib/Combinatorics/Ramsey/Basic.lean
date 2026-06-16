@@ -6,20 +6,11 @@ Authors: Bhavik Mehta
 module
 
 public import Mathlib.Algebra.BigOperators.Fin
-public import Mathlib.Algebra.Order.BigOperators.Group.Finset
-public import Mathlib.Algebra.CharP.Pi
 public import Mathlib.Combinatorics.SimpleGraph.Coloring.EdgeLabeling
 public import Mathlib.Combinatorics.SimpleGraph.Copy
 public import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-public import Mathlib.Data.DFinsupp.WellFounded
-public import Mathlib.Data.Fin.Basic
-public import Mathlib.Data.Fin.Tuple.Sort
-public import Mathlib.Data.Fin.VecNotation
-public import Mathlib.Data.Finite.Card
 public import Mathlib.Data.Finset.Pairwise
 public import Mathlib.Data.Nat.Choose.Central
-public import Mathlib.Data.Sym.Card
-public import Mathlib.Tactic.FinCases
 
 /-!
 # Ramsey numbers
