@@ -30,43 +30,9 @@ these.
 
 @[expose] public section
 
-namespace Nat
-
-theorem centralBinom_monotone : Monotone centralBinom :=
-  fun n _ h ↦ (choose_le_choose n (mul_le_mul_left 2 h)).trans (choose_le_centralBinom _ _)
-
-theorem asc_le_pow_mul_factorial (s t : ℕ) : t.ascFactorial s ≤ s.factorial * t ^ s :=
-  match s with
-  | 0 => by simp
-  | n + 1 => by
-    rcases t.eq_zero_or_pos with rfl | ht
-    · simp [zero_ascFactorial] -- should be a `simp` lemma
-    rw [ascFactorial_succ, factorial_succ, pow_succ', mul_mul_mul_comm, add_one_mul]
-    grw [← Nat.le_mul_of_pos_right _ ht, add_comm, asc_le_pow_mul_factorial]
-
-theorem choose_add_le_pow_left (s t : ℕ) : (s + t).choose s ≤ (t + 1) ^ s := by
-  rw [add_comm, choose_eq_asc_factorial_div_factorial]
-  exact Nat.div_le_of_le_mul (asc_le_pow_mul_factorial _ _)
-
-theorem choose_le_pow_left (s t : ℕ) : s.choose t ≤ (s + 1 - t) ^ t := by
-  rcases le_or_gt t s with h | h
-  · obtain ⟨s, rfl⟩ := exists_add_of_le h
-    grw [choose_add_le_pow_left, add_assoc, Nat.add_sub_cancel_left]
-  · grw [choose_eq_zero_of_lt h, zero_le']
-
-end Nat
-
 namespace SimpleGraph
 
 variable {V : Type*}
-
-theorem neighborSet_bot {x : V} : (⊥ : SimpleGraph V).neighborSet x = ∅ := by
-  ext
-  simp
-
-theorem neighborSet_top {x : V} : (⊤ : SimpleGraph V).neighborSet x = {x}ᶜ := by
-  ext
-  simp [eq_comm]
 
 theorem neighborSet_sup {G H : SimpleGraph V} {x : V} :
     (G ⊔ H).neighborSet x = G.neighborSet x ∪ H.neighborSet x := by
@@ -683,7 +649,6 @@ theorem ramsey_fin_exists [Finite K] (n : K → ℕ) : ∃ N, IsRamseyValid (Fin
   by_cases h : ∃ k, n k = 0
   · exact ⟨0, isRamseyValid_of_exists_zero _ h⟩
   push Not at h
-  dsimp at ih
   have : ∀ k, Function.update n k (n k - 1) < n :=
     by
     simp only [update_lt_self_iff]
@@ -1055,7 +1020,7 @@ theorem diagonalRamsey_monotone : Monotone diagonalRamsey := fun _ _ hnm ↦
 
 theorem ramseyNumber_le_choose : ∀ i j : ℕ, ramseyNumber ![i, j] ≤ (i + j - 2).choose (i - 1)
   | 0, _ => by simp
-  | _, 0 => by rw [ramseyNumber_pair_swap, ramseyNumber_cons_zero]; exact zero_le'
+  | _, 0 => by rw [ramseyNumber_pair_swap, ramseyNumber_cons_zero]; exact zero_le
   | 1, j + 1 => by rw [ramseyNumber_one_succ, Nat.choose_zero_right]
   | i + 1, 1 => by rw [ramseyNumber_succ_one, Nat.succ_sub_succ_eq_sub, Nat.choose_self]
   | i + 2, j + 2 => by
@@ -1071,7 +1036,7 @@ theorem diagonalRamsey_le_centralBinom (i : ℕ) : diagonalRamsey i ≤ (i - 1).
     (by rw [Nat.centralBinom_eq_two_mul_choose, Nat.mul_sub_left_distrib, mul_one, two_mul])
 
 theorem diagonalRamsey_le_central_binom' (i : ℕ) : diagonalRamsey i ≤ i.centralBinom :=
-  (diagonalRamsey_le_centralBinom _).trans (Nat.centralBinom_monotone (Nat.sub_le _ _))
+  (diagonalRamsey_le_centralBinom _).trans (Nat.centralBinom_strictMono.monotone (Nat.sub_le _ _))
 
 theorem ramseyNumber_pair_le_two_pow {i j : ℕ} : ramseyNumber ![i, j] ≤ 2 ^ (i + j - 2) :=
   (ramseyNumber_le_choose _ _).trans (Nat.choose_le_two_pow _ _)
@@ -1093,12 +1058,13 @@ theorem ramseyNumber_le_right_pow_left (i j : ℕ) : ramseyNumber ![i, j] ≤ j 
   by
   rcases Nat.eq_zero_or_pos j with (rfl | hj)
   · rw [ramseyNumber_pair_swap, ramseyNumber_cons_zero]
-    exact zero_le'
+    exact zero_le
   refine (ramseyNumber_le_choose i j).trans ?_
   have : i + j - 2 ≤ i - 1 + (j - 1) := add_tsub_add_le_tsub_add_tsub.trans' le_rfl
   -- the way naturals are handled in lean 4 makes me need to change this proof
   refine (Nat.choose_le_choose _ this).trans ?_
-  refine (Nat.choose_add_le_pow_left _ _).trans_eq ?_
+  rw [add_comm]
+  refine (Nat.choose_add_le_add_one_pow _ _).trans_eq ?_
   rw [Nat.sub_add_cancel hj]
 
 /-- A simplification of `ramsey_number_le_right_pow_left` which is more convenient for asymptotic
