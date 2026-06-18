@@ -245,9 +245,9 @@ end
 
 section
 
--- todo: add two more general versions of `IsRamseyValid` for graphs in terms of `LabelingContains`
--- and `LabelingIndContains` but keep this def because it is needed to bootstrap existence of Ramsey
--- numbers for graphs.
+-- todo: add these more general versions of `IsRamseyValid` for graphs in terms of
+-- `LabelingContains` and `LabelingIndContains`. No need to keep `IsRamseyValid` since any
+-- bootstrapping lemmas can be private lemmas stated for `⊤` and later generalized.
 
 /-- The predicate `IsRamseyValid V n` states that the type `V` is large enough to guarantee a
 clique of size `n k` for some colour `k : K`. -/
