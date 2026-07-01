@@ -39,7 +39,7 @@ lemma Ideal.ramificationIdx_eq_one_of_isUnramifiedAt
 variable (R) in
 lemma IsUnramifiedAt.of_liesOver_of_ne_bot
     (p : Ideal S) (P : Ideal T) [P.LiesOver p] [p.IsPrime] [P.IsPrime]
-    [hRP : IsUnramifiedAt R P] [EssFiniteType R S] [EssFiniteType R T]
+    [IsUnramifiedAt R P] [EssFiniteType R S] [EssFiniteType R T]
     [IsDedekindDomain S] (hP₁ : P.primeCompl ≤ nonZeroDivisors T) (hP₂ : p ≠ ⊥ → P ≠ ⊥) :
     IsUnramifiedAt R p := by
   let p₀ : Ideal R := p.under R
@@ -48,10 +48,11 @@ lemma IsUnramifiedAt.of_liesOver_of_ne_bot
   let := Localization.AtPrime.algebraOfLiesOver p P
   let := Localization.AtPrime.algebraOfLiesOver p₀ P
   have hp₀ : p₀ = P.under R := Ideal.LiesOver.over
-  rw [isUnramifiedAt_iff_map_eq R p₀] at hRP ⊢
-  apply hRP.imp
-  · exact fun _ ↦ isSeparable_tower_bot_of_isSeparable p₀.ResidueField p.ResidueField P.ResidueField
-  intro h
+  have : EssFiniteType S T := .of_comp R S T
+  have := Algebra.EssFiniteType.isNoetherianRing S T
+  rw [isUnramifiedAt_iff_map_eq R p₀ p]
+  have ⟨h₁, h₂⟩ := (isUnramifiedAt_iff_map_eq R p₀ P).mp ‹_›
+  refine ⟨Algebra.isSeparable_tower_bot_of_isSeparable _ _ P.ResidueField, ?_⟩
   by_cases hp : p = ⊥
   · have : p₀.map (algebraMap R S) = p := by
       subst hp
