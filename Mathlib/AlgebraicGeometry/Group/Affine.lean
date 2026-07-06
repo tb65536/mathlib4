@@ -89,18 +89,25 @@ instance preservesColimitsOfSize_algΓ : PreservesColimitsOfSize.{w, v} (algΓ R
 
 instance braidedAlgSpec : (algSpec R).Braided := .ofChosenFiniteProducts _
 
-@[simp] lemma algSpec_obj_left (X : (CommAlgCat R)ᵒᵖ) :
-    ((algSpec R).obj X).left = Spec (CommRingCat.of X.unop) := by
-  simp
-
 @[simp] lemma algSpec_obj_hom (X : (CommAlgCat R)ᵒᵖ) :
-    ((algSpec R).obj X).hom = Spec.map (CommRingCat.ofHom (algebraMap R X.unop)) := rfl
+    ((algSpec R).obj X).hom = Spec.map (CommRingCat.ofHom (algebraMap R X.unop)) := by
+  rfl
+
+lemma preservesTerminalIso_algSpec :
+    CartesianMonoidalCategory.preservesTerminalIso (algSpec R) =
+      Over.isoMk (Iso.refl (Spec R)) (by simp [CommRingCat.of_carrier]) := by
+  ext1; exact CartesianMonoidalCategory.toUnit_unique _ _
+
+@[simp]
+lemma preservesTerminalIso_algSpec_inv_left :
+    (CartesianMonoidalCategory.preservesTerminalIso (algSpec R)).inv.left = 𝟙 (Spec R) := by
+  simp [preservesTerminalIso_algSpec]
 
 @[simp] lemma algSpec_ε_left : (LaxMonoidal.ε (algSpec R)).left = 𝟙 (Spec R) := by
-  simpa [CommRingCat.of_carrier] using (LaxMonoidal.ε (algSpec R)).w
+  simp [ε_of_cartesianMonoidalCategory]
 
 @[simp] lemma algSpec_η_left : (OplaxMonoidal.η (algSpec R)).left = 𝟙 (Spec R) := by
-  simpa [CommRingCat.of_carrier] using (OplaxMonoidal.η (algSpec R)).w
+  simp [OplaxMonoidal.η_of_cartesianMonoidalCategory, CommRingCat.of_carrier]
 
 @[simp] lemma algSpec_δ_left (X Y : (CommAlgCat R)ᵒᵖ) :
     (OplaxMonoidal.δ (algSpec R) X Y).left = (pullbackSpecIso R X.unop Y.unop).inv :=
@@ -121,16 +128,6 @@ lemma prodComparisonIso_algSpec_inv_left (A B : (CommAlgCat R)ᵒᵖ) :
       (pullbackSpecIso R A.unop B.unop).hom := by
   rw [← Iso.comp_inv_eq_id, ← prodComparison_algSpec_left, ← Over.comp_left,
     ← CartesianMonoidalCategory.prodComparisonIso_hom, Iso.inv_hom_id, Over.id_left]
-
-lemma preservesTerminalIso_algSpec :
-    CartesianMonoidalCategory.preservesTerminalIso (algSpec R) =
-      Over.isoMk (Iso.refl (Spec R)) (by simp [CommRingCat.of_carrier]) := by
-  ext1; exact CartesianMonoidalCategory.toUnit_unique _ _
-
-@[simp]
-lemma preservesTerminalIso_algSpec_inv_left :
-    (CartesianMonoidalCategory.preservesTerminalIso (algSpec R)).inv.left = 𝟙 (Spec R) := by
-  simp [preservesTerminalIso_algSpec]
 
 /-- `Spec` is full on `R`-algebras. -/
 instance algSpec.instFull : (algSpec R).Full :=
