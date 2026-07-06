@@ -36,7 +36,7 @@ variable {D : Type u₂} [Category.{v₂} D]
 /-- The over category has as objects arrows in `T` with codomain `X` and as morphisms commutative
 triangles. -/
 @[stacks 001G]
-def Over (X : T) :=
+abbrev Over (X : T) :=
   CostructuredArrow (𝟭 T) X
 
 /-- The type of morphisms in the category `Over`. -/
@@ -96,7 +96,7 @@ theorem comp_left (a b c : Over X) (f : a ⟶ b) (g : b ⟶ c) : (f ≫ g).left 
 
 /-- To give an object in the over category, it suffices to give a morphism with codomain `X`. -/
 @[simps! left hom]
-def mk {X Y : T} (f : Y ⟶ X) : Over X :=
+abbrev mk {X Y : T} (f : Y ⟶ X) : Over X :=
   CostructuredArrow.mk f
 
 /-- We can set up a coercion from arrows with codomain `X` to `over X`. This most likely should not
@@ -247,7 +247,7 @@ def mapId (Y : T) : map (𝟙 Y) ≅ 𝟭 _ :=
 set_option backward.defeqAttrib.useBackward true in
 /-- Mapping by the identity morphism is just the identity functor. -/
 theorem mapId_eq (Y : T) : map (𝟙 Y) = 𝟭 _ :=
-  Functor.ext_of_iso (mapId Y) (fun _ ↦ by simp [map, Comma.mapRight]; rfl)
+  Functor.ext_of_iso (mapId Y) (fun _ ↦ by simp [map, Comma.mapRight])
     (fun _ ↦ by ext; simp [eqToHom_left])
 
 /-- Mapping by `f` and then forgetting is the same as forgetting. -/

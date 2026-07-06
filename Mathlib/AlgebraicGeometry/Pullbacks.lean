@@ -830,4 +830,9 @@ instance isMonHom_fst_id_right [MonObj (asOver M S)] :
     IsMonHom ((pullback.fst (M ↘ S) (𝟙 S)).asOver S) := by
   unfold asOver OverClass.asOver at *; exact Over.isMonHom_pullbackFst_id_right
 
+open AlgebraicGeometry Scheme CategoryTheory MonoidalCategory Functor Monoidal Opposite
+  Limits TensorProduct MonObj GrpObj
+theorem foo {R : CommRingCat.{u}} : (𝟙_ (Over (Spec R))).left = Spec R := by
+  with_reducible_and_instances rfl
+
 end AlgebraicGeometry.Scheme

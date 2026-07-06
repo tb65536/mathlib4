@@ -39,14 +39,14 @@ variable {C : Type u₁} [Category.{v₁} C]
 
 /-- Construct a cone for the empty diagram given an object. -/
 @[simps]
-def asEmptyCone (X : C) : Cone (Functor.empty.{0} C) :=
+abbrev asEmptyCone (X : C) : Cone (Functor.empty.{0} C) :=
   { pt := X
     π :=
     { app := by cat_disch } }
 
 /-- Construct a cocone for the empty diagram given an object. -/
 @[simps]
-def asEmptyCocone (X : C) : Cocone (Functor.empty.{0} C) :=
+abbrev asEmptyCocone (X : C) : Cocone (Functor.empty.{0} C) :=
   { pt := X
     ι :=
     { app := by cat_disch } }
