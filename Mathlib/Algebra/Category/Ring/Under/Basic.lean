@@ -55,7 +55,7 @@ lemma toAlgHom_apply {A B : Under R} (f : A ⟶ B) (a : A) :
 
 variable (R) in
 /-- Make an object of `Under R` from an `R`-algebra. -/
-@[simps! hom, simps! -isSimp right]
+@[simps! hom, simps! -isSimp right, implicit_reducible]
 def mkUnder (A : Type u) [CommRing A] [Algebra R A] : Under R :=
   Under.mk (CommRingCat.ofHom <| algebraMap R A)
 

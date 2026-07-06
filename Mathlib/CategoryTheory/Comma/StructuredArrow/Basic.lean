@@ -92,6 +92,7 @@ theorem hom_eq_iff {X Y : StructuredArrow S T} (f g : X ⟶ Y) : f = g ↔ f.rig
   ⟨fun h ↦ by rw [h], hom_ext _ _⟩
 
 /-- Construct a structured arrow from a morphism. -/
+@[implicit_reducible]
 def mk (f : S ⟶ T.obj Y) : StructuredArrow S T :=
   ⟨⟨⟨⟩⟩, Y, f⟩
 

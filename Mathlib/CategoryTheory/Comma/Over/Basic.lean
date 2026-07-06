@@ -640,11 +640,11 @@ end CostructuredArrow
 
 /-- The under category has as objects arrows with domain `X` and as morphisms commutative
     triangles. -/
-def Under (X : T) :=
+abbrev Under (X : T) :=
   StructuredArrow X (𝟭 T)
 
 /-- The type of morphisms in the category `Under`. -/
-protected def Under.Hom {X : T} (f g : Under X) := CommaMorphism f g
+protected abbrev Under.Hom {X : T} (f g : Under X) := CommaMorphism f g
 
 instance {X : T} : Category (Under X) where
   Hom := Under.Hom
@@ -699,7 +699,7 @@ theorem comp_right (a b c : Under X) (f : a ⟶ b) (g : b ⟶ c) : (f ≫ g).rig
 
 /-- To give an object in the under category, it suffices to give an arrow with domain `X`. -/
 @[simps! right hom]
-def mk {X Y : T} (f : X ⟶ Y) : Under X :=
+abbrev mk {X Y : T} (f : X ⟶ Y) : Under X :=
   StructuredArrow.mk f
 
 /-- To give a morphism in the under category, it suffices to give a morphism fitting in a
