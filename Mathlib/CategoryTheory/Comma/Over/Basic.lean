@@ -40,7 +40,7 @@ abbrev Over (X : T) :=
   CostructuredArrow (𝟭 T) X
 
 /-- The type of morphisms in the category `Over`. -/
-protected def Over.Hom {X : T} (f g : Over X) := CommaMorphism f g
+protected abbrev Over.Hom {X : T} (f g : Over X) := CommaMorphism f g
 
 instance {X : T} : Category (Over X) where
   Hom := Over.Hom
@@ -248,7 +248,7 @@ set_option backward.defeqAttrib.useBackward true in
 /-- Mapping by the identity morphism is just the identity functor. -/
 theorem mapId_eq (Y : T) : map (𝟙 Y) = 𝟭 _ :=
   Functor.ext_of_iso (mapId Y) (fun _ ↦ by simp [map, Comma.mapRight])
-    (fun _ ↦ by ext; simp [eqToHom_left])
+    (fun _ ↦ by ext; simp)
 
 /-- Mapping by `f` and then forgetting is the same as forgetting. -/
 theorem mapForget_eq {X Y : T} (f : X ⟶ Y) :
@@ -271,7 +271,7 @@ theorem mapComp_eq {X Y Z : T} (f : X ⟶ Y) (g : Y ⟶ Z) :
     map (f ≫ g) = (map f) ⋙ (map g) :=
   Functor.ext_of_iso (mapComp f g)
     (fun _ ↦ by simp [map, Comma.mapRight])
-    (fun _ ↦ by ext; simp [eqToHom_left])
+    (fun _ ↦ by ext; simp)
 
 /-- If `f = g`, then `map f` is naturally isomorphic to `map g`. -/
 @[simps!]

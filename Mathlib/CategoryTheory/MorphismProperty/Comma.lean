@@ -654,8 +654,7 @@ protected def Over.isoMk [Q.RespectsIso] {A B : P.Over Q X} (f : A.left ≅ B.le
 @[ext]
 lemma Over.Hom.ext {A B : P.Over Q X} {f g : A ⟶ B} (h : f.left = g.left) : f = g := by
   ext
-  · exact h
-  · simp
+  exact h
 
 @[reassoc]
 lemma Over.w {A B : P.Over Q X} (f : A ⟶ B) :
@@ -787,7 +786,7 @@ variable {P Q F X} in
 @[ext]
 lemma CostructuredArrow.Hom.ext {A B : P.CostructuredArrow Q F X} {f g : A ⟶ B}
     (h : f.left = g.left) : f = g := by
-  ext <;> simp [h]
+  ext; simp [h]
 
 variable {P Q F X} in
 /-- Construct an isomorphism in `P.CostructuredArrow Q F X` by giving the isomorphism
