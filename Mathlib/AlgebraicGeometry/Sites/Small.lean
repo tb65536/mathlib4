@@ -88,25 +88,22 @@ variable (P Q S)
 set_option backward.isDefEq.respectTransparency false in
 /-- The pretopology on `Over S` induced by `P` where coverings are given by `P`-covers
 of `S`-schemes. -/
-def overPretopology : Pretopology (Over S) :=
-  Pretopology.comap (Over.forget S)
-
--- where -- todo: pretopology.comap (Over.forget)
---   coverings Y := {R | ∃ (𝒰 : Cover.{u} (precoverage P) Y.left) (_ : 𝒰.Over S), R = 𝒰.toPresieveOver}
---   has_isos {X Y} f _ := ⟨coverOfIsIso f.left, inferInstance, (Presieve.ofArrows_pUnit _).symm⟩
---   pullbacks := by
---     rintro Y X f _ ⟨𝒰, h, rfl⟩
---     refine ⟨𝒰.pullbackCoverOver' S f.left, inferInstance, ?_⟩
---     simpa [Cover.toPresieveOver] using!
---       (Presieve.ofArrows_pullback f (fun i ↦ (𝒰.X i).asOver S) (fun i ↦ (𝒰.f i).asOver S)).symm
---   transitive := by
---     rintro X _ T ⟨𝒰, h, rfl⟩ H
---     choose V h hV using H
---     refine ⟨𝒰.bind (fun j => V ((𝒰.f j).asOver S) ⟨j⟩), inferInstance, ?_⟩
---     convert!
---       Presieve.ofArrows_bind _ (fun j ↦ (𝒰.f j).asOver S) _ (fun Y f H j ↦ ((V f H).X j).asOver S)
---         (fun Y f H j ↦ ((V f H).f j).asOver S)
---     apply hV
+def overPretopology : Pretopology (Over S) where -- todo: pretopology.comap (Over.forget)
+  coverings Y := {R | ∃ (𝒰 : Cover.{u} (precoverage P) Y.left) (_ : 𝒰.Over S), R = 𝒰.toPresieveOver}
+  has_isos {X Y} f _ := ⟨coverOfIsIso f.left, inferInstance, (Presieve.ofArrows_pUnit _).symm⟩
+  pullbacks := by
+    rintro Y X f _ ⟨𝒰, h, rfl⟩
+    refine ⟨𝒰.pullbackCoverOver' S f.left, inferInstance, ?_⟩
+    simpa [Cover.toPresieveOver] using!
+      (Presieve.ofArrows_pullback f (fun i ↦ (𝒰.X i).asOver S) (fun i ↦ (𝒰.f i).asOver S)).symm
+  transitive := by
+    rintro X _ T ⟨𝒰, h, rfl⟩ H
+    choose V h hV using H
+    refine ⟨𝒰.bind (fun j => V ((𝒰.f j).asOver S) ⟨j⟩), inferInstance, ?_⟩
+    convert!
+      Presieve.ofArrows_bind _ (fun j ↦ (𝒰.f j).asOver S) _ (fun Y f H j ↦ ((V f H).X j).asOver S)
+        (fun Y f H j ↦ ((V f H).f j).asOver S)
+    apply hV
 
 /-- The topology on `Over S` induced from the topology on `Scheme` defined by `P`.
 This agrees with the topology induced by `S.overPretopology P`, see
