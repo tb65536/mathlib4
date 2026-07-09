@@ -237,36 +237,38 @@ def Pretopology.over (X : C) [Limits.HasPullbacks C] (J : Pretopology C)
     [J.toPrecoverage.IsStableUnderBaseChange] :
     Pretopology (Over X) where
   coverings Y := Presieve.overEquiv Y ⁻¹' J Y.left
-  has_isos _ _ _  _ := by simpa using J.has_isos _
+  has_isos _ _ _ _ := by simpa using J.has_isos _
   pullbacks Y₁ Y₂ g S hS := by
     obtain ⟨ι, Z, u, rfl⟩ := S.exists_eq_ofArrows
-    show ((Presieve.ofArrows Z u).pullbackArrows g).map (Over.forget X) ∈ J Y₂.left
+    change ((Presieve.ofArrows Z u).pullbackArrows g).map (Over.forget X) ∈ J Y₂.left
     rw [← Presieve.ofArrows_pullback, Presieve.map_ofArrows]
     exact Precoverage.mem_coverings_of_isPullback (fun i ↦ (Over.forget X).map (u i))
       (by simpa using hS) ((Over.forget X).map g) _
       (fun i ↦ (Over.forget X).map (Limits.pullback.fst (u i) g))
       (fun i ↦ (Over.forget X).map_isPullback (IsPullback.of_hasPullback (u i) g).flip)
-  transitive Y S R hS hR := by
-    have key {Z : C} (g : Z ⟶ Y.left) (hg : S.map (Over.forget X) g) :
-        S (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) := by
+  transitive U S R hS hR := by
+    have key {Z : C} (g : Z ⟶ U.left) (hg : S.map (Over.forget X) g) :
+        S (Over.homMk g : Over.mk (g ≫ U.hom) ⟶ U) := by
       rw [← Presieve.functorPullback_map_overForget S]
       exact hg
     have heq : (S.bind R).map (Over.forget X) = (S.map (Over.forget X)).bind
-        (fun Z g hg ↦ (R (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) (key g hg)).map
+        (fun Z g hg ↦ (R (Over.homMk g : Over.mk (g ≫ U.hom) ⟶ U) (key g hg)).map
           (Over.forget X)) := by
       refine le_antisymm ?_ ?_
       · rintro W t ⟨hb⟩
         obtain ⟨T, b, f, hf, hb, rfl⟩ := hb
         obtain ⟨T', t', rfl⟩ := T.mk_surjective
-        obtain ⟨f₀, rfl : f₀ ≫ Y.hom = t', rfl⟩ := Over.homMk_surjective f
-        exact Presieve.bind_comp (Presieve.map_map hf) (Presieve.map_map hb)
+        obtain ⟨f₀ : T' ⟶ U.left, rfl : f₀ ≫ U.hom = t', rfl⟩ := Over.homMk_surjective f
+        exact ⟨T', (Over.forget X).map b, f₀, Presieve.map_map hf, Presieve.map_map hb, rfl⟩
       · rintro W t ⟨T, b, f, hf, hb, rfl⟩
-        obtain ⟨hb'⟩ := hb
-        exact Presieve.map_map (Presieve.bind_comp (key f hf) hb')
-    show (S.bind R).map (Over.forget X) ∈ J Y.left
+        obtain @⟨W', u, hb'⟩ := hb
+        have hbind : S.bind R (u ≫ (Over.homMk f : Over.mk (f ≫ U.hom) ⟶ U)) :=
+          ⟨_, u, _, key f hf, hb', rfl⟩
+        exact Presieve.map_map hbind
+    change (S.bind R).map (Over.forget X) ∈ J U.left
     rw [heq]
     exact J.transitive _ _ hS
-      fun Z g hg ↦ hR (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) (key g hg)
+      fun Z g hg ↦ hR (Over.homMk g : Over.mk (g ≫ U.hom) ⟶ U) (key g hg)
 
 variable (J : GrothendieckTopology C)
 
