@@ -40,42 +40,48 @@ open CategoryTheory Limits
 namespace AlgebraicGeometry.Scheme
 
 variable {P Q : MorphismProperty Scheme.{u}} {S : Scheme.{u}}
-  [P.IsStableUnderBaseChange]
 
 /-- The presieve defined by a `P`-cover of `S`-schemes. -/
-def Cover.toPresieveOver {X : Over S} (𝒰 : Cover.{u} (precoverage P) X.left) [𝒰.Over S] :
+@[deprecated "Use `𝒰.toPreZeroHypercover.presieve₀` instead. " (since := "2026-07-08")]
+def Cover.toPresieveOver {X : Over S}
+    (𝒰 : Precoverage.ZeroHypercover.{u} ((precoverage P).comap (Over.forget S)) X) :
     Presieve X :=
-  Presieve.ofArrows (fun i ↦ (𝒰.X i).asOver S) (fun i ↦ (𝒰.f i).asOver S)
+  𝒰.toPreZeroHypercover.presieve₀
 
 /-- The presieve defined by a `P`-cover of `S`-schemes with `Q`. -/
-def Cover.toPresieveOverProp {X : Q.Over ⊤ S} (𝒰 : Cover.{u} (precoverage P) X.left) [𝒰.Over S]
-    (h : ∀ j, Q (𝒰.X j ↘ S)) : Presieve X :=
-  Presieve.ofArrows (fun i ↦ (𝒰.X i).asOverProp S (h i)) (fun i ↦ (𝒰.f i).asOverProp S)
+def Cover.toPresieveOverProp {X : Q.Over ⊤ S}
+    (𝒰 : Precoverage.ZeroHypercover.{u}
+      (((precoverage P).comap (Over.forget S)).comap (MorphismProperty.Over.forget Q ⊤ S)) X) :
+    Presieve X :=
+  𝒰.toPreZeroHypercover.presieve₀
 
 set_option backward.defeqAttrib.useBackward true in
 lemma Cover.overEquiv_generate_toPresieveOver_eq_ofArrows {X : Over S}
-    (𝒰 : Cover.{u} (precoverage P) X.left)
-    [𝒰.Over S] : Sieve.overEquiv X (Sieve.generate 𝒰.toPresieveOver) =
-      Sieve.ofArrows 𝒰.X 𝒰.f := by
+    (𝒰 : Precoverage.ZeroHypercover.{u} ((precoverage P).comap (Over.forget S)) X) :
+    Sieve.overEquiv X (Sieve.generate 𝒰.toPreZeroHypercover.presieve₀) =
+      Sieve.ofArrows (fun i ↦ (𝒰.X i).left) (fun i ↦ (𝒰.f i).left) := by
   ext V f
   simp only [Sieve.overEquiv_iff, Sieve.generate_apply]
   constructor
   · rintro ⟨U, h, g, ⟨k⟩, hcomp⟩
-    exact ⟨𝒰.X k, h.left, 𝒰.f k, ⟨k⟩, congrArg CommaMorphism.left hcomp⟩
+    exact ⟨(𝒰.X k).left, h.left, (𝒰.f k).left, ⟨k⟩, congrArg CommaMorphism.left hcomp⟩
   · rintro ⟨U, h, g, ⟨k⟩, hcomp⟩
-    have : 𝒰.f k ≫ X.hom = 𝒰.X k ↘ S := comp_over (𝒰.f k) S
-    refine ⟨(𝒰.X k).asOver S, Over.homMk h (by simp [← hcomp, this]), (𝒰.f k).asOver S, ⟨k⟩, ?_⟩
+    have : (𝒰.f k).left ≫ X.hom = (𝒰.X k).hom := (𝒰.f k).w
+    refine ⟨𝒰.X k, Over.homMk h (by simp [← hcomp, this]), 𝒰.f k, ⟨k⟩, ?_⟩
     ext : 1
     simpa
 
 lemma Cover.toPresieveOver_le_arrows_iff {X : Over S} (R : Sieve X)
-    (𝒰 : Cover.{u} (precoverage P) X.left) [𝒰.Over S] :
-    𝒰.toPresieveOver ≤ R.arrows ↔
-      Presieve.ofArrows 𝒰.X 𝒰.f ≤ (Sieve.overEquiv X R).arrows := by
+    (𝒰 : Precoverage.ZeroHypercover.{u} ((precoverage P).comap (Over.forget S)) X) :
+    𝒰.toPreZeroHypercover.presieve₀ ≤ R.arrows ↔
+      Presieve.ofArrows (fun i ↦ (𝒰.X i).left) (fun i ↦ (𝒰.f i).left) ≤
+        (Sieve.overEquiv X R).arrows := by
   simp_rw [← Sieve.giGenerate.gc.le_iff_le, ← (Sieve.overEquiv X).map_rel_iff]
   rw [overEquiv_generate_toPresieveOver_eq_ofArrows]
 
 variable [P.IsMultiplicative] [P.RespectsIso]
+
+variable [P.IsStableUnderBaseChange]
 
 variable (P Q S)
 
