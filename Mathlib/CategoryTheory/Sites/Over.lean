@@ -228,38 +228,45 @@ lemma overEquiv_functorPushforward_post {D : Type*} [Category* D] (F : C ⥤ D) 
 end Sieve
 
 set_option backward.isDefEq.respectTransparency false in
-/-- The pretopology on `Over X` for any `X : C` that is induced by a pretopology on `C`. -/
-def Pretopology.over (X : C) [Limits.HasPullbacks C] (J : Pretopology C) :
+/-- The pretopology on `Over X` for any `X : C` that is induced by a pretopology on `C`.
+
+Stability under base change is required in the strong sense of
+`Precoverage.IsStableUnderBaseChange`, because the pullbacks chosen in `Over X` need not be
+mapped by `Over.forget X` to the pullbacks chosen in `C`. -/
+def Pretopology.over (X : C) [Limits.HasPullbacks C] (J : Pretopology C)
+    [J.toPrecoverage.IsStableUnderBaseChange] :
     Pretopology (Over X) where
   coverings Y := Presieve.overEquiv Y ⁻¹' J Y.left
   has_isos _ _ _  _ := by simpa using J.has_isos _
-  pullbacks Y₁ Y₂ S₁ f h₁ := by
-    rw [Set.mem_preimage]
-    convert J.pullbacks S₁.left _ h₁
-    simp [Presieve.overEquiv]
-    rw [Presieve.map_pu]
-    simp
-    rw [Presieve.pullbackArrows]
-    have := J.pullbacks S₁.left _ h₁
-    rw [Set.mem_preimage, Presieve.overEquiv_apply,
-      Presieve.pullbackArrows]
-    simp [Presieve.pullbackArrows] at this ⊢
-    rw [Presieve.overEquiv_apply] at this
-    -- pullbackarrows commutes with map
-    sorry
-    -- rw [Set.mem_preimage, Sieve.overEquiv_pullback]
-    -- exact J.pullback_stable _ h₁
-  transitive Y S hS R hR :=  by
-    have := J.transitive (S.map (Over.forget X)) ?_ ?_ ?_
-    ·
-      sorry
-    · intro Y h
-      sorry
-    · sorry
-    · sorry
-    -- J.transitive hS _ fun Z f hf => by
-    -- specialize hR ((Sieve.overEquiv_iff _ _).1 hf)
-    -- rwa [Set.mem_preimage, Sieve.overEquiv_pullback] at hR
+  pullbacks Y₁ Y₂ g S hS := by
+    obtain ⟨ι, Z, u, rfl⟩ := S.exists_eq_ofArrows
+    show ((Presieve.ofArrows Z u).pullbackArrows g).map (Over.forget X) ∈ J Y₂.left
+    rw [← Presieve.ofArrows_pullback, Presieve.map_ofArrows]
+    exact Precoverage.mem_coverings_of_isPullback (fun i ↦ (Over.forget X).map (u i))
+      (by simpa using hS) ((Over.forget X).map g) _
+      (fun i ↦ (Over.forget X).map (Limits.pullback.fst (u i) g))
+      (fun i ↦ (Over.forget X).map_isPullback (IsPullback.of_hasPullback (u i) g).flip)
+  transitive Y S R hS hR := by
+    have key {Z : C} (g : Z ⟶ Y.left) (hg : S.map (Over.forget X) g) :
+        S (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) := by
+      rw [← Presieve.functorPullback_map_overForget S]
+      exact hg
+    have heq : (S.bind R).map (Over.forget X) = (S.map (Over.forget X)).bind
+        (fun Z g hg ↦ (R (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) (key g hg)).map
+          (Over.forget X)) := by
+      refine le_antisymm ?_ ?_
+      · rintro W t ⟨hb⟩
+        obtain ⟨T, b, f, hf, hb, rfl⟩ := hb
+        obtain ⟨T', t', rfl⟩ := T.mk_surjective
+        obtain ⟨f₀, rfl : f₀ ≫ Y.hom = t', rfl⟩ := Over.homMk_surjective f
+        exact Presieve.bind_comp (Presieve.map_map hf) (Presieve.map_map hb)
+      · rintro W t ⟨T, b, f, hf, hb, rfl⟩
+        obtain ⟨hb'⟩ := hb
+        exact Presieve.map_map (Presieve.bind_comp (key f hf) hb')
+    show (S.bind R).map (Over.forget X) ∈ J Y.left
+    rw [heq]
+    exact J.transitive _ _ hS
+      fun Z g hg ↦ hR (Over.homMk g : Over.mk (g ≫ Y.hom) ⟶ Y) (key g hg)
 
 variable (J : GrothendieckTopology C)
 
