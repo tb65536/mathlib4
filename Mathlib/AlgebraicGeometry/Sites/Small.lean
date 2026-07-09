@@ -85,28 +85,10 @@ variable [P.IsStableUnderBaseChange]
 
 variable (P Q S)
 
-abbrev overPretopology : Pretopology (Over S) :=
-  (Scheme.pretopology P).over S
-
-set_option backward.isDefEq.respectTransparency false in
 /-- The pretopology on `Over S` induced by `P` where coverings are given by `P`-covers
 of `S`-schemes. -/
-def overPretopology : Pretopology (Over S) where
-  coverings Y := {R | ∃ (𝒰 : Cover.{u} (precoverage P) Y.left) (_ : 𝒰.Over S), R = 𝒰.toPresieveOver}
-  has_isos {X Y} f _ := ⟨coverOfIsIso f.left, inferInstance, (Presieve.ofArrows_pUnit _).symm⟩
-  pullbacks := by
-    rintro Y X f _ ⟨𝒰, h, rfl⟩
-    refine ⟨𝒰.pullbackCoverOver' S f.left, inferInstance, ?_⟩
-    simpa [Cover.toPresieveOver] using!
-      (Presieve.ofArrows_pullback f (fun i ↦ (𝒰.X i).asOver S) (fun i ↦ (𝒰.f i).asOver S)).symm
-  transitive := by
-    rintro X _ T ⟨𝒰, h, rfl⟩ H
-    choose V h hV using H
-    refine ⟨𝒰.bind (fun j => V ((𝒰.f j).asOver S) ⟨j⟩), inferInstance, ?_⟩
-    convert!
-      Presieve.ofArrows_bind _ (fun j ↦ (𝒰.f j).asOver S) _ (fun Y f H j ↦ ((V f H).X j).asOver S)
-        (fun Y f H j ↦ ((V f H).f j).asOver S)
-    apply hV
+abbrev overPretopology : Pretopology (Over S) :=
+  ((Scheme.precoverage P).over S).toPretopology
 
 /-- The topology on `Over S` induced from the topology on `Scheme` defined by `P`.
 This agrees with the topology induced by `S.overPretopology P`, see
@@ -116,51 +98,73 @@ abbrev overGrothendieckTopology : GrothendieckTopology (Over S) :=
 
 lemma overGrothendieckTopology_eq_toGrothendieck_overPretopology :
     S.overGrothendieckTopology P = (S.overPretopology P).toGrothendieck := by
-  ext X R
-  rw [GrothendieckTopology.mem_over_iff]
-  constructor
-  · intro hR
-    obtain ⟨𝒰, hle⟩ := exists_cover_of_mem_grothendieckTopology hR
-    rw [mem_grothendieckTopology_iff] at hR
-    letI (i : 𝒰.I₀) : (𝒰.X i).Over S := { hom := 𝒰.f i ≫ X.hom }
-    letI : 𝒰.Over S :=
-      { over := inferInstance
-        isOver_map := fun i ↦ ⟨rfl⟩ }
-    use 𝒰.toPresieveOver, ⟨𝒰, inferInstance, rfl⟩
-    rwa [Cover.toPresieveOver_le_arrows_iff]
-  · rintro ⟨T, ⟨𝒰, h, rfl⟩, hT⟩
-    rw [mem_grothendieckTopology_iff]
-    use 𝒰
-    rwa [Cover.toPresieveOver_le_arrows_iff] at hT
+  rw [Precoverage.toGrothendieck_toPretopology_eq_toGrothendieck]
+  exact over_toGrothendieck_eq_toGrothendieck_comap_forget (precoverage P) S
 
 variable {S}
 
-lemma mem_overGrothendieckTopology (X : Over S) (R : Sieve X) :
-    R ∈ S.overGrothendieckTopology P X ↔
-      ∃ (𝒰 : Cover.{u} (precoverage P) X.left) (_ : 𝒰.Over S), 𝒰.toPresieveOver ≤ R.arrows := by
-  rw [overGrothendieckTopology_eq_toGrothendieck_overPretopology]
-  constructor
-  · rintro ⟨T, ⟨𝒰, h, rfl⟩, hle⟩
-    use 𝒰, h
-  · rintro ⟨𝒰, h𝒰, hle⟩
-    exact ⟨𝒰.toPresieveOver, ⟨𝒰, h𝒰, rfl⟩, hle⟩
-
+-- lemma mem_overGrothendieckTopology (X : Over S) (R : Sieve X) :
+--     R ∈ S.overGrothendieckTopology P X ↔
+--       ∃ (𝒰 : Cover.{u} (precoverage P) X.left) (_ : 𝒰.Over S), 𝒰.toPresieveOver ≤ R.arrows := by
+--   rw [overGrothendieckTopology_eq_toGrothendieck_overPretopology]
+--   constructor
+--   · rintro ⟨T, ⟨𝒰, h, rfl⟩, hle⟩
+--     use 𝒰, h
+--   · rintro ⟨𝒰, h𝒰, hle⟩
+--     exact ⟨𝒰.toPresieveOver, ⟨𝒰, h𝒰, rfl⟩, hle⟩
 variable [Q.IsStableUnderComposition]
+instance (X : Q.Over ⊤ S) : (Over.post (X := X) (MorphismProperty.Over.forget Q ⊤ S)).EssSurj := by
+  constructor
+  intro Y
+  refine ⟨?_, ?_⟩
+  fapply Over.mk
+  fapply MorphismProperty.Over.mk
+  exact Y.left.left
+  exact Y.hom.left ≫ X.hom
+  apply Q.comp_mem
+  · have := Y.hom.left
+    sorry
+  · exact X.2
+  have := Y.hom
 
+
+  sorry
+
+theorem foo {C D : Type*} [Category C] [Category D] (F : C ⥤ D) (X : C)
+    [(Over.post F (X := X)).EssSurj] (S : Sieve (F.obj X)) :
+    (Sieve.functorPushforward F (Sieve.functorPullback F S)) = S := by
+  apply le_antisymm (Sieve.functorPullback_pushforward_le F S)
+  intro h f hf
+  obtain ⟨Y, ⟨fY⟩⟩ := Functor.EssSurj.mem_essImage (Over.post F (X := X)) (Over.mk f)
+  refine ⟨Y.left, Y.hom, fY.inv.left, ?_, fY.inv.w.symm⟩
+  exact congr(S.arrows $(fY.hom.w.symm)).mpr (S.downward_closed hf fY.hom.left)
+
+
+#check Sieve.overEquiv
 variable (S) {P Q} in
 lemma locallyCoverDense_of_le (hPQ : P ≤ Q) :
     (MorphismProperty.Over.forget Q ⊤ S).LocallyCoverDense (overGrothendieckTopology P S) where
   functorPushforward_functorPullback_mem X := by
     intro ⟨T, hT⟩
-    rw [mem_overGrothendieckTopology] at hT ⊢
-    obtain ⟨𝒰, h, hle⟩ := hT
-    use 𝒰, h
-    rintro - - ⟨i⟩
-    have p : Q (𝒰.X i ↘ S) := by
-      rw [← comp_over (𝒰.f i) S]
-      exact Q.comp_mem _ _ (hPQ _ <| 𝒰.map_prop i) X.prop
-    use (𝒰.X i).asOverProp S p, MorphismProperty.Over.homMk (𝒰.f i) (comp_over (𝒰.f i) S), 𝟙 _
-    exact ⟨hle _ _ ⟨i⟩, rfl⟩
+    simp only
+    rw [overGrothendieckTopology, GrothendieckTopology.over] at hT
+    rw [GrothendieckTopology.mem_iff_isSheafFor_closedSieves] at hT
+    rw [overGrothendieckTopology_eq_toGrothendieck_overPretopology] at *
+    obtain ⟨𝒰, h𝒰, h_le⟩ := hT
+    simp at h𝒰
+    refine ⟨𝒰, h𝒰, ?_⟩
+    grw [h_le]
+    rw [foo]
+
+    -- rw [mem_overGrothendieckTopology] at hT ⊢
+    -- obtain ⟨𝒰, h, hle⟩ := hT
+    -- use 𝒰, h
+    -- rintro - - ⟨i⟩
+    -- have p : Q (𝒰.X i ↘ S) := by
+    --   rw [← comp_over (𝒰.f i) S]
+    --   exact Q.comp_mem _ _ (hPQ _ <| 𝒰.map_prop i) X.prop
+    -- use (𝒰.X i).asOverProp S p, MorphismProperty.Over.homMk (𝒰.f i) (comp_over (𝒰.f i) S), 𝟙 _
+    -- exact ⟨hle _ _ ⟨i⟩, rfl⟩
 
 instance : (MorphismProperty.Over.forget P ⊤ S).LocallyCoverDense (overGrothendieckTopology P S) :=
   locallyCoverDense_of_le S le_rfl
