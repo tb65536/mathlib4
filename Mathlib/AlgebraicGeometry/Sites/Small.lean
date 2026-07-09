@@ -85,6 +85,9 @@ variable [P.IsStableUnderBaseChange]
 
 variable (P Q S)
 
+abbrev overPretopology : Pretopology (Over S) :=
+  (Scheme.pretopology P).over S
+
 set_option backward.isDefEq.respectTransparency false in
 /-- The pretopology on `Over S` induced by `P` where coverings are given by `P`-covers
 of `S`-schemes. -/
