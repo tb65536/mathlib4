@@ -227,6 +227,40 @@ lemma overEquiv_functorPushforward_post {D : Type*} [Category* D] (F : C ⥤ D) 
 
 end Sieve
 
+set_option backward.isDefEq.respectTransparency false in
+/-- The pretopology on `Over X` for any `X : C` that is induced by a pretopology on `C`. -/
+def Pretopology.over (X : C) [Limits.HasPullbacks C] (J : Pretopology C) :
+    Pretopology (Over X) where
+  coverings Y := Presieve.overEquiv Y ⁻¹' J Y.left
+  has_isos _ _ _  _ := by simpa using J.has_isos _
+  pullbacks Y₁ Y₂ S₁ f h₁ := by
+    rw [Set.mem_preimage]
+    convert J.pullbacks S₁.left _ h₁
+    simp [Presieve.overEquiv]
+    rw [Presieve.map_pu]
+    simp
+    rw [Presieve.pullbackArrows]
+    have := J.pullbacks S₁.left _ h₁
+    rw [Set.mem_preimage, Presieve.overEquiv_apply,
+      Presieve.pullbackArrows]
+    simp [Presieve.pullbackArrows] at this ⊢
+    rw [Presieve.overEquiv_apply] at this
+    -- pullbackarrows commutes with map
+    sorry
+    -- rw [Set.mem_preimage, Sieve.overEquiv_pullback]
+    -- exact J.pullback_stable _ h₁
+  transitive Y S hS R hR :=  by
+    have := J.transitive (S.map (Over.forget X)) ?_ ?_ ?_
+    ·
+      sorry
+    · intro Y h
+      sorry
+    · sorry
+    · sorry
+    -- J.transitive hS _ fun Z f hf => by
+    -- specialize hR ((Sieve.overEquiv_iff _ _).1 hf)
+    -- rwa [Set.mem_preimage, Sieve.overEquiv_pullback] at hR
+
 variable (J : GrothendieckTopology C)
 
 namespace GrothendieckTopology
