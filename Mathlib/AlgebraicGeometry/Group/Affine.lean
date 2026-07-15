@@ -200,7 +200,6 @@ lemma one_spec_asOver_spec [Bialgebra R A] :
         (Spec.map <| CommRingCat.ofHom <| Bialgebra.counitAlgHom R A)
           (by simp [specOverSpec_over, ← Spec.map_comp, ← CommRingCat.ofHom_comp]) := rfl
 
-set_option backward.isDefEq.respectTransparency false in
 lemma left_one_spec_asOver_spec [Bialgebra R A] :
     η[(Spec A).asOver (Spec R)].left =
       (Spec.map <| CommRingCat.ofHom <| Bialgebra.counitAlgHom R A) := rfl
@@ -235,9 +234,9 @@ instance isCommMonObj_spec_asOver_spec [Bialgebra R A] [IsCocomm R A] :
 instance instGrpObjSpecAsOverSpec [HopfAlgebra R A] : GrpObj ((Spec A).asOver (Spec R)) :=
   ((hopfSpec R).obj <| .op <| .of R A).grp
 
-set_option backward.isDefEq.respectTransparency false in
 instance instCommGrpObjSpecAsOverSpec [HopfAlgebra R A] [IsCocomm R A] :
     CommGrpObj ((Spec A).asOver (Spec R)) where
+  mul_comm := isCommMonObj_spec_asOver_spec.mul_comm
 
 instance {R S T : Type u} [CommRing R] [CommRing S] [CommRing T] [Algebra R S] [Algebra R T]
     (f : S →ₐ[R] T) : (Spec.map (CommRingCat.ofHom f.toRingHom)).IsOver Spec(R) where
@@ -274,7 +273,6 @@ def Spec.mapMulEquiv {R S T : Type u} [CommRing R] [CommRing S] [CommRing T] [Bi
       congr 3
       ext; simp
 
-set_option backward.isDefEq.respectTransparency false in
 /-- The adjunction between `Spec` and `Γ` as functors between commutative `R`-algebras and
 schemes over `Spec R`. -/
 def algΓAlgSpecAdjunction (R : CommRingCat) : algΓ R ⊣ algSpec R := by
@@ -327,7 +325,22 @@ over a scheme `Spec R` and the `Spec` of the tensor product `S ⊗[R] T`. -/
 def pullbackSpecIso' [Algebra R T] :
     pullback (Spec(S) ↘ Spec(R)) (Spec(T) ↘ Spec(R)) ≅ Spec (.of <| S ⊗[R] T) := pullbackSpecIso ..
 
-set_option backward.defeqAttrib.useBackward true in
+variable (R S T) in
+lemma pullbackSpecIso'_inv_fst [Algebra R T] :
+    (pullbackSpecIso' R S T).inv ≫ pullback.fst _ _ = Spec.map (ofHom includeLeftRingHom) :=
+  pullbackSpecIso_inv_fst ..
+
+variable (R S T) in
+lemma pullbackSpecIso'_inv_fst' [Algebra R T] :
+    (pullbackSpecIso' R S T).inv ≫ pullback.fst _ _ = Spec.map (ofHom (algebraMap S _)) :=
+  pullbackSpecIso_inv_fst' ..
+
+variable (R S T) in
+lemma pullbackSpecIso'_inv_snd [Algebra R T] :
+    (pullbackSpecIso' R S T).inv ≫ pullback.snd _ _ =
+      Spec.map (ofHom (R := T) (S := S ⊗[R] T) (toRingHom includeRight)) :=
+  pullbackSpecIso_inv_snd ..
+
 lemma pullbackSpecIso'_symmetry [Algebra R T] :
     (pullbackSymmetry .. ≪≫ pullbackSpecIso' R S T).hom =
       (pullbackSpecIso' ..).hom ≫
@@ -336,18 +349,19 @@ lemma pullbackSpecIso'_symmetry [Algebra R T] :
   ext
   · have : (RingHomClass.toRingHom (Algebra.TensorProduct.comm R S T)).comp
       Algebra.TensorProduct.includeLeftRingHom = Algebra.TensorProduct.includeRight.toRingHom := rfl
-    simp [specOverSpec_over, pullbackSpecIso', ← Spec.map_comp, ← CommRingCat.ofHom_comp, this]
+    simp [pullbackSpecIso'_inv_fst, pullbackSpecIso'_inv_snd, ← Spec.map_comp,
+      ← CommRingCat.ofHom_comp, this]
   have : (RingHomClass.toRingHom (Algebra.TensorProduct.comm R S T)).comp
       (RingHomClass.toRingHom Algebra.TensorProduct.includeRight) =
       Algebra.TensorProduct.includeLeftRingHom := rfl
-  simp [specOverSpec_over, pullbackSpecIso', ← Spec.map_comp, ← CommRingCat.ofHom_comp, this]
+  simp [pullbackSpecIso'_inv_fst, pullbackSpecIso'_inv_snd, ← Spec.map_comp,
+    ← CommRingCat.ofHom_comp, this]
 
-set_option backward.defeqAttrib.useBackward true in
 instance [Algebra R T] : (pullbackSymmetry .. ≪≫ pullbackSpecIso' R S T).hom.IsOver Spec(S) where
   comp_over := by
     rw [← cancel_epi (pullbackSymmetry .. ≪≫ pullbackSpecIso' ..).inv,
       Scheme.canonicallyOverPullback_over]
-    simp [specOverSpec_over, pullbackSpecIso']
+    simp [specOverSpec_over, pullbackSpecIso'_inv_fst']
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
@@ -429,11 +443,11 @@ affine group schemes over `Spec R`.
 
 section rightEdge
 
-set_option backward.isDefEq.respectTransparency false in
 /-- The essential image of `R`-algebras under `Spec` is precisely affine schemes over `Spec R`. -/
 @[simp]
 lemma essImage_algSpec {G : Over <| Spec R} : (algSpec R).essImage G ↔ IsAffine G.left := by
-  simp [algSpec, Functor.essImage_overPost (F := Scheme.Spec)]
+  simp only [algSpec, Functor.essImage_comp_of_essSurj]
+  exact Functor.essImage_overPost.trans essImage_Spec
 
 /-- The essential image of `R`-bialgebras under `Spec` is precisely affine monoid schemes over
 `Spec R`. -/
