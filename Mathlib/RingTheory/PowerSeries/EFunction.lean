@@ -145,19 +145,6 @@ theorem map_comp_neg_X : (f.comp (-X)).map φ = (f.map φ).comp (-X) := by
 theorem natDegree_comp_neg_X : (f.comp (-X)).natDegree = f.natDegree := by
   exact natDegree_eq_of_degree_eq (f.degree_comp_neg_X)
 
-private theorem rootMultiplicity_comp_neg_X_le [IsDomain R] (a : R) :
-    (f.comp (-X)).rootMultiplicity a ≤ f.rootMultiplicity (-a) := by
-  by_cases hf : f = 0
-  · simp [hf]
-  have h := pow_rootMultiplicity_dvd (f.comp (-X)) a
-  rw [dvd_comp_neg_X_iff, pow_comp, sub_comp, X_comp, C_comp, ← neg_add', neg_pow] at h
-  simpa [le_rootMultiplicity_iff hf, isUnit_neg_one.pow] using h
-
-theorem rootMultiplicity_comp_neg_X [IsDomain R] (a : R) :
-    (f.comp (-X)).rootMultiplicity a = f.rootMultiplicity (-a) := by
-  refine le_antisymm (rootMultiplicity_comp_neg_X_le f a) ?_
-  simpa [comp_neg_X_comp_neg_X] using rootMultiplicity_comp_neg_X_le (f.comp (-X)) (-a)
-
 theorem resultant_comp_neg_X : (f.comp (-X)).resultant (g.comp (-X)) = g.resultant f := by
   revert g
   apply induction_of_Splits_of_injective_of_surjective f
