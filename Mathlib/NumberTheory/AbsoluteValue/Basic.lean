@@ -86,7 +86,6 @@ theorem algebra_eq :
   intro r
   rfl
 
--- can we avoid assuming `w.LiesOver v` here?
 theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
   have := LiesOver.comp_eq w v
   rw [localDegree, algebra_eq v w]
@@ -132,6 +131,9 @@ theorem sum_eq [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
     ∑ w : v.absoluteValuesOver L,
       Module.finrank v.Completion w.1.Completion ≤ Module.finrank K L := by
+  let A := v.Completion ⊗[K] L
+  have : Fintype (PrimeSpectrum A) := sorry
+  rw [← Module.finrank_baseChange (R := v.Completion), IsArtinianRing.finrank_eq_sum_primeSpectrum]
   sorry
 
 end sum
