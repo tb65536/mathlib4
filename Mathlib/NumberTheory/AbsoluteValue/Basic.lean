@@ -22,40 +22,30 @@ open TensorProduct
 
 namespace AbsoluteValue
 
-namespace Completion
-
-variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
-
-instance : CompletableTopField (WithAbs v) :=
-  let : NormedField K := v.toNormedField
-  NormedField.instCompletableTopField
-
-end Completion
-
-section absoluteValuesOver
-
-variable {K S : Type*} [Field K] [PartialOrder S] [Semiring S] (v : AbsoluteValue K S)
-  (L : Type*) [CommRing L] [Nontrivial L] [Algebra K L]
-
-def absoluteValuesOver : Set (AbsoluteValue L S) :=
-  {w | w.LiesOver v}
-
-end absoluteValuesOver
-
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
     (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
 
-@[implicit_reducible]
-def algebraOfLiesOver : Algebra v.Completion w.Completion := by
-  have : v.Completion →+* w.Completion :=
-    Isometry.mapRingHom (f := WithAbs.map v w (algebraMap K L)) ?_
-  exact this.toAlgebra
+theorem WithAbs.isometry_map : Isometry (WithAbs.map v w (algebraMap K L)) := by
   rw [← LiesOver.comp_eq w v]
-  apply AddMonoidHomClass.isometry_of_norm
-  intro x
-  rfl
+  exact AddMonoidHomClass.isometry_of_norm _ fun x ↦ rfl
+
+@[instance_reducible]
+def algebraOfLiesOver : Algebra v.Completion w.Completion :=
+  (WithAbs.isometry_map v w).mapRingHom.toAlgebra
+
+instance : letI := algebraOfLiesOver v w
+    ContinuousSMul v.Completion w.Completion :=
+  let := algebraOfLiesOver v w
+  continuousSMul_of_algebraMap v.Completion w.Completion
+    (WithAbs.isometry_map v w).isometry_mapRingHom.continuous
+
+instance : letI := algebraOfLiesOver v w
+    IsScalarTower K v.Completion w.Completion :=
+  let := algebraOfLiesOver v w
+  IsScalarTower.of_algebraMap_eq fun x ↦
+    ((WithAbs.isometry_map v w).mapRingHom_coe (WithAbs.toAbs v x)).symm
 
 end algebra
 
@@ -67,25 +57,50 @@ instance : w.LiesOver (w.comp (algebraMap K L).injective) := ⟨rfl⟩
 
 def localDegree : ℕ :=
   letI v := w.comp (algebraMap K L).injective
-  letI : Algebra v.Completion w.Completion := sorry -- todo: extract
+  letI := algebraOfLiesOver v w
   Module.finrank v.Completion w.Completion
 
 end localDegree
 
-section localDegree_eq
+section localDegree
 
-variable {K L : Type*} [Field K] [Field L] [Algebra K L]
-    (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ)
+variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K ℝ)
+  (w : AbsoluteValue L ℝ) [w.LiesOver v] [Algebra v.Completion w.Completion]
+  [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
 
-theorem localDegree_eq
-    [Algebra v.Completion w.Completion]
-    [ContinuousSMul v.Completion w.Completion]
-    [IsScalarTower K v.Completion w.Completion] :
-    w.localDegree K = Module.finrank v.Completion w.Completion := by
-  rw [localDegree]
+theorem algebraMap_eq :
+    algebraMap v.Completion w.Completion = (WithAbs.isometry_map v w).mapRingHom := by
+
+  -- need some uniqueness result
   sorry
 
-end localDegree_eq
+theorem algebra_eq :
+    ‹_› = algebraOfLiesOver v w := by
+  apply Algebra.algebra_ext
+  rw [algebraMap_eq v w]
+  intro r
+  rfl
+
+-- can we avoid assuming `w.LiesOver v` here?
+theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
+  have := LiesOver.comp_eq w v
+  rw [localDegree, algebra_eq v w]
+  subst this
+  rfl
+
+end localDegree
+
+section absoluteValuesOver
+
+variable {K S : Type*} [Field K] [PartialOrder S] [Semiring S] (v : AbsoluteValue K S)
+  (L : Type*) [CommRing L] [Nontrivial L] [Algebra K L]
+
+def absoluteValuesOver : Set (AbsoluteValue L S) :=
+  {w | w.LiesOver v}
+
+instance (w : absoluteValuesOver v L) : w.1.LiesOver v := w.2
+
+end absoluteValuesOver
 
 section sum
 
@@ -97,7 +112,6 @@ instance : IsArtinianRing (v.Completion ⊗[K] L) := .of_finite v.Completion (v.
 instance : Finite (PrimeSpectrum (v.Completion ⊗[K] L)) := inferInstance
 
 def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) := by
-
   sorry
 
 -- `A = L ⊗[K] K_v = ∏ A_m` is an Artinian ring
@@ -111,7 +125,8 @@ theorem sum_eq [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], Algebra v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], ContinuousSMul v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
-    ∑ w ∈ v.absoluteValuesOver L, Module.finrank v.Completion w.Completion ≤ Module.finrank K L := by
+    ∑ w : v.absoluteValuesOver L,
+      Module.finrank v.Completion w.1.Completion ≤ Module.finrank K L := by
   sorry
 
 end sum
