@@ -69,15 +69,20 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K �
   [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
 
 theorem algebraMap_eq :
-    algebraMap v.Completion w.Completion = (WithAbs.isometry_map v w).mapRingHom := by
-
-  -- need some uniqueness result
-  sorry
+    (WithAbs.isometry_map v w).mapRingHom = algebraMap v.Completion w.Completion := by
+  apply DFunLike.ext'
+  apply UniformSpace.Completion.extension_unique
+  · exact (UniformSpace.Completion.uniformContinuous_coe (WithAbs w)).comp
+      (WithAbs.isometry_map v w).uniformContinuous
+  · apply uniformContinuous_addMonoidHom_of_continuous
+    apply continuous_algebraMap
+  · intro x
+    exact IsScalarTower.algebraMap_apply K v.Completion w.Completion x.ofAbs
 
 theorem algebra_eq :
     ‹_› = algebraOfLiesOver v w := by
   apply Algebra.algebra_ext
-  rw [algebraMap_eq v w]
+  rw [← algebraMap_eq v w]
   intro r
   rfl
 
