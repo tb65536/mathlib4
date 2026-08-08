@@ -140,6 +140,8 @@ variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
 /-- The extended absolute value on `v.Completion`. -/
 def completion : AbsoluteValue v.Completion ℝ := NormedField.toAbsoluteValue v.Completion
 
+variable {v}
+
 theorem completion_apply (x : v.Completion) :
     v.completion x = UniformSpace.Completion.extension (v ∘ WithAbs.ofAbs) x :=
   rfl
