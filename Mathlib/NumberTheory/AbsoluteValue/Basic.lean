@@ -5,14 +5,20 @@ Authors: Thomas Browning
 -/
 module
 
-public import Mathlib.Analysis.Normed.Group.Completion
+public import Mathlib.Analysis.Normed.Algebra.Spectrum
 public import Mathlib.Analysis.Normed.Field.Instances
 public import Mathlib.Analysis.Normed.Field.WithAbs
+public import Mathlib.Analysis.Normed.Group.Completion
+public import Mathlib.Analysis.Normed.Group.Hom
 public import Mathlib.Analysis.Normed.Module.Completion
+public import Mathlib.Analysis.Normed.Operator.Basic
+public import Mathlib.Analysis.Normed.Operator.Mul
 public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
 public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+public import Mathlib.RingTheory.Norm.Basic
 public import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 public import Mathlib.RingTheory.TensorProduct.Finite
+public import Mathlib.Topology.Algebra.Module.FiniteDimension
 public import Mathlib.Topology.Algebra.UniformField
 
 /-!
@@ -140,19 +146,111 @@ variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
 /-- The extended absolute value on `v.Completion`. -/
 def completion : AbsoluteValue v.Completion ℝ := NormedField.toAbsoluteValue v.Completion
 
+-- this might just be a bad lemma
+theorem coe_completion : ⇑v.completion = UniformSpace.Completion.extension (v ∘ WithAbs.ofAbs) :=
+  rfl
+
+theorem uniformContinuous_completion : UniformContinuous v.completion := uniformContinuous_norm
+
 variable {v}
 
-theorem completion_apply (x : v.Completion) :
-    v.completion x = UniformSpace.Completion.extension (v ∘ WithAbs.ofAbs) x :=
+theorem completion_apply (x : v.Completion) : v.completion x = ‖x‖ :=
   rfl
 
 instance : v.completion.LiesOver v where
   comp_eq := by
     ext x
-    exact (v.completion_apply x).trans
-      (UniformSpace.Completion.extension_coe uniformContinuous_norm (WithAbs.toAbs v x))
+    exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
 end completion
+
+section extension
+
+theorem le_one_if_not_isNontrivial {K : Type*} [Field K] {v : AbsoluteValue K ℝ}
+    (hv : ¬ v.IsNontrivial) (x : K) : v x ≤ 1 := by
+
+  by_cases hx : x = 0
+  sorry
+
+open scoped Topology
+
+variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
+#check NormedAlgebra
+#check norm_pow_le'
+theorem abstract {𝕜 A : Type*} [NormedField 𝕜] [SeminormedRing A] [NormedAlgebra 𝕜 A]
+    (ρ : A → ℝ) (x y : A) (hc : Commute x y)
+    (h : ∀ x, Filter.atTop.Tendsto (fun n : ℕ ↦ ‖x ^ n‖ ^ (n : ℝ)⁻¹) (𝓝 (ρ x))) :
+    ρ (x + y) ≤ ρ x + ρ y := by
+  apply le_of_forall_pos_le_add
+  intro ε hε
+  have h_le : ∀ x : A, ∃ C > 0, ∀ n, ‖x ^ n‖ ≤ C * (ρ x + ε / 3) ^ n := by
+    sorry
+  have h_ge : ∀ x : A, ∃ C > 0, ∀ n, C * (ρ x - ε / 3) ^ n ≤ ‖x ^ n‖ := by
+    sorry
+  suffices ρ (x + y) - ε / 3 ≤ (ρ x + ε / 3) + (ρ y + ε / 3) by
+    grind
+  obtain ⟨Cx, hCx, hx⟩ := h_le x
+  obtain ⟨Cy, hCy, hy⟩ := h_le y
+  obtain ⟨Cxy, hCxy, hxy⟩ := h_ge (x + y)
+  let C := Cx * Cy * ‖(1 : A)‖
+  suffices ∀ n, Cxy * (ρ (x + y) - ε / 3) ^ n ≤ C * ((ρ x + ε / 3) + (ρ y + ε / 3)) ^ n by
+    -- take `n`th powers and take the limit
+    sorry
+  intro n
+  rw [add_pow]
+  specialize hxy n
+  have tmp (k : ℕ) : ‖(n.choose k : A)‖ ≤ (n.choose k) * ‖(1 : A)‖ := by
+    grw [← nsmul_one, norm_nsmul_le]
+  have hρ : ∀ x, 0 ≤ ρ x := by
+    sorry
+  have := hρ x
+  have := hρ y
+  grw [hc.add_pow, norm_sum_le, norm_mul_le, norm_mul_le, hx, hy, tmp] at hxy
+  grind [Finset.mul_sum]
+
+def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ where
+  toFun x := v (Algebra.norm K x) ^ (Module.finrank K L : ℝ)⁻¹
+  map_mul' := by simp [Real.mul_rpow]
+  nonneg' x := by positivity
+  eq_zero' := by simp [Module.finrank_pos.ne']
+  add_le' x y := by
+    classical
+    -- first handle the case where `v` is trivial
+    by_cases hv : v.IsNontrivial; swap
+    · rw [isNontrivial_iff_ne_trivial v, not_ne_iff] at hv
+      simp [hv, AbsoluteValue.trivial, Module.finrank_pos.ne']
+      grind
+    -- now `L` is a normed vector space over `WithAbs v`
+    let : NontriviallyNormedField (WithAbs v) :=
+    { non_trivial := by
+        obtain ⟨x, hx⟩ := hv.exists_abv_gt_one
+        exact ⟨WithAbs.toAbs v x, hx⟩ }
+    let := NormedAddCommGroup.induced L _ _ (Module.finBasis (WithAbs v) L).equivFun.injective
+    let := NormedSpace.induced (WithAbs v) L _ (Module.finBasis (WithAbs v) L).equivFun
+    -- let `T x` be multiplication by `x` on `L`
+    let T x := (LinearMap.mul (WithAbs v) L x).toContinuousLinearMap
+    have key : ∀ x : L, Algebra.norm K x = (T x).toLinearMap.det.ofAbs := by
+      sorry
+    have key' : ∀ x y : L, T (x + y) = T x + T y := by
+      sorry
+    have key'' : ∀ x y : L, Commute (T x) (T y) := by
+      sorry
+    suffices ∀ T : L →L[WithAbs v] L, Filter.atTop.Tendsto (fun k : ℕ ↦ ‖T ^ k‖ ^ (k : ℝ)⁻¹)
+        (𝓝 (v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹)) by
+      have := abstract (𝕜 := WithAbs v) _ (T x) (T y) ?_  this
+      simp [key, key']
+      exact this
+      apply key''
+    sorry
+
+instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v := by
+
+  sorry
+
+-- once you have extensions of absolute values on complete fields, the Artinian machinery
+-- let's you pick an arbitrary extension if desired
+
+end extension
 
 section sum
 
@@ -176,10 +274,12 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
   invFun p := by
     let K_v := v.Completion
     let L_w := (v.Completion ⊗[K] L) ⧸ p.asIdeal
+    have : p.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p.asIdeal
+    let : Field L_w := Ideal.Quotient.field p.asIdeal
     have : Algebra K_v L_w := inferInstance
     have : FiniteDimensional K_v L_w := inferInstance
     let v' : AbsoluteValue v.Completion ℝ := v.completion
-    let w : AbsoluteValue L_w ℝ := sorry -- extend valuation on K_v to L_w
+    let w : AbsoluteValue L_w ℝ := v.completion.extension L_w -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
     simp
     sorry
