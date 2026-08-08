@@ -22,6 +22,16 @@ open TensorProduct
 
 namespace AbsoluteValue
 
+variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
+    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
+
+def under : AbsoluteValue T S :=
+  v.comp (FaithfulSMul.algebraMap_injective T R)
+
+end AbsoluteValue
+
+namespace AbsoluteValue
+
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
@@ -75,10 +85,11 @@ section localDegree
 
 variable {L : Type*} [Field L] (w : AbsoluteValue L ℝ) (K : Type*) [Field K] [Algebra K L]
 
-instance : w.LiesOver (w.comp (algebraMap K L).injective) := ⟨rfl⟩
+-- this instance will be handled by the `under` refactor.
+instance : w.LiesOver (w.under K) := ⟨rfl⟩
 
 def localDegree : ℕ :=
-  letI v := w.comp (algebraMap K L).injective
+  letI v := w.under K
   letI := algebraOfLiesOver v w
   Module.finrank v.Completion w.Completion
 
@@ -106,7 +117,7 @@ variable {K S : Type*} [Field K] [PartialOrder S] [Semiring S] (v : AbsoluteValu
 def absoluteValuesOver : Set (AbsoluteValue L S) :=
   {w | w.LiesOver v}
 
-instance (w : absoluteValuesOver v L) : w.1.LiesOver v := w.2
+instance (w : absoluteValuesOver v L) : w.val.LiesOver v := w.2
 
 end absoluteValuesOver
 
@@ -119,8 +130,28 @@ instance : IsArtinianRing (v.Completion ⊗[K] L) := .of_finite v.Completion (v.
 
 instance : Finite (PrimeSpectrum (v.Completion ⊗[K] L)) := inferInstance
 
-def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) := by
-  sorry
+attribute [local instance] Algebra.TensorProduct.rightAlgebra in
+def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) where
+  toFun w := by
+    let := algebraOfLiesOver v w.val
+     -- can weaken to be over K if desired
+    let φ : v.Completion ⊗[K] L →ₐ[v.Completion] w.val.Completion := by
+      apply Algebra.TensorProduct.productLeftAlgHom
+      · apply Algebra.ofId
+      · apply IsScalarTower.toAlgHom
+    exact ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
+  invFun p := by
+    let K_v := v.Completion
+    let L_w := (v.Completion ⊗[K] L) ⧸ p.asIdeal
+    have : Algebra K_v L_w := inferInstance
+    have : FiniteDimensional K_v L_w := inferInstance
+    let w : AbsoluteValue L_w ℝ := sorry
+    refine ⟨w.under L, ?_⟩
+    sorry
+  left_inv := by
+    sorry
+  right_inv := by
+    sorry
 
 -- `A = L ⊗[K] K_v = ∏ A_m` is an Artinian ring
 -- absolutes values over `L` are in bijection with maximal ideals of `A`
@@ -129,15 +160,18 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
 
 instance : Finite (v.absoluteValuesOver L) := Finite.of_equiv _ (v.absoluteValuesOverEquiv L).symm
 
+/-- The fundamental inequality. -/
 theorem sum_eq [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], Algebra v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], ContinuousSMul v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
-    ∑ w : v.absoluteValuesOver L,
-      Module.finrank v.Completion w.1.Completion ≤ Module.finrank K L := by
+    ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤ Module.finrank K L := by
   let A := v.Completion ⊗[K] L
   have : Fintype (PrimeSpectrum A) := sorry
   rw [← Module.finrank_baseChange (R := v.Completion), IsArtinianRing.finrank_eq_sum_primeSpectrum]
+  change ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤
+    ∑ p : PrimeSpectrum A, Module.finrank v.Completion (Localization.AtPrime p.asIdeal)
+  -- these are both finranks, want map injective `L_w → A_m`
   sorry
 
 end sum
