@@ -8,6 +8,8 @@ module
 public import Mathlib.Analysis.Normed.Group.Completion
 public import Mathlib.Analysis.Normed.Field.Instances
 public import Mathlib.Analysis.Normed.Field.WithAbs
+public import Mathlib.Analysis.Normed.Module.Completion
+public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
 public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 public import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 public import Mathlib.RingTheory.TensorProduct.Finite
@@ -135,22 +137,18 @@ section completion
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
 
-theorem foo : UniformContinuous (v ∘ WithAbs.ofAbs : WithAbs v → ℝ) := by
-  let f' : WithAbs v →* ℝ := .comp v (WithAbs.equiv v).toMonoidHom
-  have hf' : Continuous f' := by
-    sorry
-  sorry
+/-- The extended absolute value on `v.Completion`. -/
+def completion : AbsoluteValue v.Completion ℝ := NormedField.toAbsoluteValue v.Completion
 
-open UniformSpace Completion in
-def completion : AbsoluteValue v.Completion ℝ where
-  toFun := Completion.extension (v ∘ WithAbs.ofAbs)
-  map_mul' x y := induction_on₂ x y (isClosed_eq (by fun_prop) (by fun_prop)) fun x y ↦ by
-    simp [← coe_mul, extension_coe v.foo]
-  nonneg' x := induction_on x (isClosed_le (by fun_prop) (by fun_prop)) fun x ↦ by
-    simp [extension_coe v.foo]
-  eq_zero' x := norm_eq_zero (a := x)
-  add_le' x y := induction_on₂ x y (isClosed_le (by fun_prop) (by fun_prop)) fun x y ↦ by
-    simpa [← coe_add, extension_coe v.foo] using v.add_le x.ofAbs y.ofAbs
+theorem completion_apply (x : v.Completion) :
+    v.completion x = UniformSpace.Completion.extension (v ∘ WithAbs.ofAbs) x :=
+  rfl
+
+instance : v.completion.LiesOver v where
+  comp_eq := by
+    ext x
+    exact (v.completion_apply x).trans
+      (UniformSpace.Completion.extension_coe uniformContinuous_norm (WithAbs.toAbs v x))
 
 end completion
 
@@ -178,6 +176,7 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     let L_w := (v.Completion ⊗[K] L) ⧸ p.asIdeal
     have : Algebra K_v L_w := inferInstance
     have : FiniteDimensional K_v L_w := inferInstance
+    let v' : AbsoluteValue v.Completion ℝ := v.completion
     let w : AbsoluteValue L_w ℝ := sorry -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
     simp
