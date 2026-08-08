@@ -5,6 +5,7 @@ Authors: Thomas Browning
 -/
 module
 
+public import Mathlib.Analysis.Normed.Group.Completion
 public import Mathlib.Analysis.Normed.Field.Instances
 public import Mathlib.Analysis.Normed.Field.WithAbs
 public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
@@ -25,11 +26,13 @@ namespace AbsoluteValue
 variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
     (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
 
+-- #42566
 def under : AbsoluteValue T S :=
   v.comp (FaithfulSMul.algebraMap_injective T R)
 
 end AbsoluteValue
 
+-- #42542
 namespace AbsoluteValue
 
 section algebra
@@ -85,7 +88,7 @@ section localDegree
 
 variable {L : Type*} [Field L] (w : AbsoluteValue L ℝ) (K : Type*) [Field K] [Algebra K L]
 
--- this instance will be handled by the `under` refactor.
+-- #42566
 instance : w.LiesOver (w.under K) := ⟨rfl⟩
 
 def localDegree : ℕ :=
@@ -117,9 +120,39 @@ variable {K S : Type*} [Field K] [PartialOrder S] [Semiring S] (v : AbsoluteValu
 def absoluteValuesOver : Set (AbsoluteValue L S) :=
   {w | w.LiesOver v}
 
+variable {v L}
+
+@[simp]
+theorem mem_absoluteValuesOver {w : AbsoluteValue L S} :
+    w ∈ v.absoluteValuesOver L ↔ w.LiesOver v :=
+  .rfl
+
 instance (w : absoluteValuesOver v L) : w.val.LiesOver v := w.2
 
 end absoluteValuesOver
+
+section completion
+
+variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
+
+theorem foo : UniformContinuous (v ∘ WithAbs.ofAbs : WithAbs v → ℝ) := by
+  let f' : WithAbs v →* ℝ := .comp v (WithAbs.equiv v).toMonoidHom
+  have hf' : Continuous f' := by
+    sorry
+  sorry
+
+open UniformSpace Completion in
+def completion : AbsoluteValue v.Completion ℝ where
+  toFun := Completion.extension (v ∘ WithAbs.ofAbs)
+  map_mul' x y := induction_on₂ x y (isClosed_eq (by fun_prop) (by fun_prop)) fun x y ↦ by
+    simp [← coe_mul, extension_coe v.foo]
+  nonneg' x := induction_on x (isClosed_le (by fun_prop) (by fun_prop)) fun x ↦ by
+    simp [extension_coe v.foo]
+  eq_zero' x := norm_eq_zero (a := x)
+  add_le' x y := induction_on₂ x y (isClosed_le (by fun_prop) (by fun_prop)) fun x y ↦ by
+    simpa [← coe_add, extension_coe v.foo] using v.add_le x.ofAbs y.ofAbs
+
+end completion
 
 section sum
 
@@ -145,8 +178,9 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     let L_w := (v.Completion ⊗[K] L) ⧸ p.asIdeal
     have : Algebra K_v L_w := inferInstance
     have : FiniteDimensional K_v L_w := inferInstance
-    let w : AbsoluteValue L_w ℝ := sorry
+    let w : AbsoluteValue L_w ℝ := sorry -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
+    simp
     sorry
   left_inv := by
     sorry
