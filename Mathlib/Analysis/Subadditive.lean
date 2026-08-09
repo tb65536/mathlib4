@@ -5,6 +5,7 @@ Authors: Sébastien Gouëzel
 -/
 module
 
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.Order.Filter.AtTopBot.Archimedean
 public import Mathlib.Order.Filter.AtTopBot.Finite
 public import Mathlib.Order.Filter.AtTopBot.Prod
@@ -29,10 +30,9 @@ noncomputable section
 
 open Set Filter Topology
 
-/-- A real-valued sequence is subadditive if it satisfies the inequality `u (m + n) ≤ u m + u n`
-for all `m, n`. -/
-def Subadditive (u : ℕ → ℝ) : Prop :=
-  ∀ m n, u (m + n) ≤ u m + u n
+@[to_additive Subadditive]
+def Submultiplicative {α β : Type*} [Add α] [Mul β] [LE β] (u : α → β) : Prop :=
+  ∀ m n, u (m + n) ≤ u m * u n
 
 namespace Subadditive
 
@@ -40,7 +40,6 @@ variable {u : ℕ → ℝ} (h : Subadditive u)
 
 /-- The limit of a bounded-below subadditive sequence. The fact that the sequence indeed tends to
 this limit is given in `Subadditive.tendsto_lim` -/
-@[nolint unusedArguments, irreducible]
 protected def lim (_h : Subadditive u) :=
   sInf ((fun n : ℕ => u n / n) '' Ici 1)
 
@@ -96,4 +95,61 @@ theorem tendsto_lim (hbdd : BddBelow (range fun n => u n / n)) :
       exact ⟨n, zero_lt_one.trans_le hn, xL⟩
     exact h.eventually_div_lt_of_div_lt npos.ne' hn
 
+include h in
+theorem tendsto_atBot (hbdd : ¬ BddBelow (range fun n ↦ u n / n)) :
+    Tendsto (fun n ↦ u n / n) atTop atBot := by
+  rw [bddBelow_def] at hbdd
+  push Not at hbdd
+  rw [tendsto_atTop_atBot]
+  intro L
+  rw [← eventually_atTop]
+  obtain ⟨-, ⟨n, rfl⟩, hn⟩ := hbdd (min L 0)
+  by_cases hn0 : n = 0
+  · simp [hn0] at hn
+  · exact (eventually_div_lt_of_div_lt h hn0 hn).mono (by grind)
+
 end Subadditive
+
+namespace Submultiplicative
+
+variable {u : ℕ → ℝ} (h : Submultiplicative u)
+
+/-- The limit of a submultipliactive sequence. The fact that the sequence indeed
+tends to this limit is given in `Submultiplicative.tendsto_lim`. -/
+protected def lim (_h : Submultiplicative u) :=
+  sInf ((fun n : ℕ ↦ u n ^ (n : ℝ)⁻¹) '' Ici 1)
+
+/-- Fekete's lemma: a nonnegative submultipliactive sequence converges. -/
+theorem tendsto_lim (hbdd : ∀ n, 0 ≤ u n) : Tendsto (fun n ↦ u n ^ (n : ℝ)⁻¹) atTop (𝓝 h.lim) := by
+  by_cases! hu : ∃ n, u n ≤ 0
+  · obtain ⟨n, hu⟩ := hu
+    replace hu m (hm : m ≥ n) : u m = 0 := by grind [le_antisymm, h n (m - n)]
+    have h0 : n + 1 ≠ (0 : ℝ) := by grind
+    have h1 : Ici 1 = {0}ᶜ := by grind
+    have h2 : h.lim = 0 := by
+      rw [Submultiplicative.lim, h1]
+      refine csInf_eq_of_forall_ge_of_forall_gt_exists_lt ⟨0, n + 1, by simp, by simp [hu, h0]⟩ ?_
+        fun _ _ ↦ ⟨u (n + 1) ^ (n + 1 : ℝ)⁻¹, ⟨n + 1, by simp⟩, by simpa [hu, h0]⟩
+      rintro - ⟨n, hn, rfl⟩
+      positivity [hbdd n]
+    apply tendsto_nhds_of_eventually_eq
+    rw [eventually_atTop, h2]
+    refine ⟨n + 1, fun m hm ↦ ?_⟩
+    simp [hu m (by grind), show m ≠ 0 by grind]
+  · have key : Subadditive fun n ↦ (u n).log :=
+      fun a b ↦ (Real.log_le_log (hu (a + b)) (h a b)).trans_eq (Real.log_mul (hu a).ne' (hu b).ne')
+    have h0 n : u n ^ (n : ℝ)⁻¹ = Real.exp (Real.log (u n) / n) := by
+      rw [Real.rpow_def_of_pos (hu n), Real.exp_eq_exp, div_eq_mul_inv]
+    simp_rw [h0]
+    by_cases h' : BddBelow (range fun n ↦ Real.log (u n) / ↑n)
+    · convert Real.continuous_exp.continuousAt.tendsto.comp (key.tendsto_lim h')
+      · rfl
+      · sorry
+    · suffices h.lim = 0 by
+        rw [this]
+        have h1 := key.tendsto_atBot h'
+        have h2 : Filter.Tendsto Real.exp Filter.atBot (𝓝 0) := by sorry
+        exact h2.comp h1
+      sorry
+
+end Submultiplicative

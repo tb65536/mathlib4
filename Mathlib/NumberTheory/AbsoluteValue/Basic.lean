@@ -14,6 +14,7 @@ public import Mathlib.Analysis.Normed.Module.Completion
 public import Mathlib.Analysis.Normed.Operator.Basic
 public import Mathlib.Analysis.Normed.Operator.Mul
 public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
+public import Mathlib.Analysis.Subadditive
 public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 public import Mathlib.RingTheory.Norm.Basic
 public import Mathlib.RingTheory.Spectrum.Prime.Noetherian
@@ -26,6 +27,58 @@ public import Mathlib.Topology.Algebra.UniformField
 -/
 
 @[expose] public noncomputable section
+
+section gelfand
+
+open scoped Topology
+
+def foo {A : Type*} [SeminormedRing A] (a : A) : ℝ :=
+  Filter.atTop.limUnder fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹
+
+theorem tendsto_foo {A : Type*} [SeminormedRing A] (a : A) :
+    Filter.atTop.Tendsto (fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹) (𝓝 (foo a)) := by
+  have h : Submultiplicative fun k ↦ ‖a ^ k‖ :=
+    fun m n ↦ by simpa [pow_add] using norm_mul_le (a ^ m) (a ^ n)
+  exact tendsto_nhds_limUnder ⟨h.lim, h.tendsto_lim fun n ↦ norm_nonneg (a ^ n)⟩
+
+theorem foo_nonneg {A : Type*} [SeminormedRing A] (a : A) : 0 ≤ foo a :=
+  isClosed_Ici.mem_of_tendsto (tendsto_foo a) (.of_forall fun k ↦ by rw [Set.mem_Ici]; positivity)
+
+theorem foo_mul {A : Type*} [SeminormedRing A] (a b : A) : foo (a * b) ≤ foo a * foo b := by
+  sorry
+
+-- might require imposing `‖1‖ = 1` or splitting off `n = 0`
+theorem foo_pow {A : Type*} [SeminormedRing A] (a : A) (n : ℕ) : foo (a ^ n) = foo a ^ n := by
+  sorry
+
+theorem foo_add_le {A : Type*} [SeminormedRing A] (a b : A) (hc : Commute a b) :
+    foo (a + b) ≤ foo a + foo b := by
+  apply le_of_forall_pos_le_add
+  intro ε hε
+  have h_le : ∀ a : A, ∃ C > 0, ∀ n, ‖a ^ n‖ ≤ C * (foo a + ε / 3) ^ n := by
+    sorry
+  have h_ge : ∀ a : A, ∃ C > 0, ∀ n, C * (foo a - ε / 3) ^ n ≤ ‖a ^ n‖ := by
+    sorry
+  suffices foo (a + b) - ε / 3 ≤ (foo a + ε / 3) + (foo b + ε / 3) by
+    grind
+  obtain ⟨Cx, hCx, hx⟩ := h_le a
+  obtain ⟨Cy, hCy, hy⟩ := h_le b
+  obtain ⟨Cxy, hCxy, hxy⟩ := h_ge (a + b)
+  let C := Cx * Cy * ‖(1 : A)‖
+  suffices ∀ n, Cxy * (foo (a + b) - ε / 3) ^ n ≤ C * ((foo a + ε / 3) + (foo b + ε / 3)) ^ n by
+    -- take `n`th powers and take the limit
+    sorry
+  intro n
+  rw [add_pow]
+  specialize hxy n
+  have tmp (k : ℕ) : ‖(n.choose k : A)‖ ≤ (n.choose k) * ‖(1 : A)‖ := by
+    grw [← nsmul_one, norm_nsmul_le]
+  have := foo_nonneg a
+  have := foo_nonneg b
+  grw [hc.add_pow, norm_sum_le, norm_mul_le, norm_mul_le, hx, hy, tmp] at hxy
+  grind [Finset.mul_sum]
+
+end gelfand
 
 open TensorProduct
 
@@ -168,45 +221,14 @@ section extension
 
 theorem le_one_if_not_isNontrivial {K : Type*} [Field K] {v : AbsoluteValue K ℝ}
     (hv : ¬ v.IsNontrivial) (x : K) : v x ≤ 1 := by
-
   by_cases hx : x = 0
   sorry
 
 open scoped Topology
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
-#check NormedAlgebra
-#check norm_pow_le'
-theorem abstract {𝕜 A : Type*} [NormedField 𝕜] [SeminormedRing A] [NormedAlgebra 𝕜 A]
-    (ρ : A → ℝ) (x y : A) (hc : Commute x y)
-    (h : ∀ x, Filter.atTop.Tendsto (fun n : ℕ ↦ ‖x ^ n‖ ^ (n : ℝ)⁻¹) (𝓝 (ρ x))) :
-    ρ (x + y) ≤ ρ x + ρ y := by
-  apply le_of_forall_pos_le_add
-  intro ε hε
-  have h_le : ∀ x : A, ∃ C > 0, ∀ n, ‖x ^ n‖ ≤ C * (ρ x + ε / 3) ^ n := by
-    sorry
-  have h_ge : ∀ x : A, ∃ C > 0, ∀ n, C * (ρ x - ε / 3) ^ n ≤ ‖x ^ n‖ := by
-    sorry
-  suffices ρ (x + y) - ε / 3 ≤ (ρ x + ε / 3) + (ρ y + ε / 3) by
-    grind
-  obtain ⟨Cx, hCx, hx⟩ := h_le x
-  obtain ⟨Cy, hCy, hy⟩ := h_le y
-  obtain ⟨Cxy, hCxy, hxy⟩ := h_ge (x + y)
-  let C := Cx * Cy * ‖(1 : A)‖
-  suffices ∀ n, Cxy * (ρ (x + y) - ε / 3) ^ n ≤ C * ((ρ x + ε / 3) + (ρ y + ε / 3)) ^ n by
-    -- take `n`th powers and take the limit
-    sorry
-  intro n
-  rw [add_pow]
-  specialize hxy n
-  have tmp (k : ℕ) : ‖(n.choose k : A)‖ ≤ (n.choose k) * ‖(1 : A)‖ := by
-    grw [← nsmul_one, norm_nsmul_le]
-  have hρ : ∀ x, 0 ≤ ρ x := by
-    sorry
-  have := hρ x
-  have := hρ y
-  grw [hc.add_pow, norm_sum_le, norm_mul_le, norm_mul_le, hx, hy, tmp] at hxy
-  grind [Finset.mul_sum]
+
+-- first define auxilliary norm as the limit
 
 def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ where
   toFun x := v (Algebra.norm K x) ^ (Module.finrank K L : ℝ)⁻¹
@@ -229,23 +251,34 @@ def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L 
     let := NormedSpace.induced (WithAbs v) L _ (Module.finBasis (WithAbs v) L).equivFun
     -- let `T x` be multiplication by `x` on `L`
     let T x := (LinearMap.mul (WithAbs v) L x).toContinuousLinearMap
-    have key : ∀ x : L, Algebra.norm K x = (T x).toLinearMap.det.ofAbs := by
+    have key x : Algebra.norm K x = (T x).toLinearMap.det.ofAbs := by
+      rw [Algebra.norm]
+      simp [T]
       sorry
-    have key' : ∀ x y : L, T (x + y) = T x + T y := by
-      sorry
-    have key'' : ∀ x y : L, Commute (T x) (T y) := by
-      sorry
-    suffices ∀ T : L →L[WithAbs v] L, Filter.atTop.Tendsto (fun k : ℕ ↦ ‖T ^ k‖ ^ (k : ℝ)⁻¹)
-        (𝓝 (v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹)) by
-      have := abstract (𝕜 := WithAbs v) _ (T x) (T y) ?_  this
-      simp [key, key']
-      exact this
-      apply key''
+    have key' x y : T (x + y) = T x + T y := by simp [T]
+    have key'' x y : Commute (T x) (T y) := by
+      ext x
+      simp [T]
+      grind
+    suffices ∀ T : L →L[WithAbs v] L,
+        v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹ = foo T by
+      simp [key, this]
+      rw [key']
+      exact foo_add_le (T x) (T y) (key'' x y)
+    -- define foo as a norm on L (this may also shortcut some of the above)
+    -- `|v x| ≤ C * (foo x) ^ n`
+    -- `|v (x ^ k)| ≤ C * (foo (x ^ k)) ^ n`
+    -- `|v x| ^ k ≤ C * ((foo x) ^ n) ^ k`
+    -- `|v x| ≤ C ^ (1 / k) * (foo x) ^ n`
+    -- `|v x| ≤ (foo x) ^ n`
+    --  reverse bound gives equality
     sorry
 
-instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v := by
-
-  sorry
+instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v where
+  comp_eq := by
+    ext x
+    simp [extension, AbsoluteValue.comp]
+    sorry
 
 -- once you have extensions of absolute values on complete fields, the Artinian machinery
 -- let's you pick an arbitrary extension if desired
