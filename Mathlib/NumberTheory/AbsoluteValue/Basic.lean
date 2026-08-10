@@ -233,7 +233,6 @@ instance : v.completion.LiesOver v where
     ext x
     exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
--- might be unnecessary
 instance : CompleteSpace (WithAbs v.completion) := by
   sorry
 
@@ -241,6 +240,7 @@ end completion
 
 section extension
 
+-- might be unnecessary
 theorem le_one_if_not_isNontrivial {K : Type*} [Field K] {v : AbsoluteValue K ℝ}
     (hv : ¬ v.IsNontrivial) (x : K) : v x ≤ 1 := by
   by_cases hx : x = 0
