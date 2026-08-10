@@ -6,6 +6,7 @@ Authors: Sébastien Gouëzel
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Order.ConditionallyCompleteLattice.Indexed
 public import Mathlib.Order.Filter.AtTopBot.Archimedean
 public import Mathlib.Order.Filter.AtTopBot.Finite
 public import Mathlib.Order.Filter.AtTopBot.Prod
@@ -114,42 +115,52 @@ namespace Submultiplicative
 
 variable {u : ℕ → ℝ} (h : Submultiplicative u)
 
-/-- The limit of a submultipliactive sequence. The fact that the sequence indeed
-tends to this limit is given in `Submultiplicative.tendsto_lim`. -/
+/-- The limit of the nth roots of a submultipliactive sequence. The fact that the nth roots indeed
+converge to this limit is given in `Submultiplicative.tendsto_lim`. -/
 protected def lim (_h : Submultiplicative u) :=
   sInf ((fun n : ℕ ↦ u n ^ (n : ℝ)⁻¹) '' Ici 1)
 
-/-- Fekete's lemma: a nonnegative submultipliactive sequence converges. -/
 theorem tendsto_lim (hbdd : ∀ n, 0 ≤ u n) : Tendsto (fun n ↦ u n ^ (n : ℝ)⁻¹) atTop (𝓝 h.lim) := by
   by_cases! hu : ∃ n, u n ≤ 0
   · obtain ⟨n, hu⟩ := hu
     replace hu m (hm : m ≥ n) : u m = 0 := by grind [le_antisymm, h n (m - n)]
     have h0 : n + 1 ≠ (0 : ℝ) := by grind
-    have h1 : Ici 1 = {0}ᶜ := by grind
-    have h2 : h.lim = 0 := by
-      rw [Submultiplicative.lim, h1]
+    have h1 : h.lim = 0 := by
+      rw [Submultiplicative.lim]
       refine csInf_eq_of_forall_ge_of_forall_gt_exists_lt ⟨0, n + 1, by simp, by simp [hu, h0]⟩ ?_
         fun _ _ ↦ ⟨u (n + 1) ^ (n + 1 : ℝ)⁻¹, ⟨n + 1, by simp⟩, by simpa [hu, h0]⟩
       rintro - ⟨n, hn, rfl⟩
       positivity [hbdd n]
     apply tendsto_nhds_of_eventually_eq
-    rw [eventually_atTop, h2]
+    rw [eventually_atTop, h1]
     refine ⟨n + 1, fun m hm ↦ ?_⟩
     simp [hu m (by grind), show m ≠ 0 by grind]
   · have key : Subadditive fun n ↦ (u n).log :=
       fun a b ↦ (Real.log_le_log (hu (a + b)) (h a b)).trans_eq (Real.log_mul (hu a).ne' (hu b).ne')
-    have h0 n : u n ^ (n : ℝ)⁻¹ = Real.exp (Real.log (u n) / n) := by
+    have h0 n : u n ^ (n : ℝ)⁻¹ = ((u n).log / n).exp := by
       rw [Real.rpow_def_of_pos (hu n), Real.exp_eq_exp, div_eq_mul_inv]
     simp_rw [h0]
-    by_cases h' : BddBelow (range fun n ↦ Real.log (u n) / ↑n)
-    · convert Real.continuous_exp.continuousAt.tendsto.comp (key.tendsto_lim h')
-      · rfl
-      · sorry
+    by_cases h' : BddBelow (range fun n ↦ (u n).log / n)
+    · suffices h.lim = key.lim.exp by
+        rw [this]
+        exact Real.continuous_exp.continuousAt.tendsto.comp (key.tendsto_lim h')
+      let : Inhabited (Ioi (0 : ℝ)) := ⟨1, by simp⟩
+      let : ConditionallyCompleteLinearOrder (Ioi (0 : ℝ)) :=
+        ordConnectedSubsetConditionallyCompleteLinearOrder (Ioi (0 : ℝ))
+      simp_rw [Subadditive.lim, Submultiplicative.lim, h0]
+      rw [Real.exp_monotone.map_csInf_of_continuousAt Real.continuous_exp.continuousAt
+        Nonempty.of_subtype (h'.mono (image_subset_range _ _)), Set.image_image]
     · suffices h.lim = 0 by
         rw [this]
-        have h1 := key.tendsto_atBot h'
-        have h2 : Filter.Tendsto Real.exp Filter.atBot (𝓝 0) := by sorry
-        exact h2.comp h1
-      sorry
+        exact Real.tendsto_exp_atBot.comp (key.tendsto_atBot h')
+      simp_rw [Submultiplicative.lim, h0]
+      apply csInf_eq_of_forall_ge_of_forall_gt_exists_lt Nonempty.of_subtype
+      · rintro - ⟨n, hn, rfl⟩
+        positivity
+      · intro ε hε
+        obtain ⟨-, ⟨n, rfl⟩, hn⟩ := (not_bddBelow_iff.mp h') (min 0 ε.log)
+        refine exists_mem_image.mpr ⟨n, (lt_inf_iff.mp hn).imp ?_ (Real.lt_log_iff_exp_lt hε).mp⟩
+        contrapose!
+        simp +contextual
 
 end Submultiplicative

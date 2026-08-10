@@ -32,40 +32,63 @@ section gelfand
 
 open scoped Topology
 
-def foo {A : Type*} [SeminormedRing A] (a : A) : ℝ :=
+variable {A : Type*}
+
+section SeminormedRing
+
+variable [SeminormedRing A]
+
+/-- The limit `‖a ^ k‖ ^ (1 / k)` of an element `a` in a normed ring. -/
+def spectralRadiusLim (a : A) : ℝ :=
   Filter.atTop.limUnder fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹
 
-theorem tendsto_foo {A : Type*} [SeminormedRing A] (a : A) :
-    Filter.atTop.Tendsto (fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹) (𝓝 (foo a)) := by
+theorem tendsto_spectralRadiusLim (a : A) :
+    Filter.atTop.Tendsto (fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹) (𝓝 (spectralRadiusLim a)) := by
   have h : Submultiplicative fun k ↦ ‖a ^ k‖ :=
     fun m n ↦ by simpa [pow_add] using norm_mul_le (a ^ m) (a ^ n)
   exact tendsto_nhds_limUnder ⟨h.lim, h.tendsto_lim fun n ↦ norm_nonneg (a ^ n)⟩
 
-theorem foo_nonneg {A : Type*} [SeminormedRing A] (a : A) : 0 ≤ foo a :=
-  isClosed_Ici.mem_of_tendsto (tendsto_foo a) (.of_forall fun k ↦ by rw [Set.mem_Ici]; positivity)
+@[bound]
+theorem spectralRadiusLim_nonneg (a : A) : 0 ≤ spectralRadiusLim a :=
+  isClosed_Ici.mem_of_tendsto (tendsto_spectralRadiusLim a)
+    (.of_forall fun k ↦ by rw [Set.mem_Ici]; positivity)
 
-theorem foo_mul {A : Type*} [SeminormedRing A] (a b : A) : foo (a * b) ≤ foo a * foo b := by
-  sorry
+theorem Commute.spectralRadiusLim_mul {a b : A} (h : Commute a b) :
+    spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b := by
+  refine OrderClosedTopology.isClosed_le'.mem_of_tendsto
+    ((tendsto_spectralRadiusLim (a * b)).prodMk_nhds
+      ((tendsto_spectralRadiusLim a).mul (tendsto_spectralRadiusLim b))) (.of_forall fun n ↦ ?_)
+  simp_rw [Set.mem_ofPred_eq, h.mul_pow]
+  grw [norm_mul_le, Real.mul_rpow] <;> positivity
 
--- might require imposing `‖1‖ = 1` or splitting off `n = 0`
-theorem foo_pow {A : Type*} [SeminormedRing A] (a : A) (n : ℕ) : foo (a ^ n) = foo a ^ n := by
-  sorry
+theorem spectralRadiusLim_pow_of_ne_zero (a : A) (n : ℕ) (hn : n ≠ 0) :
+    spectralRadiusLim (a ^ n) = spectralRadiusLim a ^ n := by
+  refine tendsto_nhds_unique (tendsto_spectralRadiusLim (a ^ n)) ((((tendsto_spectralRadiusLim a).comp
+    (strictMono_mul_left_of_pos hn.pos).tendsto_atTop).pow n).congr fun k ↦ ?_)
+  rw [Function.comp_apply, Nat.cast_mul, mul_inv_rev,
+    ← Real.rpow_mul_natCast (by positivity), inv_mul_cancel_right₀ (by simpa), pow_mul]
 
-theorem foo_add_le {A : Type*} [SeminormedRing A] (a b : A) (hc : Commute a b) :
-    foo (a + b) ≤ foo a + foo b := by
+theorem spectralRadiusLim_pow [NormOneClass A] (a : A) (n : ℕ) :
+    spectralRadiusLim (a ^ n) = spectralRadiusLim a ^ n := by
+  by_cases hn : n = 0
+  · simpa [hn, eq_comm] using tendsto_spectralRadiusLim (1 : A)
+  · exact spectralRadiusLim_pow_of_ne_zero a n hn
+
+theorem Commute.spectralRadiusLim_add_le {a b : A} (hc : Commute a b) :
+    spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b := by
   apply le_of_forall_pos_le_add
   intro ε hε
-  have h_le : ∀ a : A, ∃ C > 0, ∀ n, ‖a ^ n‖ ≤ C * (foo a + ε / 3) ^ n := by
+  have h_le : ∀ a : A, ∃ C > 0, ∀ n, ‖a ^ n‖ ≤ C * (spectralRadiusLim a + ε / 3) ^ n := by
     sorry
-  have h_ge : ∀ a : A, ∃ C > 0, ∀ n, C * (foo a - ε / 3) ^ n ≤ ‖a ^ n‖ := by
+  have h_ge : ∀ a : A, ∃ C > 0, ∀ n, C * (spectralRadiusLim a - ε / 3) ^ n ≤ ‖a ^ n‖ := by
     sorry
-  suffices foo (a + b) - ε / 3 ≤ (foo a + ε / 3) + (foo b + ε / 3) by
+  suffices spectralRadiusLim (a + b) - ε / 3 ≤ (spectralRadiusLim a + ε / 3) + (spectralRadiusLim b + ε / 3) by
     grind
   obtain ⟨Cx, hCx, hx⟩ := h_le a
   obtain ⟨Cy, hCy, hy⟩ := h_le b
   obtain ⟨Cxy, hCxy, hxy⟩ := h_ge (a + b)
   let C := Cx * Cy * ‖(1 : A)‖
-  suffices ∀ n, Cxy * (foo (a + b) - ε / 3) ^ n ≤ C * ((foo a + ε / 3) + (foo b + ε / 3)) ^ n by
+  suffices ∀ n, Cxy * (spectralRadiusLim (a + b) - ε / 3) ^ n ≤ C * ((spectralRadiusLim a + ε / 3) + (spectralRadiusLim b + ε / 3)) ^ n by
     -- take `n`th powers and take the limit
     sorry
   intro n
@@ -73,10 +96,26 @@ theorem foo_add_le {A : Type*} [SeminormedRing A] (a b : A) (hc : Commute a b) :
   specialize hxy n
   have tmp (k : ℕ) : ‖(n.choose k : A)‖ ≤ (n.choose k) * ‖(1 : A)‖ := by
     grw [← nsmul_one, norm_nsmul_le]
-  have := foo_nonneg a
-  have := foo_nonneg b
+  have := spectralRadiusLim_nonneg a
+  have := spectralRadiusLim_nonneg b
   grw [hc.add_pow, norm_sum_le, norm_mul_le, norm_mul_le, hx, hy, tmp] at hxy
   grind [Finset.mul_sum]
+
+end SeminormedRing
+
+section SeminormedCommRing
+
+variable [SeminormedCommRing A]
+
+theorem spectralRadiusLim_mul (a b : A) :
+    spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b :=
+  (Commute.all a b).spectralRadiusLim_mul
+
+theorem spectralRadiusLim_add_le (a b : A) :
+    spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b :=
+  (Commute.all a b).spectralRadiusLim_add_le
+
+end SeminormedCommRing
 
 end gelfand
 
@@ -261,16 +300,16 @@ def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L 
       simp [T]
       grind
     suffices ∀ T : L →L[WithAbs v] L,
-        v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹ = foo T by
+        v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹ = spectralRadiusLim T by
       simp [key, this]
       rw [key']
-      exact foo_add_le (T x) (T y) (key'' x y)
-    -- define foo as a norm on L (this may also shortcut some of the above)
-    -- `|v x| ≤ C * (foo x) ^ n`
-    -- `|v (x ^ k)| ≤ C * (foo (x ^ k)) ^ n`
-    -- `|v x| ^ k ≤ C * ((foo x) ^ n) ^ k`
-    -- `|v x| ≤ C ^ (1 / k) * (foo x) ^ n`
-    -- `|v x| ≤ (foo x) ^ n`
+      exact spectralRadiusLim_add_le (T x) (T y) (key'' x y)
+    -- define spectralRadiusLim as a norm on L (this may also shortcut some of the above)
+    -- `|v x| ≤ C * (spectralRadiusLim x) ^ n`
+    -- `|v (x ^ k)| ≤ C * (spectralRadiusLim (x ^ k)) ^ n`
+    -- `|v x| ^ k ≤ C * ((spectralRadiusLim x) ^ n) ^ k`
+    -- `|v x| ≤ C ^ (1 / k) * (spectralRadiusLim x) ^ n`
+    -- `|v x| ≤ (spectralRadiusLim x) ^ n`
     --  reverse bound gives equality
     sorry
 
