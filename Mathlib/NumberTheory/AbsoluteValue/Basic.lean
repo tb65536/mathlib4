@@ -28,6 +28,7 @@ public import Mathlib.Topology.Algebra.UniformField
 
 @[expose] public noncomputable section
 
+-- #42607
 section gelfand
 
 open scoped Topology
@@ -53,7 +54,7 @@ theorem spectralRadiusLim_nonneg (a : A) : 0 ≤ spectralRadiusLim a :=
   isClosed_Ici.mem_of_tendsto (tendsto_spectralRadiusLim a)
     (.of_forall fun k ↦ by rw [Set.mem_Ici]; positivity)
 
-theorem Commute.spectralRadiusLim_mul {a b : A} (h : Commute a b) :
+theorem Commute.spectralRadiusLim_mul_le {a b : A} (h : Commute a b) :
     spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b := by
   refine OrderClosedTopology.isClosed_le'.mem_of_tendsto
     ((tendsto_spectralRadiusLim (a * b)).prodMk_nhds
@@ -74,32 +75,10 @@ theorem spectralRadiusLim_pow [NormOneClass A] (a : A) (n : ℕ) :
   · simpa [hn, eq_comm] using tendsto_spectralRadiusLim (1 : A)
   · exact spectralRadiusLim_pow_of_ne_zero a n hn
 
+-- #42607
 theorem Commute.spectralRadiusLim_add_le {a b : A} (hc : Commute a b) :
     spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b := by
-  apply le_of_forall_pos_le_add
-  intro ε hε
-  have h_le : ∀ a : A, ∃ C > 0, ∀ n, ‖a ^ n‖ ≤ C * (spectralRadiusLim a + ε / 3) ^ n := by
-    sorry
-  have h_ge : ∀ a : A, ∃ C > 0, ∀ n, C * (spectralRadiusLim a - ε / 3) ^ n ≤ ‖a ^ n‖ := by
-    sorry
-  suffices spectralRadiusLim (a + b) - ε / 3 ≤ (spectralRadiusLim a + ε / 3) + (spectralRadiusLim b + ε / 3) by
-    grind
-  obtain ⟨Cx, hCx, hx⟩ := h_le a
-  obtain ⟨Cy, hCy, hy⟩ := h_le b
-  obtain ⟨Cxy, hCxy, hxy⟩ := h_ge (a + b)
-  let C := Cx * Cy * ‖(1 : A)‖
-  suffices ∀ n, Cxy * (spectralRadiusLim (a + b) - ε / 3) ^ n ≤ C * ((spectralRadiusLim a + ε / 3) + (spectralRadiusLim b + ε / 3)) ^ n by
-    -- take `n`th powers and take the limit
-    sorry
-  intro n
-  rw [add_pow]
-  specialize hxy n
-  have tmp (k : ℕ) : ‖(n.choose k : A)‖ ≤ (n.choose k) * ‖(1 : A)‖ := by
-    grw [← nsmul_one, norm_nsmul_le]
-  have := spectralRadiusLim_nonneg a
-  have := spectralRadiusLim_nonneg b
-  grw [hc.add_pow, norm_sum_le, norm_mul_le, norm_mul_le, hx, hy, tmp] at hxy
-  grind [Finset.mul_sum]
+  sorry
 
 end SeminormedRing
 
@@ -107,9 +86,9 @@ section SeminormedCommRing
 
 variable [SeminormedCommRing A]
 
-theorem spectralRadiusLim_mul (a b : A) :
+theorem spectralRadiusLim_mul_le (a b : A) :
     spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b :=
-  (Commute.all a b).spectralRadiusLim_mul
+  (Commute.all a b).spectralRadiusLim_mul_le
 
 theorem spectralRadiusLim_add_le (a b : A) :
     spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b :=
@@ -254,6 +233,9 @@ instance : v.completion.LiesOver v where
     ext x
     exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
+instance : CompleteSpace (WithAbs v.completion) := by
+  sorry
+
 end completion
 
 section extension
@@ -345,13 +327,11 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     exact ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
   invFun p := by
     let K_v := v.Completion
-    let L_w := (v.Completion ⊗[K] L) ⧸ p.asIdeal
+    let L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
     have : p.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p.asIdeal
     let : Field L_w := Ideal.Quotient.field p.asIdeal
-    have : Algebra K_v L_w := inferInstance
-    have : FiniteDimensional K_v L_w := inferInstance
-    let v' : AbsoluteValue v.Completion ℝ := v.completion
-    let w : AbsoluteValue L_w ℝ := v.completion.extension L_w -- extend valuation on K_v to L_w
+    let v' : AbsoluteValue K_v ℝ := v.completion
+    let w : AbsoluteValue L_w ℝ := v'.extension L_w -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
     simp
     sorry
