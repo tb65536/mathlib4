@@ -233,6 +233,7 @@ instance : v.completion.LiesOver v where
     ext x
     exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
+-- might be unnecessary
 instance : CompleteSpace (WithAbs v.completion) := by
   sorry
 
@@ -285,7 +286,7 @@ def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L 
         v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹ = spectralRadiusLim T by
       simp [key, this]
       rw [key']
-      exact spectralRadiusLim_add_le (T x) (T y) (key'' x y)
+      exact (key'' x y).spectralRadiusLim_add_le
     -- define spectralRadiusLim as a norm on L (this may also shortcut some of the above)
     -- `|v x| ≤ C * (spectralRadiusLim x) ^ n`
     -- `|v (x ^ k)| ≤ C * (spectralRadiusLim (x ^ k)) ^ n`
