@@ -28,6 +28,13 @@ public import Mathlib.Topology.Algebra.UniformField
 
 @[expose] public noncomputable section
 
+-- todo: PR
+instance (K : Type*) [NormedField K] [CompleteSpace K] :
+    CompleteSpace (WithAbs (NormedField.toAbsoluteValue K)) :=
+  IsometryEquiv.completeSpace
+  { __ := WithAbs.equiv (NormedField.toAbsoluteValue K)
+    isometry_toFun := by simp [AddMonoidHomClass.isometry_iff_norm, WithAbs.norm_eq_apply_ofAbs] }
+
 -- #42607
 section gelfand
 
@@ -123,6 +130,8 @@ theorem WithAbs.isometry_map : Isometry (WithAbs.map v w (algebraMap K L)) := by
   rw [← LiesOver.comp_eq w v]
   exact AddMonoidHomClass.isometry_of_norm _ fun x ↦ rfl
 
+-- will be deprecated by #42634
+-- (UniformSpace.Completion.mapRingHom (WithAbs.map v w (algebraMap K L)) (WithAbs.isometry_map v w).continuous).toAlgebra
 @[instance_reducible]
 def algebraOfLiesOver : Algebra v.Completion w.Completion :=
   (WithAbs.isometry_map v w).mapRingHom.toAlgebra
@@ -233,8 +242,8 @@ instance : v.completion.LiesOver v where
     ext x
     exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
-instance : CompleteSpace (WithAbs v.completion) := by
-  sorry
+instance : CompleteSpace (WithAbs v.completion) :=
+  inferInstanceAs (CompleteSpace (WithAbs (NormedField.toAbsoluteValue v.Completion)))
 
 end completion
 
@@ -269,14 +278,15 @@ def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L 
     { non_trivial := by
         obtain ⟨x, hx⟩ := hv.exists_abv_gt_one
         exact ⟨WithAbs.toAbs v x, hx⟩ }
-    let := NormedAddCommGroup.induced L _ _ (Module.finBasis (WithAbs v) L).equivFun.injective
-    let := NormedSpace.induced (WithAbs v) L _ (Module.finBasis (WithAbs v) L).equivFun
+    let := NormedAddCommGroup.induced _ _ _ (Module.finBasis (WithAbs v) L).equivFun.injective
+    let := NormedSpace.induced _ _ _ (Module.finBasis (WithAbs v) L).equivFun
     -- let `T x` be multiplication by `x` on `L`
     let T x := (LinearMap.mul (WithAbs v) L x).toContinuousLinearMap
-    have key x : Algebra.norm K x = (T x).toLinearMap.det.ofAbs := by
-      rw [Algebra.norm]
-      simp [T]
-      sorry
+    have key₀ (x : L) : Algebra.norm K x = (Algebra.norm (WithAbs v) x).ofAbs :=
+      (Algebra.norm_eq_of_ringEquiv (WithAbs.equiv v) rfl x).symm
+    -- probably just keep this version of key:
+    have key x : Algebra.norm K x = (T x).toLinearMap.det.ofAbs :=
+      (Algebra.norm_eq_of_ringEquiv (WithAbs.equiv v) rfl x).symm
     have key' x y : T (x + y) = T x + T y := by simp [T]
     have key'' x y : Commute (T x) (T y) := by
       ext x
