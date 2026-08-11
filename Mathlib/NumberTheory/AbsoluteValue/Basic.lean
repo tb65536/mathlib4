@@ -11,6 +11,7 @@ public import Mathlib.Analysis.Normed.Field.WithAbs
 public import Mathlib.Analysis.Normed.Group.Completion
 public import Mathlib.Analysis.Normed.Group.Hom
 public import Mathlib.Analysis.Normed.Module.Completion
+public import Mathlib.Analysis.Normed.Module.FiniteDimension
 public import Mathlib.Analysis.Normed.Operator.Basic
 public import Mathlib.Analysis.Normed.Operator.Mul
 public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
@@ -257,9 +258,57 @@ theorem le_one_if_not_isNontrivial {K : Type*} [Field K] {v : AbsoluteValue K �
 
 open scoped Topology
 
+theorem foo (K L : Type*) [Field K] [Field L] [Algebra K L]
+    (f g : L → ℝ) (Cf Cg : ℝ) (hf0 : ∀ x, 0 ≤ f x) (hg0 : ∀ x, 0 ≤ g x)
+    (hf : ∀ x, f x ≤ Cf * g x) (hg : ∀ x, g x ≤ Cg * f x)
+    (hf' : ∀ x n, f (x ^ n) = f x ^ n) (hg' : ∀ x n, g (x ^ n) = g x ^ n) :
+    f = g := by
+  rcases le_or_gt Cf 0 with hCf | hCf
+  · ext x
+    specialize hf x
+    specialize hg0 x
+    grw [hCf, zero_mul] at hf
+    grind [le_antisymm]
+  rcases le_or_gt Cg 0 with hCg | hCg
+  · ext x
+    specialize hf x
+    specialize hg x
+    specialize hf0 x
+    grw [hCg, zero_mul] at hg
+    grind [le_antisymm]
+  ext x
+  have h : ∀ᶠ (n : ℕ) in Filter.atTop, f x ≤ Cf ^ (n : ℝ)⁻¹ * g x ∧ g x ≤ Cg ^ (n : ℝ)⁻¹ * f x := by
+    rw [Filter.eventually_atTop]
+    use 1
+    intro n hn
+    specialize hf (x ^ n)
+    specialize hg (x ^ n)
+    rw [hf', hg', ← Real.rpow_natCast,
+      ← Real.le_rpow_inv_iff_of_pos (by bound) (by bound) (by simp; grind),
+      Real.mul_rpow (by bound) (by bound), ← Real.rpow_natCast_mul (by bound),
+      mul_inv_cancel₀ (by simp; grind), Real.rpow_one] at hf hg
+    exact ⟨hf, hg⟩
+  replace h := Filter.eventually_and.mp h
+  refine le_antisymm ?_ ?_
+  -- const would be better
+  · refine le_of_tendsto_of_tendsto ?_ ?_ h.1
+    · sorry
+    · sorry
+  · refine le_of_tendsto_of_tendsto ?_ ?_ h.1
+    · sorry
+    · sorry
+
+
+  sorry
+
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
 
--- first define auxilliary norm as the limit
+
+
+/-
+Let f(x^n)=f(x)^n, f(xy)=f(x)f(y), g(x^n)=g(x)^n, g(x+y)<=g(x)+g(y), and g(xy)<=g(x)g(y). Does it follow that f(x)=g(x)?
+
+-/
 
 def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ where
   toFun x := v (Algebra.norm K x) ^ (Module.finrank K L : ℝ)⁻¹
