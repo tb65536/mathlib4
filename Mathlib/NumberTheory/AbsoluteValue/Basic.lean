@@ -364,6 +364,36 @@ instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesO
 
 end extension
 
+section liesOver_iff
+
+variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L] [PartialOrder S]
+  [Nontrivial L] [Semiring S]
+
+/-- An absolute value `w` of `L / K` lies over the absolute value `v` of `K` if `v` is the
+restriction of `w` to `K`. -/
+theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
+    w.LiesOver v ↔ w.under K = v :=
+  ⟨fun h ↦ h.comp_eq, fun h ↦ ⟨h⟩⟩
+
+end liesOver_iff
+
+section under_under
+
+variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
+    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
+    (U : Type*) [CommSemiring U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    [FaithfulSMul U T] [FaithfulSMul U R]
+
+variable {T} in
+theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
+
+-- #42566
+theorem under_under : (v.under T).under U = v.under U := by
+  ext x
+  simp [under_apply, ← IsScalarTower.algebraMap_apply]
+
+end under_under
+
 section sum
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
@@ -376,26 +406,48 @@ instance : Finite (PrimeSpectrum (v.Completion ⊗[K] L)) := inferInstance
 attribute [local instance] Algebra.TensorProduct.rightAlgebra in
 def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) where
   toFun w := by
-    let := algebraOfLiesOver v w.val
+    letI := algebraOfLiesOver v w.val
      -- can weaken to be over K if desired
-    let φ : v.Completion ⊗[K] L →ₐ[v.Completion] w.val.Completion := by
+    letI φ : v.Completion ⊗[K] L →ₐ[v.Completion] w.val.Completion := by
       apply Algebra.TensorProduct.productLeftAlgHom
       · apply Algebra.ofId
       · apply IsScalarTower.toAlgHom
     exact ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
   invFun p := by
-    let K_v := v.Completion
-    let L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
-    have : p.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p.asIdeal
-    let : Field L_w := Ideal.Quotient.field p.asIdeal
-    let v' : AbsoluteValue K_v ℝ := v.completion
-    let w : AbsoluteValue L_w ℝ := v'.extension L_w -- extend valuation on K_v to L_w
+    letI K_v := v.Completion
+    letI L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
+    haveI : p.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p.asIdeal
+    letI : Field L_w := Ideal.Quotient.field p.asIdeal
+    letI w : AbsoluteValue L_w ℝ := v.completion.extension L_w -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
+    rw [mem_absoluteValuesOver, liesOver_iff, under_under w L K, ← under_under w K_v K,
+      ← liesOver_iff]
+    -- use LiesOver.over_def or something
+    sorry
+  left_inv w := by
+    let := algebraOfLiesOver v w.val
+    let K_v := v.Completion
+    let L_w := w.val.Completion
+    let φ : K_v ⊗[K] L →ₐ[K_v] L_w := by
+      apply Algebra.TensorProduct.productLeftAlgHom
+      · apply Algebra.ofId
+      · apply IsScalarTower.toAlgHom
+    let p := RingHom.ker φ
+    have : p.IsPrime := RingHom.ker_isPrime φ
+    have : p.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p
+    let L_w' := K_v ⊗[K] L ⧸ p
+    let : Field L_w' := Ideal.Quotient.field p
+    ext1
+    change (v.completion.extension L_w').under L = w
+    have : Module.Finite K_v L_w := by
+      sorry
+    suffices (v.completion.extension L_w).under L = w by
+      sorry
+    ext x
+    sorry
+  right_inv p := by
+    ext1
     simp
-    sorry
-  left_inv := by
-    sorry
-  right_inv := by
     sorry
 
 -- `A = L ⊗[K] K_v = ∏ A_m` is an Artinian ring
@@ -412,7 +464,7 @@ theorem sum_eq [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
     ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤ Module.finrank K L := by
   let A := v.Completion ⊗[K] L
-  have : Fintype (PrimeSpectrum A) := sorry
+  have : Fintype (PrimeSpectrum A) := Fintype.ofEquiv _ (v.absoluteValuesOverEquiv L)
   rw [← Module.finrank_baseChange (R := v.Completion), IsArtinianRing.finrank_eq_sum_primeSpectrum]
   change ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤
     ∑ p : PrimeSpectrum A, Module.finrank v.Completion (Localization.AtPrime p.asIdeal)
