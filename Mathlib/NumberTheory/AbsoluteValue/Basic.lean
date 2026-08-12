@@ -291,15 +291,13 @@ theorem foo (K L : Type*) [Field K] [Field L] [Algebra K L]
   replace h := Filter.eventually_and.mp h
   refine le_antisymm ?_ ?_
   -- const would be better
-  · refine le_of_tendsto_of_tendsto ?_ ?_ h.1
-    · sorry
-    · sorry
-  · refine le_of_tendsto_of_tendsto ?_ ?_ h.1
-    · sorry
-    · sorry
+  · refine ge_of_tendsto ?_ h.1
+    sorry
+  · refine ge_of_tendsto ?_ h.2
+    sorry
 
-
-  sorry
+-- f(x) ≤ C * g(x) by direct estimation
+-- g(x) ≤ C * |x|
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
 
