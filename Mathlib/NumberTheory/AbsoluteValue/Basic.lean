@@ -5,6 +5,7 @@ Authors: Thomas Browning
 -/
 module
 
+public import Mathlib.Analysis.Matrix.Normed
 public import Mathlib.Analysis.Normed.Algebra.Spectrum
 public import Mathlib.Analysis.Normed.Field.Instances
 public import Mathlib.Analysis.Normed.Field.WithAbs
@@ -247,6 +248,44 @@ instance : CompleteSpace (WithAbs v.completion) :=
   inferInstanceAs (CompleteSpace (WithAbs (NormedField.toAbsoluteValue v.Completion)))
 
 end completion
+
+section extension4
+
+-- todo: remove nontrivially
+variable (K L : Type*) [NontriviallyNormedField K] [CompleteSpace K]
+  [Field L] [Algebra K L] [Module.Finite K L]
+
+open scoped Matrix.Norms.Operator -- multiple choices here: elementwise, frobenius, L∞
+
+-- Given matrix A and irreducible polynomial f such that f(A) = 0
+
+theorem key_equality (x : L) :
+    ‖(Algebra.norm K x)‖ ^ (Module.finrank K L : ℝ)⁻¹ =
+      spectralRadiusLim (algEquivMatrix (Module.finBasis K L) (LinearMap.mul K L x)) := by
+  let T := (algEquivMatrix (Module.finBasis K L)).toAlgHom.comp (Algebra.lmul K L)
+  have key x : Algebra.norm K x = (T x).det := by
+    simp [algEquivMatrix, algEquivMatrix', LinearMap.toMatrixAlgEquiv', T, Algebra.norm_apply]
+  simp_rw [key]
+  change ‖(T x).det‖ ^ (Module.finrank K L : ℝ)⁻¹ = spectralRadiusLim (T x)
+  have h1 : Irreducible (minpoly K x) := minpoly.irreducible (Algebra.IsIntegral.isIntegral x)
+  have h2 : (minpoly K x).aeval (T x) = 0 := minpoly.aeval_algHom K T x
+
+  sorry
+
+def extension' : AbsoluteValue L ℝ where
+  toFun x := ‖Algebra.norm K x‖ ^ (Module.finrank K L : ℝ)⁻¹
+  map_mul' := by simp [Real.mul_rpow]
+  nonneg' x := by positivity
+  eq_zero' := by simp [Module.finrank_pos.ne']
+  add_le' x y := by
+    simp_rw [key_equality, map_add]
+    apply Commute.spectralRadiusLim_add_le
+    apply (algEquivMatrix (Module.finBasis K L)).symm.injective
+    simp_rw [map_mul, AlgEquiv.symm_apply_apply]
+    ext z
+    exact mul_left_comm x y z
+
+end extension4
 
 section extension
 
