@@ -8,6 +8,7 @@ module
 public import Mathlib.Algebra.EuclideanDomain.Int
 public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.FieldTheory.Minpoly.Basic
+public import Mathlib.RingTheory.Algebraic.Denominator
 public import Mathlib.RingTheory.Algebraic.Integral
 public import Mathlib.RingTheory.Ideal.Colon
 public import Mathlib.RingTheory.LaurentSeries
@@ -28,27 +29,14 @@ We define E-functions.
 
 @[expose] public section
 
-namespace IsAlgebraic
+namespace Algebra
 
 variable (R : Type*) [CommRing R] [IsPrincipalIdealRing R] {S : Type*} [CommRing S] [Algebra R S]
 
-/-- The denominator of an algebraic element. -/
-noncomputable def denominator (x : S) : R :=
-  Submodule.IsPrincipal.generator ((integralClosure R S).toSubmodule.colon {x})
-
 variable {R}
 
-theorem denominator_dvd_iff {r : R} {x : S} :
-    denominator R x ∣ r ↔ IsIntegral R (r • x) := by
-  rw [denominator, ← Submodule.IsPrincipal.mem_iff_generator_dvd, Submodule.mem_colon_singleton,
-    Subalgebra.mem_toSubmodule, mem_integralClosure_iff]
-
-theorem isIntegral_denominator_smul (x : S) : IsIntegral R (denominator R x • x) :=
-  denominator_dvd_iff.mp dvd_rfl
-
 theorem denominator_ne_zero {x : S} (hx : IsAlgebraic R x) : denominator R x ≠ 0 := by
-  obtain ⟨r, hr0, hr⟩ := hx.exists_integral_multiple
-  exact ne_zero_of_dvd_ne_zero hr0 (denominator_dvd_iff.mpr hr)
+  exact IsAlgebraic.denominator_ne_zero R hx
 
 theorem denominator_ne_zero_iff [IsReduced R] {x : S} : denominator R x ≠ 0 ↔ IsAlgebraic R x := by
   simp_rw [IsAlgebraic.iff_exists_smul_integral, ← denominator_dvd_iff]
@@ -68,19 +56,8 @@ theorem denominator_mul_dvd_mul {x y : S} :
   rw [denominator_dvd_iff, mul_smul_mul_comm]
   exact (isIntegral_denominator_smul x).mul (isIntegral_denominator_smul y)
 
-/-- The natural number valued denominator of an algebraic number. -/
-noncomputable def natDenominator (x : S) : ℕ :=
-  (denominator ℤ x).natAbs
-
-theorem natDenominator_dvd_iff {n : ℕ} {x : S} :
-    natDenominator x ∣ n ↔ IsIntegral ℤ (n • x) := by
-  rw [natDenominator, ← Int.ofNat_dvd_right, denominator_dvd_iff, natCast_zsmul]
-
-theorem isIntegral_natDenominator_smul (x : S) : IsIntegral ℤ (natDenominator x • x) :=
-  natDenominator_dvd_iff.mp dvd_rfl
-
 theorem natDenominator_eq_zero_iff {x : S} : natDenominator x = 0 ↔ ¬ IsAlgebraic ℤ x := by
-  rw [natDenominator, Int.natAbs_eq_zero, denominator_eq_zero_iff]
+  rw [natDenominator_def, Int.natAbs_eq_zero, denominator_eq_zero_iff]
 
 theorem natDenominator_ne_zero_iff {x : S} : natDenominator x ≠ 0 ↔ IsAlgebraic ℤ x :=
   not_iff_comm.mp natDenominator_eq_zero_iff.symm
@@ -99,7 +76,7 @@ theorem natDenominator_mul_dvd_mul {x y : S} :
   rw [natDenominator_dvd_iff, mul_smul_mul_comm]
   exact (isIntegral_natDenominator_smul x).mul (isIntegral_natDenominator_smul y)
 
-end IsAlgebraic
+end Algebra
 
 namespace Polynomial
 
@@ -450,7 +427,7 @@ E-sequences `a₀,a₁,...` are used to define E-functions `∑ aₙzⁿ/n!`.
 -/
 structure IsESeq (f : ℕ → R) : Prop where
   growth : ∃ p : ℝ[X], ∀ n, BoundedConjugates (f n) (p.eval n)
-  denominators : ∃ p : ℕ[X], ∀ n, (Finset.range n).lcm (IsAlgebraic.natDenominator ∘ f) ≤ p.eval n
+  denominators : ∃ p : ℕ[X], ∀ n, (Finset.range n).lcm (Algebra.natDenominator ∘ f) ≤ p.eval n
 
 namespace IsESeq
 
@@ -474,7 +451,7 @@ protected theorem add {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
     specialize hq n
     rw [eval_mul]
     have h1 := (Finset.range n).lcm_mul_dvd
-      (IsAlgebraic.natDenominator ∘ f) (IsAlgebraic.natDenominator ∘ g)
+      (Algebra.natDenominator ∘ f) (Algebra.natDenominator ∘ g)
     refine le_trans ?_ (mul_le_mul' hp hq)
     apply Nat.le_of_dvd
     · simp_rw [pos_iff_ne_zero, mul_ne_zero_iff, Finset.lcm_ne_zero_iff]
@@ -483,7 +460,7 @@ protected theorem add {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
     · refine dvd_trans ?_ h1
       apply Finset.lcm_dvd_lcm
       intro i hi
-      apply IsAlgebraic.natDenominator_add_dvd_mul
+      apply Algebra.natDenominator_add_dvd_mul
 
 protected theorem mul {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq (f * g) where
   growth := by
@@ -500,7 +477,7 @@ protected theorem mul {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
     specialize hq n
     rw [eval_mul]
     have h1 := (Finset.range n).lcm_mul_dvd
-      (IsAlgebraic.natDenominator ∘ f) (IsAlgebraic.natDenominator ∘ g)
+      (Algebra.natDenominator ∘ f) (Algebra.natDenominator ∘ g)
     refine le_trans ?_ (mul_le_mul' hp hq)
     apply Nat.le_of_dvd
     · simp_rw [pos_iff_ne_zero, mul_ne_zero_iff, Finset.lcm_ne_zero_iff]
@@ -509,7 +486,7 @@ protected theorem mul {f g : ℕ → R} (hf : IsESeq f) (hg : IsESeq g) : IsESeq
     · refine dvd_trans ?_ h1
       apply Finset.lcm_dvd_lcm
       intro i hi
-      apply IsAlgebraic.natDenominator_mul_dvd_mul
+      apply Algebra.natDenominator_mul_dvd_mul
 
 -- also need Cauchy product
 
