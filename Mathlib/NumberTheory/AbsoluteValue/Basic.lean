@@ -6,6 +6,7 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.Analysis.Matrix.Normed
+public import Mathlib.Analysis.Normed.Algebra.SpectralNorm
 public import Mathlib.Analysis.Normed.Algebra.Spectrum
 public import Mathlib.Analysis.Normed.Field.Instances
 public import Mathlib.Analysis.Normed.Field.WithAbs
@@ -43,67 +44,6 @@ section gelfand
 open scoped Topology
 
 variable {A : Type*}
-
-section SeminormedRing
-
-variable [SeminormedRing A]
-
-/-- The limit `‖a ^ k‖ ^ (1 / k)` of an element `a` in a normed ring. -/
-def spectralRadiusLim (a : A) : ℝ :=
-  Filter.atTop.limUnder fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹
-
-theorem tendsto_spectralRadiusLim (a : A) :
-    Filter.atTop.Tendsto (fun k : ℕ ↦ ‖a ^ k‖ ^ (k : ℝ)⁻¹) (𝓝 (spectralRadiusLim a)) := by
-  have h : Submultiplicative fun k ↦ ‖a ^ k‖ :=
-    fun m n ↦ by simpa [pow_add] using norm_mul_le (a ^ m) (a ^ n)
-  exact tendsto_nhds_limUnder ⟨h.lim, h.tendsto_lim fun n ↦ norm_nonneg (a ^ n)⟩
-
-@[bound]
-theorem spectralRadiusLim_nonneg (a : A) : 0 ≤ spectralRadiusLim a :=
-  isClosed_Ici.mem_of_tendsto (tendsto_spectralRadiusLim a)
-    (.of_forall fun k ↦ by rw [Set.mem_Ici]; positivity)
-
-theorem Commute.spectralRadiusLim_mul_le {a b : A} (h : Commute a b) :
-    spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b := by
-  refine OrderClosedTopology.isClosed_le'.mem_of_tendsto
-    ((tendsto_spectralRadiusLim (a * b)).prodMk_nhds
-      ((tendsto_spectralRadiusLim a).mul (tendsto_spectralRadiusLim b))) (.of_forall fun n ↦ ?_)
-  simp_rw [Set.mem_ofPred_eq, h.mul_pow]
-  grw [norm_mul_le, Real.mul_rpow] <;> positivity
-
-theorem spectralRadiusLim_pow_of_ne_zero (a : A) (n : ℕ) (hn : n ≠ 0) :
-    spectralRadiusLim (a ^ n) = spectralRadiusLim a ^ n := by
-  refine tendsto_nhds_unique (tendsto_spectralRadiusLim (a ^ n)) ((((tendsto_spectralRadiusLim a).comp
-    (strictMono_mul_left_of_pos hn.pos).tendsto_atTop).pow n).congr fun k ↦ ?_)
-  rw [Function.comp_apply, Nat.cast_mul, mul_inv_rev,
-    ← Real.rpow_mul_natCast (by positivity), inv_mul_cancel_right₀ (by simpa), pow_mul]
-
-theorem spectralRadiusLim_pow [NormOneClass A] (a : A) (n : ℕ) :
-    spectralRadiusLim (a ^ n) = spectralRadiusLim a ^ n := by
-  by_cases hn : n = 0
-  · simpa [hn, eq_comm] using tendsto_spectralRadiusLim (1 : A)
-  · exact spectralRadiusLim_pow_of_ne_zero a n hn
-
--- #42607
-theorem Commute.spectralRadiusLim_add_le {a b : A} (hc : Commute a b) :
-    spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b := by
-  sorry
-
-end SeminormedRing
-
-section SeminormedCommRing
-
-variable [SeminormedCommRing A]
-
-theorem spectralRadiusLim_mul_le (a b : A) :
-    spectralRadiusLim (a * b) ≤ spectralRadiusLim a * spectralRadiusLim b :=
-  (Commute.all a b).spectralRadiusLim_mul_le
-
-theorem spectralRadiusLim_add_le (a b : A) :
-    spectralRadiusLim (a + b) ≤ spectralRadiusLim a + spectralRadiusLim b :=
-  (Commute.all a b).spectralRadiusLim_add_le
-
-end SeminormedCommRing
 
 end gelfand
 
@@ -249,148 +189,34 @@ instance : CompleteSpace (WithAbs v.completion) :=
 
 end completion
 
-section extension4
+section extension
 
 -- todo: remove nontrivially
 variable (K L : Type*) [NontriviallyNormedField K] [CompleteSpace K]
-  [Field L] [Algebra K L] [Module.Finite K L]
+  [Field L] [Algebra K L] [FiniteDimensional K L]
 
 open scoped Matrix.Norms.Operator -- multiple choices here: elementwise, frobenius, L∞
 
--- Given matrix A and irreducible polynomial f such that f(A) = 0
+def extension' : AbsoluteValue L ℝ :=
+  SpectralNorm.absoluteValue (𝕜 := K)
 
-theorem key_equality (x : L) :
-    ‖(Algebra.norm K x)‖ ^ (Module.finrank K L : ℝ)⁻¹ =
-      spectralRadiusLim (algEquivMatrix (Module.finBasis K L) (LinearMap.mul K L x)) := by
-  let T := (algEquivMatrix (Module.finBasis K L)).toAlgHom.comp (Algebra.lmul K L)
-  have key x : Algebra.norm K x = (T x).det := by
-    simp [algEquivMatrix, algEquivMatrix', LinearMap.toMatrixAlgEquiv', T, Algebra.norm_apply]
-  simp_rw [key]
-  change ‖(T x).det‖ ^ (Module.finrank K L : ℝ)⁻¹ = spectralRadiusLim (T x)
-  have h1 : Irreducible (minpoly K x) := minpoly.irreducible (Algebra.IsIntegral.isIntegral x)
-  have h2 : (minpoly K x).aeval (T x) = 0 := minpoly.aeval_algHom K T x
-
-  sorry
-
-def extension' : AbsoluteValue L ℝ where
-  toFun x := ‖Algebra.norm K x‖ ^ (Module.finrank K L : ℝ)⁻¹
-  map_mul' := by simp [Real.mul_rpow]
-  nonneg' x := by positivity
-  eq_zero' := by simp [Module.finrank_pos.ne']
-  add_le' x y := by
-    simp_rw [key_equality, map_add]
-    apply Commute.spectralRadiusLim_add_le
-    apply (algEquivMatrix (Module.finBasis K L)).symm.injective
-    simp_rw [map_mul, AlgEquiv.symm_apply_apply]
-    ext z
-    exact mul_left_comm x y z
-
-end extension4
+end extension
 
 section extension
 
--- might be unnecessary
-theorem le_one_if_not_isNontrivial {K : Type*} [Field K] {v : AbsoluteValue K ℝ}
-    (hv : ¬ v.IsNontrivial) (x : K) : v x ≤ 1 := by
-  by_cases hx : x = 0
-  sorry
 
 open scoped Topology
 
-theorem foo (K L : Type*) [Field K] [Field L] [Algebra K L]
-    (f g : L → ℝ) (Cf Cg : ℝ) (hf0 : ∀ x, 0 ≤ f x) (hg0 : ∀ x, 0 ≤ g x)
-    (hf : ∀ x, f x ≤ Cf * g x) (hg : ∀ x, g x ≤ Cg * f x)
-    (hf' : ∀ x n, f (x ^ n) = f x ^ n) (hg' : ∀ x n, g (x ^ n) = g x ^ n) :
-    f = g := by
-  rcases le_or_gt Cf 0 with hCf | hCf
-  · ext x
-    specialize hf x
-    specialize hg0 x
-    grw [hCf, zero_mul] at hf
-    grind [le_antisymm]
-  rcases le_or_gt Cg 0 with hCg | hCg
-  · ext x
-    specialize hf x
-    specialize hg x
-    specialize hf0 x
-    grw [hCg, zero_mul] at hg
-    grind [le_antisymm]
-  ext x
-  have h : ∀ᶠ (n : ℕ) in Filter.atTop, f x ≤ Cf ^ (n : ℝ)⁻¹ * g x ∧ g x ≤ Cg ^ (n : ℝ)⁻¹ * f x := by
-    rw [Filter.eventually_atTop]
-    use 1
-    intro n hn
-    specialize hf (x ^ n)
-    specialize hg (x ^ n)
-    rw [hf', hg', ← Real.rpow_natCast,
-      ← Real.le_rpow_inv_iff_of_pos (by bound) (by bound) (by simp; grind),
-      Real.mul_rpow (by bound) (by bound), ← Real.rpow_natCast_mul (by bound),
-      mul_inv_cancel₀ (by simp; grind), Real.rpow_one] at hf hg
-    exact ⟨hf, hg⟩
-  replace h := Filter.eventually_and.mp h
-  refine le_antisymm ?_ ?_
-  -- const would be better
-  · refine ge_of_tendsto ?_ h.1
-    sorry
-  · refine ge_of_tendsto ?_ h.2
-    sorry
-
--- f(x) ≤ C * g(x) by direct estimation
--- g(x) ≤ C * |x|
-
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
 
-
-
-/-
-Let f(x^n)=f(x)^n, f(xy)=f(x)f(y), g(x^n)=g(x)^n, g(x+y)<=g(x)+g(y), and g(xy)<=g(x)g(y). Does it follow that f(x)=g(x)?
-
--/
-
-def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ where
-  toFun x := v (Algebra.norm K x) ^ (Module.finrank K L : ℝ)⁻¹
-  map_mul' := by simp [Real.mul_rpow]
-  nonneg' x := by positivity
-  eq_zero' := by simp [Module.finrank_pos.ne']
-  add_le' x y := by
-    classical
-    -- first handle the case where `v` is trivial
-    by_cases hv : v.IsNontrivial; swap
-    · rw [isNontrivial_iff_ne_trivial v, not_ne_iff] at hv
-      simp [hv, AbsoluteValue.trivial, Module.finrank_pos.ne']
-      grind
-    -- now `L` is a normed vector space over `WithAbs v`
-    let : NontriviallyNormedField (WithAbs v) :=
+def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ := by
+  by_cases hv : v.IsNontrivial; swap
+  · sorry
+  let : NontriviallyNormedField (WithAbs v) :=
     { non_trivial := by
         obtain ⟨x, hx⟩ := hv.exists_abv_gt_one
         exact ⟨WithAbs.toAbs v x, hx⟩ }
-    let := NormedAddCommGroup.induced _ _ _ (Module.finBasis (WithAbs v) L).equivFun.injective
-    let := NormedSpace.induced _ _ _ (Module.finBasis (WithAbs v) L).equivFun
-    -- let `T x` be multiplication by `x` on `L`
-    let T x := (LinearMap.mul (WithAbs v) L x).toContinuousLinearMap
-    have key₀ (x : L) : Algebra.norm K x = (Algebra.norm (WithAbs v) x).ofAbs :=
-      (Algebra.norm_eq_of_ringEquiv (WithAbs.equiv v) rfl x).symm
-    -- probably just keep this version of key:
-    have key x : Algebra.norm K x = (T x).toLinearMap.det.ofAbs :=
-      (Algebra.norm_eq_of_ringEquiv (WithAbs.equiv v) rfl x).symm
-    have key' x y : T (x + y) = T x + T y := by simp [T]
-    have key'' x y : Commute (T x) (T y) := by
-      ext x
-      simp [T]
-      grind
-    suffices ∀ T : L →L[WithAbs v] L,
-        v T.toLinearMap.det.ofAbs ^ (Module.finrank K L : ℝ)⁻¹ = spectralRadiusLim T by
-      simp [key, this]
-      rw [key']
-      exact (key'' x y).spectralRadiusLim_add_le
-    -- define spectralRadiusLim as a norm on L (this may also shortcut some of the above)
-    -- `|v x| ≤ C * (spectralRadiusLim x) ^ n`
-    -- `|v (x ^ k)| ≤ C * (spectralRadiusLim (x ^ k)) ^ n`
-    -- `|v x| ^ k ≤ C * ((spectralRadiusLim x) ^ n) ^ k`
-    -- `|v x| ≤ C ^ (1 / k) * (spectralRadiusLim x) ^ n`
-    -- `|v x| ≤ (spectralRadiusLim x) ^ n`
-    --  reverse bound gives equality
-    sorry
+  exact SpectralNorm.absoluteValue (𝕜 := WithAbs v) (A := L)
 
 instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v where
   comp_eq := by
