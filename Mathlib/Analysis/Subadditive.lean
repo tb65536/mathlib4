@@ -6,11 +6,6 @@ Authors: Sébastien Gouëzel
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
-public import Mathlib.Order.ConditionallyCompleteLattice.Indexed
-public import Mathlib.Order.Filter.AtTopBot.Archimedean
-public import Mathlib.Order.Filter.AtTopBot.Finite
-public import Mathlib.Order.Filter.AtTopBot.Prod
-public import Mathlib.Topology.Algebra.Ring.Real
 
 /-!
 # Convergence of subadditive sequences
@@ -31,7 +26,10 @@ noncomputable section
 
 open Set Filter Topology
 
-@[to_additive Subadditive]
+/-- A sequence is submultiplicative if it satisfies the inequality `u (m + n) ≤ u m * u n`
+for all `m, n`. -/
+@[to_additive Subadditive /-- A sequence is subadditive if it satisfies the inequality
+`u (m + n) ≤ u m + u n` for all `m, n`. -/]
 def Submultiplicative {α β : Type*} [Add α] [Mul β] [LE β] (u : α → β) : Prop :=
   ∀ m n, u (m + n) ≤ u m * u n
 
@@ -99,12 +97,9 @@ theorem tendsto_lim (hbdd : BddBelow (range fun n => u n / n)) :
 include h in
 theorem tendsto_atBot (hbdd : ¬ BddBelow (range fun n ↦ u n / n)) :
     Tendsto (fun n ↦ u n / n) atTop atBot := by
-  rw [bddBelow_def] at hbdd
-  push Not at hbdd
-  rw [tendsto_atTop_atBot]
+  simp_rw [tendsto_atTop_atBot, ← eventually_atTop]
   intro L
-  rw [← eventually_atTop]
-  obtain ⟨-, ⟨n, rfl⟩, hn⟩ := hbdd (min L 0)
+  obtain ⟨-, ⟨n, rfl⟩, hn⟩ := not_bddBelow_iff.mp hbdd (min L 0)
   by_cases hn0 : n = 0
   · simp [hn0] at hn
   · exact (eventually_div_lt_of_div_lt h hn0 hn).mono (by grind)
@@ -115,11 +110,13 @@ namespace Submultiplicative
 
 variable {u : ℕ → ℝ} (h : Submultiplicative u)
 
-/-- The limit of the nth roots of a submultipliactive sequence. The fact that the nth roots indeed
+/-- The limit of the nth roots of a submultiplicative sequence. The fact that the nth roots indeed
 converge to this limit is given in `Submultiplicative.tendsto_lim`. -/
 protected def lim (_h : Submultiplicative u) :=
   sInf ((fun n : ℕ ↦ u n ^ (n : ℝ)⁻¹) '' Ici 1)
 
+/-- Fekete's lemma for nonnegative submultiplicative sequences:
+The nth roots of a submultiplicative sequence converge. -/
 theorem tendsto_lim (hbdd : ∀ n, 0 ≤ u n) : Tendsto (fun n ↦ u n ^ (n : ℝ)⁻¹) atTop (𝓝 h.lim) := by
   by_cases! hu : ∃ n, u n ≤ 0
   · obtain ⟨n, hu⟩ := hu
