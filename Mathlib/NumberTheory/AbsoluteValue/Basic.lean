@@ -19,6 +19,7 @@ public import Mathlib.Analysis.Normed.Operator.Mul
 public import Mathlib.Analysis.Normed.Unbundled.RingSeminorm
 public import Mathlib.Analysis.Subadditive
 public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+public import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 public import Mathlib.RingTheory.Norm.Basic
 public import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 public import Mathlib.RingTheory.TensorProduct.Finite
@@ -37,15 +38,6 @@ instance (K : Type*) [NormedField K] [CompleteSpace K] :
   IsometryEquiv.completeSpace
   { __ := WithAbs.equiv (NormedField.toAbsoluteValue K)
     isometry_toFun := by simp [AddMonoidHomClass.isometry_iff_norm, WithAbs.norm_eq_apply_ofAbs] }
-
--- #42607
-section gelfand
-
-open scoped Topology
-
-variable {A : Type*}
-
-end gelfand
 
 open TensorProduct
 
@@ -66,14 +58,12 @@ namespace AbsoluteValue
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
-    (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
+  (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
 
 theorem WithAbs.isometry_map : Isometry (WithAbs.map v w (algebraMap K L)) := by
   rw [← LiesOver.comp_eq w v]
   exact AddMonoidHomClass.isometry_of_norm _ fun x ↦ rfl
 
--- will be deprecated by #42634
--- (UniformSpace.Completion.mapRingHom (WithAbs.map v w (algebraMap K L)) (WithAbs.isometry_map v w).continuous).toAlgebra
 @[instance_reducible]
 def algebraOfLiesOver : Algebra v.Completion w.Completion :=
   (UniformSpace.Completion.mapRingHom (WithAbs.map v w (algebraMap K L))
@@ -114,6 +104,9 @@ theorem algebra_eq : ‹_› = algebraOfLiesOver v w := by
   intro r
   rw [UniformSpace.Completion.mapRingHom_apply]
   rfl
+
+instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
+  sorry
 
 end algebra
 
@@ -260,6 +253,16 @@ theorem under_under : (v.under T).under U = v.under U := by
   ext x
   simp [under_apply, ← IsScalarTower.algebraMap_apply]
 
+theorem LiesOver.trans
+    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
+    [Field T] [Algebra T R]
+    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
+    [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
+  rw [liesOver_iff] at *
+  rw [← vR.under_under T]
+  grind
+
 end under_under
 
 section sum
@@ -288,10 +291,8 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     letI : Field L_w := Ideal.Quotient.field p.asIdeal
     letI w : AbsoluteValue L_w ℝ := v.completion.extension L_w -- extend valuation on K_v to L_w
     refine ⟨w.under L, ?_⟩
-    rw [mem_absoluteValuesOver, liesOver_iff, under_under w L K, ← under_under w K_v K,
-      ← liesOver_iff]
-    -- use LiesOver.over_def or something
-    sorry
+    rw [mem_absoluteValuesOver, liesOver_iff, under_under w L K, ← liesOver_iff]
+    exact LiesOver.trans v v.completion w
   left_inv w := by
     let := algebraOfLiesOver v w.val
     let K_v := v.Completion
@@ -307,8 +308,6 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     let : Field L_w' := Ideal.Quotient.field p
     ext1
     change (v.completion.extension L_w').under L = w
-    have : Module.Finite K_v L_w := by
-      sorry
     suffices (v.completion.extension L_w).under L = w by
       sorry
     ext x
@@ -324,6 +323,8 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
 -- `∑_w [L_w : K_v] = ∑_m dim_(K_v) (A_m/m) ≤ ∑_m dim_(K_v) A_m = dim_(K_v) A = [L : K]`
 
 instance : Finite (v.absoluteValuesOver L) := Finite.of_equiv _ (v.absoluteValuesOverEquiv L).symm
+
+instance : Nonempty (v.absoluteValuesOver L) := (v.absoluteValuesOverEquiv L).nonempty
 
 /-- The fundamental inequality. -/
 theorem sum_eq [Fintype (v.absoluteValuesOver L)]
