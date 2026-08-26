@@ -198,6 +198,10 @@ instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesO
   comp_eq := by
     sorry
 
+instance [Module.Finite K L] [CompleteSpace (WithAbs v)] :
+    CompleteSpace (WithAbs (v.extension L)) := by
+  sorry
+
 -- once you have extensions of absolute values on complete fields, the Artinian machinery
 -- let's you pick an arbitrary extension if desired
 
@@ -231,6 +235,15 @@ theorem under_under : (v.under T).under U = v.under U := by
   ext x
   simp [under_apply, ← IsScalarTower.algebraMap_apply]
 
+@[simp]
+theorem under_liesOver_iff
+    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
+    [Field T] [Algebra T R]
+    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    {vU : AbsoluteValue U S} {vR : AbsoluteValue R S} :
+    (vR.under T).LiesOver vU ↔ vR.LiesOver vU := by
+  rw [liesOver_iff, liesOver_iff, under_under]
+
 theorem LiesOver.trans
     {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
     [Field T] [Algebra T R]
@@ -254,42 +267,38 @@ instance : Finite (PrimeSpectrum (v.Completion ⊗[K] L)) := inferInstance
 
 attribute [local instance] Algebra.TensorProduct.rightAlgebra in
 def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) where
-  toFun w := by
-    letI := algebraOfLiesOver v w.val
-     -- can weaken to be over K if desired
-    letI φ : v.Completion ⊗[K] L →ₐ[v.Completion] w.val.Completion := by
-      apply Algebra.TensorProduct.productLeftAlgHom
-      · apply Algebra.ofId
-      · apply IsScalarTower.toAlgHom
-    exact ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
-  invFun p := by
+  toFun w :=
+    letI K_v := v.Completion
+    letI L_w := w.val.Completion
+    letI : Algebra K_v L_w := algebraOfLiesOver v w.val
+    letI φ : K_v ⊗[K] L →ₐ[K_v] L_w := -- can weaken to be over K if desired
+      Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w) (Algebra.algHom K L L_w)
+    ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
+  invFun p :=
     letI K_v := v.Completion
     letI L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
-    haveI : p.asIdeal.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p.asIdeal
     letI : Field L_w := Ideal.Quotient.field p.asIdeal
-    letI w : AbsoluteValue L_w ℝ := v.completion.extension L_w -- extend valuation on K_v to L_w
-    refine ⟨w.under L, ?_⟩
-    rw [mem_absoluteValuesOver, liesOver_iff, under_under w L K, ← liesOver_iff]
-    exact LiesOver.trans v v.completion w
+    letI w : AbsoluteValue L_w ℝ := v.completion.extension L_w
+    ⟨w.under L, under_liesOver_iff.mpr (.trans v v.completion w)⟩
   left_inv w := by
-    let := algebraOfLiesOver v w.val
     let K_v := v.Completion
     let L_w := w.val.Completion
-    let φ : K_v ⊗[K] L →ₐ[K_v] L_w := by
-      apply Algebra.TensorProduct.productLeftAlgHom
-      · apply Algebra.ofId
-      · apply IsScalarTower.toAlgHom
+    let : Algebra K_v L_w := algebraOfLiesOver v w.val
+    let φ : K_v ⊗[K] L →ₐ[K_v] L_w :=
+      Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w) (Algebra.algHom K L L_w)
     let p := RingHom.ker φ
     have : p.IsPrime := RingHom.ker_isPrime φ
-    have : p.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p
     let L_w' := K_v ⊗[K] L ⧸ p
     let : Field L_w' := Ideal.Quotient.field p
     ext1
     change (v.completion.extension L_w').under L = w
-    suffices (v.completion.extension L_w).under L = w by
+    let φ' : L_w' →ₐ[K_v] L_w := Ideal.kerLiftAlg φ
+    let : Algebra L_w' L_w := φ'.toAlgebra
+    have : Module.Finite L_w' L_w := .of_restrictScalars_finite K_v L_w' L_w
+    have key : (v.completion.extension L_w').extension L_w = w.val.completion := by
+      -- both lie over v.completion
       sorry
-    ext x
-    sorry
+    -- RHS lies over w, so LHS also lies over w
   right_inv p := by
     ext1
     simp
