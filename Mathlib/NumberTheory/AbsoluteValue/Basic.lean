@@ -51,7 +51,6 @@ def under : AbsoluteValue T S :=
 
 end AbsoluteValue
 
--- #42542
 namespace AbsoluteValue
 
 section algebra
@@ -59,50 +58,8 @@ section algebra
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
   (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
 
-theorem WithAbs.isometry_map : Isometry (WithAbs.map v w (algebraMap K L)) := by
-  rw [← LiesOver.comp_eq w v]
-  exact AddMonoidHomClass.isometry_of_norm _ fun x ↦ rfl
-
-@[instance_reducible]
-def algebraOfLiesOver : Algebra v.Completion w.Completion :=
-  (UniformSpace.Completion.mapRingHom (WithAbs.map v w (algebraMap K L))
-    (WithAbs.isometry_map v w).continuous).toAlgebra
-
-instance : letI := algebraOfLiesOver v w
-    ContinuousSMul v.Completion w.Completion :=
-  let := algebraOfLiesOver v w
-  continuousSMul_of_algebraMap v.Completion w.Completion
-    (UniformSpace.Completion.isometry_mapRingHom (WithAbs.isometry_map v w)).continuous
-
-instance : letI := algebraOfLiesOver v w
-    IsScalarTower K v.Completion w.Completion :=
-  let := algebraOfLiesOver v w
-  IsScalarTower.of_algebraMap_eq fun x ↦ (UniformSpace.Completion.mapRingHom_coe
-    (WithAbs.isometry_map v w).continuous (WithAbs.toAbs v x)).symm
-
 variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
-
-theorem algebraMap_eq_mapRingHom :
-    algebraMap v.Completion w.Completion =
-      UniformSpace.Completion.mapRingHom (WithAbs.map v w (algebraMap K L))
-        (WithAbs.isometry_map v w).continuous := by
-  symm
-  apply DFunLike.ext'
-  apply UniformSpace.Completion.extension_unique
-  · exact (UniformSpace.Completion.uniformContinuous_coe (WithAbs w)).comp
-      (WithAbs.isometry_map v w).uniformContinuous
-  · apply uniformContinuous_addMonoidHom_of_continuous
-    apply continuous_algebraMap
-  · intro x
-    exact IsScalarTower.algebraMap_apply K v.Completion w.Completion x.ofAbs
-
-theorem algebra_eq : ‹_› = algebraOfLiesOver v w := by
-  apply Algebra.algebra_ext
-  rw [algebraMap_eq_mapRingHom v w]
-  intro r
-  rw [UniformSpace.Completion.mapRingHom_apply]
-  rfl
 
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
   sorry
@@ -118,7 +75,7 @@ instance : w.LiesOver (w.under K) := ⟨rfl⟩
 
 def localDegree : ℕ :=
   letI v := w.under K
-  letI := algebraOfLiesOver v w
+  letI := Completion.algebraOfLiesOver v w
   Module.finrank v.Completion w.Completion
 
 end localDegree
@@ -131,7 +88,7 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K �
 
 theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
   have := LiesOver.comp_eq w v
-  rw [localDegree, algebra_eq v w]
+  rw [localDegree, Completion.algebra_eq v w]
   subst this
   rfl
 
@@ -270,7 +227,7 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
   toFun w :=
     letI K_v := v.Completion
     letI L_w := w.val.Completion
-    letI : Algebra K_v L_w := algebraOfLiesOver v w.val
+    letI : Algebra K_v L_w := Completion.algebraOfLiesOver v w.val
     letI φ : K_v ⊗[K] L →ₐ[K_v] L_w := -- can weaken to be over K if desired
       Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w) (Algebra.algHom K L L_w)
     ⟨RingHom.ker φ, RingHom.ker_isPrime φ⟩
@@ -283,7 +240,7 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
   left_inv w := by
     let K_v := v.Completion
     let L_w := w.val.Completion
-    let : Algebra K_v L_w := algebraOfLiesOver v w.val
+    let : Algebra K_v L_w := Completion.algebraOfLiesOver v w.val
     let φ : K_v ⊗[K] L →ₐ[K_v] L_w :=
       Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w) (Algebra.algHom K L L_w)
     let p := RingHom.ker φ
