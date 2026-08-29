@@ -42,17 +42,6 @@ open TensorProduct
 
 namespace AbsoluteValue
 
-variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
-    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
-
--- #42566
-def under : AbsoluteValue T S :=
-  v.comp (FaithfulSMul.algebraMap_injective T R)
-
-end AbsoluteValue
-
-namespace AbsoluteValue
-
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
@@ -87,7 +76,7 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K �
   [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
 
 theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
-  have := LiesOver.comp_eq w v
+  have := LiesOver.under_eq w v
   rw [localDegree, Completion.algebra_eq v w]
   subst this
   rfl
@@ -132,7 +121,7 @@ theorem completion_apply (x : v.Completion) : v.completion x = ‖x‖ :=
   rfl
 
 instance : v.completion.LiesOver v where
-  comp_eq := by
+  under_eq := by
     ext x
     exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
 
@@ -152,7 +141,7 @@ def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L 
   sorry
 
 instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v where
-  comp_eq := by
+  under_eq := by
     sorry
 
 instance [Module.Finite K L] [CompleteSpace (WithAbs v)] :
@@ -173,7 +162,7 @@ variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L
 restriction of `w` to `K`. -/
 theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
     w.LiesOver v ↔ w.under K = v :=
-  ⟨fun h ↦ h.comp_eq, fun h ↦ ⟨h⟩⟩
+  ⟨fun h ↦ h.under_eq, fun h ↦ ⟨h⟩⟩
 
 end liesOver_iff
 
