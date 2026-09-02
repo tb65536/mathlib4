@@ -710,11 +710,16 @@ theorem isNilpotent_of_lowerCentralSeries_eq_bot {S : Subgroup G} {n : ℕ}
   (isNilpotent_iff_lowerCentralSeries S).mpr ⟨n, h⟩
 
 @[to_additive]
+theorem nilpotencyClass_le_iff_lowerCentralSeries_eq_bot
+    {H : Subgroup G} [IsNilpotent H] {n : ℕ} :
+    nilpotencyClass H ≤ n ↔ lowerCentralSeries H n = ⊥ := by
+  simp [← lowerCentralSeries_eq_bot_iff_nilpotencyClass_le, ← map_subtype_inj]
+
+@[to_additive]
 theorem lowerCentralSeries_eq_bot_of_nilpotencyClass_le {S : Subgroup G}
     [Group.IsNilpotent S] {n : ℕ} (hn : Group.nilpotencyClass S ≤ n) :
-    S.lowerCentralSeries n = ⊥ := by
-  rw [← top_subtype_lowerCentralSeries,
-    lowerCentralSeries_eq_bot_iff_nilpotencyClass_le.mpr hn, map_bot]
+    S.lowerCentralSeries n = ⊥ :=
+  nilpotencyClass_le_iff_lowerCentralSeries_eq_bot.mp hn
 
 @[to_additive]
 instance (priority := 100) _root_.Group.isNilpotent_of_subsingleton [Subsingleton G] :
@@ -752,6 +757,49 @@ theorem isNilpotent_of_ker_le_center {H : Type*} [Group H] (f : G →* H) (hf1 :
     (le_trans ((Subgroup.map_eq_bot_iff _).mp ?_) hf1)⟩
   rw [map_lowerCentralSeries, ← le_bot_iff]
   exact hn ▸ Subgroup.lowerCentralSeries_mono n le_top
+
+variable (K : Subgroup G) [K.Normal]
+
+theorem lowerCentralSeries_sup_add_le {m n : ℕ} :
+    lowerCentralSeries (N ⊔ K) (m + n) ≤ lowerCentralSeries N m ⊔ lowerCentralSeries K n := by
+  suffices P : ∀ k {m n}, m + n = k →  lowerCentralSeries (N ⊔ K) k ≤
+    lowerCentralSeries N m ⊔ lowerCentralSeries K n from P (m + n) rfl
+  intro k
+  induction k with
+  | zero => simp
+  | succ k hk =>
+    intro m n hmn
+    rw [lowerCentralSeries_succ, commutator_sup_left]
+    apply sup_le
+    · cases m
+      case zero => grw [lowerCentralSeries_zero, commutator_le_right, ← le_sup_left]
+      case succ m =>
+        rw [add_right_comm, add_left_inj] at hmn
+        grw [hk hmn, commutator_sup_right, commutator_le_left (lowerCentralSeries K n),
+          lowerCentralSeries_succ]
+    · cases n
+      case zero => grw [lowerCentralSeries_zero, commutator_le_right, ← le_sup_right]
+      case succ n =>
+        rw [← add_assoc, add_left_inj] at hmn
+        grw [hk hmn, commutator_sup_right, commutator_le_left, lowerCentralSeries_succ]
+
+instance [IsNilpotent N] [IsNilpotent K] : IsNilpotent (N ⊔ K :) := by
+  obtain ⟨m, hm⟩ := N.isNilpotent_iff_lowerCentralSeries.mp ‹_›
+  obtain ⟨n, hn⟩ := K.isNilpotent_iff_lowerCentralSeries.mp ‹_›
+  rw [isNilpotent_iff_lowerCentralSeries]
+  use m + n
+  grw [eq_bot_iff, lowerCentralSeries_sup_add_le, hm, hn, sup_idem]
+
+theorem nilpotencyClass_sup_le :
+    nilpotencyClass (N ⊔ K :) ≤ nilpotencyClass N + nilpotencyClass K := by
+  by_cases hNK : IsNilpotent (N ⊔ K :)
+  · have : IsNilpotent N := sorry
+    have : IsNilpotent K := sorry
+    grw [nilpotencyClass_le_iff_lowerCentralSeries_eq_bot, eq_bot_iff,
+        lowerCentralSeries_sup_add_le]
+    grind [lowerCentralSeries_eq_bot_of_nilpotencyClass_le]
+  · rw [nilpotencyClass_of_not_nilpotent hNK]
+    exact zero_le
 
 end Subgroup
 
