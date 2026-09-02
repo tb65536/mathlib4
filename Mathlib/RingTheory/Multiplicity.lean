@@ -118,8 +118,8 @@ theorem emultiplicity_eq_zero_iff_multiplicity_eq_zero :
 
 @[simp]
 theorem multiplicity_eq_one_of_not_finiteMultiplicity (h : ¬FiniteMultiplicity a b) :
-    multiplicity a b = 1 := by
-  exact dite_eq_right h
+    multiplicity a b = 1 :=
+  dite_eq_right h
 
 @[simp, deprecated "Use `multiplicity instead." (since := "2026-09-02")]
 theorem multiplicity_le_emultiplicity :
@@ -195,6 +195,7 @@ theorem Int.natCast_emultiplicity (a b : ℕ) :
   unfold emultiplicity FiniteMultiplicity
   congr! <;> norm_cast
 
+@[norm_cast]
 theorem Int.natCast_multiplicity (a b : ℕ) : multiplicity (a : ℤ) (b : ℤ) = multiplicity a b := by
   unfold multiplicity FiniteMultiplicity
   congr! <;> norm_cast
@@ -239,6 +240,7 @@ theorem pow_dvd_of_le_multiplicity {k : ℕ} (hk : k ≤ multiplicity a b) :
   · simpa using (Nat.find_min _ (lt_of_succ_le hk))
   · apply FiniteMultiplicity.not_iff_forall.mp ‹_›
 
+@[simp]
 theorem pow_multiplicity_dvd (a b : α) : a ^ (multiplicity a b) ∣ b :=
   pow_dvd_of_le_multiplicity le_rfl
 
