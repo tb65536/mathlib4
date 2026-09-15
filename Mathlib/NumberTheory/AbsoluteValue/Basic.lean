@@ -137,13 +137,16 @@ open scoped Topology
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ) (L : Type*) [Field L] [Algebra K L]
 
+-- spectral norm stuff
 def extension [Module.Finite K L] [CompleteSpace (WithAbs v)] : AbsoluteValue L ℝ := by
   sorry
 
+-- spectral norm stuff
 instance [Module.Finite K L] [CompleteSpace (WithAbs v)] : (v.extension L).LiesOver v where
   under_eq := by
     sorry
 
+-- spectral norm stuff
 instance [Module.Finite K L] [CompleteSpace (WithAbs v)] :
     CompleteSpace (WithAbs (v.extension L)) := by
   sorry
@@ -158,6 +161,7 @@ section liesOver_iff
 variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L] [PartialOrder S]
   [Nontrivial L] [Semiring S]
 
+-- #43841
 /-- An absolute value `w` of `L / K` lies over the absolute value `v` of `K` if `v` is the
 restriction of `w` to `K`. -/
 theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
@@ -173,13 +177,16 @@ variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
     (U : Type*) [CommSemiring U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
     [FaithfulSMul U T] [FaithfulSMul U R]
 
+-- #43841
 variable {T} in
 theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
 
+-- #43841
 theorem under_under : (v.under T).under U = v.under U := by
   ext x
   simp [under_apply, ← IsScalarTower.algebraMap_apply]
 
+-- #43841
 @[simp]
 theorem under_liesOver_iff
     {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
@@ -189,13 +196,13 @@ theorem under_liesOver_iff
     (vR.under T).LiesOver vU ↔ vR.LiesOver vU := by
   rw [liesOver_iff, liesOver_iff, under_under]
 
+-- #43841
 theorem LiesOver.trans
     {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
     [Field T] [Algebra T R]
     [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
     (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
     [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
-  rw []
   rw [liesOver_iff] at *
   rw [← vR.under_under T]
   grind
