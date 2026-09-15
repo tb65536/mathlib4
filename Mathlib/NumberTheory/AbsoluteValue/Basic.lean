@@ -176,7 +176,6 @@ variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
 variable {T} in
 theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
 
--- #42566
 theorem under_under : (v.under T).under U = v.under U := by
   ext x
   simp [under_apply, ← IsScalarTower.algebraMap_apply]
@@ -196,6 +195,7 @@ theorem LiesOver.trans
     [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
     (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
     [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
+  rw []
   rw [liesOver_iff] at *
   rw [← vR.under_under T]
   grind
