@@ -42,12 +42,64 @@ open TensorProduct
 
 namespace AbsoluteValue
 
+section liesOver_iff
+
+variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L] [PartialOrder S]
+  [Nontrivial L] [Semiring S]
+
+-- #43841
+/-- An absolute value `w` of `L / K` lies over the absolute value `v` of `K` if `v` is the
+restriction of `w` to `K`. -/
+theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
+    w.LiesOver v ↔ w.under K = v :=
+  ⟨fun h ↦ h.under_eq, fun h ↦ ⟨h⟩⟩
+
+end liesOver_iff
+
+section under_under
+
+variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
+    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
+    (U : Type*) [CommSemiring U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    [FaithfulSMul U T] [FaithfulSMul U R]
+
+-- #43841
+variable {T} in
+theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
+
+-- #43841
+theorem under_under : (v.under T).under U = v.under U := by
+  ext x
+  simp [under_apply, ← IsScalarTower.algebraMap_apply]
+
+-- #43841
+@[simp]
+theorem under_liesOver_iff
+    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
+    [Field T] [Algebra T R]
+    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    {vU : AbsoluteValue U S} {vR : AbsoluteValue R S} :
+    (vR.under T).LiesOver vU ↔ vR.LiesOver vU := by
+  rw [liesOver_iff, liesOver_iff, under_under]
+
+-- #43841
+theorem LiesOver.trans
+    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
+    [Field T] [Algebra T R]
+    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
+    (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
+    [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
+  rw [liesOver_iff] at *
+  rw [← vR.under_under T]
+  grind
+
+end under_under
+
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
   (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
-
-variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
+  [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
 
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
@@ -55,19 +107,6 @@ instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
 
 end algebra
 
-section localDegree
-
-variable {L : Type*} [Field L] (w : AbsoluteValue L ℝ) (K : Type*) [Field K] [Algebra K L]
-
--- #42566
-instance : w.LiesOver (w.under K) := ⟨rfl⟩
-
-def localDegree : ℕ :=
-  letI v := w.under K
-  letI := Completion.algebraOfLiesOver v w
-  Module.finrank v.Completion w.Completion
-
-end localDegree
 
 section localDegree
 
@@ -75,11 +114,26 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K �
   (w : AbsoluteValue L ℝ) [w.LiesOver v] [Algebra v.Completion w.Completion]
   [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
 
+def localDegree (K : Type*) [Field K] [Algebra K L] : ℕ :=
+  letI v := w.under K
+  letI := Completion.algebraOfLiesOver v w
+  Module.finrank v.Completion w.Completion
+
 theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
   have := LiesOver.under_eq w v
   rw [localDegree, Completion.algebra_eq v w]
   subst this
   rfl
+
+theorem localDegree_mul_localDegree (F : Type*) [Field F] [Algebra F K] [Algebra F L]
+    [IsScalarTower F K L] : v.localDegree F * w.localDegree K = w.localDegree F := by
+  let v₀ := v.under F
+  let : Algebra v₀.Completion v.Completion := Completion.algebraOfLiesOver v₀ v
+  have : w.LiesOver v₀ := LiesOver.trans v₀ v w -- maybe this could be an instance
+  let : Algebra v₀.Completion w.Completion := Completion.algebraOfLiesOver v₀ w
+  rw [localDegree_eq v₀ v, localDegree_eq v w, localDegree_eq v₀ w]
+  have : IsScalarTower v₀.Completion v.Completion w.Completion := sorry
+  rw [Module.finrank_mul_finrank]
 
 end localDegree
 
@@ -156,59 +210,6 @@ instance [Module.Finite K L] [CompleteSpace (WithAbs v)] :
 
 end extension
 
-section liesOver_iff
-
-variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L] [PartialOrder S]
-  [Nontrivial L] [Semiring S]
-
--- #43841
-/-- An absolute value `w` of `L / K` lies over the absolute value `v` of `K` if `v` is the
-restriction of `w` to `K`. -/
-theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
-    w.LiesOver v ↔ w.under K = v :=
-  ⟨fun h ↦ h.under_eq, fun h ↦ ⟨h⟩⟩
-
-end liesOver_iff
-
-section under_under
-
-variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
-    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
-    (U : Type*) [CommSemiring U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    [FaithfulSMul U T] [FaithfulSMul U R]
-
--- #43841
-variable {T} in
-theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
-
--- #43841
-theorem under_under : (v.under T).under U = v.under U := by
-  ext x
-  simp [under_apply, ← IsScalarTower.algebraMap_apply]
-
--- #43841
-@[simp]
-theorem under_liesOver_iff
-    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
-    [Field T] [Algebra T R]
-    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    {vU : AbsoluteValue U S} {vR : AbsoluteValue R S} :
-    (vR.under T).LiesOver vU ↔ vR.LiesOver vU := by
-  rw [liesOver_iff, liesOver_iff, under_under]
-
--- #43841
-theorem LiesOver.trans
-    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
-    [Field T] [Algebra T R]
-    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
-    [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
-  rw [liesOver_iff] at *
-  rw [← vR.under_under T]
-  grind
-
-end under_under
-
 section sum
 
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
@@ -252,6 +253,7 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
       -- both lie over v.completion
       sorry
     -- RHS lies over w, so LHS also lies over w
+    sorry
   right_inv p := by
     ext1
     simp
