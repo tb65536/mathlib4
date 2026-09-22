@@ -163,10 +163,6 @@ variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
 /-- The extended absolute value on `v.Completion`. -/
 def completion : AbsoluteValue v.Completion ℝ := NormedField.toAbsoluteValue v.Completion
 
--- this might just be a bad lemma
-theorem coe_completion : ⇑v.completion = UniformSpace.Completion.extension (v ∘ WithAbs.ofAbs) :=
-  rfl
-
 theorem uniformContinuous_completion : UniformContinuous v.completion := uniformContinuous_norm
 
 variable {v}
@@ -269,7 +265,7 @@ instance : Finite (v.absoluteValuesOver L) := Finite.of_equiv _ (v.absoluteValue
 instance : Nonempty (v.absoluteValuesOver L) := (v.absoluteValuesOverEquiv L).nonempty
 
 /-- The fundamental inequality. -/
-theorem sum_eq [Fintype (v.absoluteValuesOver L)]
+theorem sum_localDegree_le [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], Algebra v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], ContinuousSMul v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
@@ -279,8 +275,12 @@ theorem sum_eq [Fintype (v.absoluteValuesOver L)]
   rw [← Module.finrank_baseChange (R := v.Completion), IsArtinianRing.finrank_eq_sum_primeSpectrum]
   change ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤
     ∑ p : PrimeSpectrum A, Module.finrank v.Completion (Localization.AtPrime p.asIdeal)
-  -- these are both finranks, want map injective `L_w → A_m`
-  sorry
+  transitivity ∑ p : PrimeSpectrum A, Module.finrank v.Completion (A ⧸ p.asIdeal)
+  · sorry
+  · apply Finset.sum_le_sum
+    intro i hi
+    -- surjection from A to A ⧸ p factors through the localization
+    sorry
 
 end sum
 
