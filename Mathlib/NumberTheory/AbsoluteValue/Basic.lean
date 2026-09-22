@@ -251,8 +251,22 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     -- RHS lies over w, so LHS also lies over w
     sorry
   right_inv p := by
+    let K_v := v.Completion
+    let L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
+    let : Field L_w := Ideal.Quotient.field p.asIdeal
+    let w : AbsoluteValue L_w ℝ := v.completion.extension L_w
+    have : w.LiesOver v := under_liesOver_iff.mpr (.trans v v.completion w)
+    let L_w' := w.Completion
+    let : Algebra K_v L_w' := Completion.algebraOfLiesOver v w
+    let φ : K_v ⊗[K] L →ₐ[K_v] L_w' :=
+      Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w') (Algebra.algHom K L L_w')
     ext1
     simp
+    change RingHom.ker φ = p.asIdeal
+    have key : RingHom.ker φ = p.asIdeal := sorry
+    convert key
+    congr
+    -- claim is that ring hom from
     sorry
 
 -- `A = L ⊗[K] K_v = ∏ A_m` is an Artinian ring
