@@ -100,15 +100,43 @@ theorem LiesOver.trans
 
 end under_under
 
+section PRed
+
+variable {K L : Type*} [SeminormedCommRing K] [DivisionRing L] [Algebra K L]
+  [Algebra.IsIntegral K L]
+
+/-- A power-multiplicative norm on an algebraic extension of a trivially normed field is trivial. -/
+theorem AlgebraNorm.eq_one_of_trivial
+    (hK : ∀ x : K, ‖x‖ ≤ 1) (f : AlgebraNorm K L) (hf : IsPowMul f)
+    (x : L) (hx : x ≠ 0) : f x = 1 := by
+  sorry
+
+end PRed
+
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
   (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
 
+-- depends on `AlgebraNorm.eq_one_of_trivial`
 theorem foo1 [Algebra.IsAlgebraic K L] (hv : w.IsNontrivial) : v.IsNontrivial := by
-  sorry
+  contrapose! hv
+  let := v.toNormedField
+  let f : MulAlgebraNorm K L :=
+  { __ := MulRingNorm.ofAbsoluteValue w
+    smul' x y := by
+      simp [Algebra.smul_def, ← under_apply, LiesOver.under_eq w v, show v x = ‖x‖ from rfl] }
+  refine w.not_isNontrivial_iff.mpr (AlgebraNorm.eq_one_of_trivial ?_ f.toAlgebraNorm f.isPowMul)
+  intro x
+  by_cases hx : x = 0
+  · simp [hx]
+  · exact (AbsoluteValue.not_isNontrivial_apply hv hx).le
 
 theorem foo2 (hv : ¬ v.IsNontrivial) : Module.Finite K v.Completion := by
+  suffices Module.finrank K v.Completion = 1 by
+    exact Module.finite_of_finrank_eq_succ this
+  suffices Function.Bijective (algebraMap K v.Completion) by
+    exact Module.finrank_of_bijective_algebraMap this
   sorry
 
 variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
