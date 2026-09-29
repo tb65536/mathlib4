@@ -24,6 +24,11 @@ public import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 public import Mathlib.RingTheory.TensorProduct.Finite
 public import Mathlib.Topology.Algebra.Module.FiniteDimension
 public import Mathlib.Topology.Algebra.UniformField
+public import Mathlib.Analysis.Normed.Operator.BoundedLinearMaps
+public import Mathlib.Analysis.Normed.Unbundled.IsPowMulFaithful
+public import Mathlib.Analysis.Normed.Unbundled.SeminormFromConst
+public import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
+public import Mathlib.Topology.Algebra.Module.FiniteDimension
 
 /-!
 # Extensions of absolute values
@@ -99,14 +104,42 @@ section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
   (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
-  [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
+
+theorem foo1 [Algebra.IsAlgebraic K L] (hv : w.IsNontrivial) : v.IsNontrivial := by
+  sorry
+
+theorem foo2 (hv : ¬ v.IsNontrivial) : Module.Finite K v.Completion := by
+  sorry
+
+variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
 
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
-  sorry
+  classical
+  by_cases hw : w.IsNontrivial
+  · let : NontriviallyNormedField v.Completion :=
+    { non_trivial := by
+        obtain ⟨x, hx⟩ := (foo1 v w hw).exists_abv_gt_one
+        use x
+        rwa [UniformSpace.Completion.norm_coe, WithAbs.norm_toAbs_eq] }
+    let f : WithAbs w →ₗ[K] w.Completion := IsScalarTower.toAlgHom K (WithAbs w) w.Completion
+    have hf : DenseRange f := UniformSpace.Completion.denseRange_coe
+    obtain ⟨s, hs⟩ := (inferInstance : Module.Finite K (WithAbs w)).fg_top
+    use s.image f
+    let V : Submodule v.Completion w.Completion := Submodule.span v.Completion (s.image f)
+    have hV : f.range ≤ V.restrictScalars K := by
+      rw [← Submodule.map_top f, ← hs, Submodule.map_span, ← Finset.coe_image]
+      apply Submodule.span_le_restrictScalars
+    rwa [← SetLike.coe_subset_coe, V.coe_restrictScalars K,
+      ← V.complete_of_finiteDimensional.isClosed.closure_subset_iff,
+      f.coe_range, hf.closure_eq, Set.univ_subset_iff, V.coe_eq_univ] at hV
+  · have : Module.Finite L w.Completion := foo2 w hw
+    suffices Module.Finite K w.Completion from .of_restrictScalars_finite K v.Completion w.Completion
+    exact .trans L w.Completion
 
 end algebra
 
+#exit
 
 section localDegree
 
