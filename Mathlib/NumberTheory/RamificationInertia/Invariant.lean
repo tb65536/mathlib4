@@ -111,7 +111,7 @@ variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
 
 /-- Separability turns a base-linear map into an algebra-linear map. -/
 noncomputable def linearize : (M →ₗ[A] N) →ₗ[B] (M →ₗ[B] N) :=
-  (LinearMap.lcomp B N (sec A B M)).comp (LinearMap.liftBaseChangeEquiv B).toLinearMap
+  ((sec A B M).lcomp B N).comp (LinearMap.liftBaseChangeEquiv B).toLinearMap
 
 lemma linearize_apply (f : M →ₗ[A] N) (x : M) :
     linearize (B := B) f x = _root_.TensorProduct.lift ((Algebra.lsmul A A N).toLinearMap.compl₂
