@@ -131,9 +131,10 @@ lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
   ext x
   simp_rw [linearize_apply, sec, LinearMap.comp_apply, LinearMap.coe_mk]
   induction elem A B using TensorProduct.inductionOn with
-  | tmul a b => simp
-  | add t₁ t₂ h₁ h₂ => simp_all
+  | tmul => simp
+  | add => simp_all
 
+@[simp]
 lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
     linearize B ((g.restrictScalars A).comp f) = g.comp (linearize B f) := by
@@ -153,8 +154,8 @@ lemma linearize_toLinearMap (f : B →ₐ[A] B) :
   apply LinearMap.ext_ring
   simp_rw [linearize_apply, sec, LinearMap.comp_apply, LinearMap.coe_mk, equalizerIdempotent]
   induction elem A B using TensorProduct.inductionOn with
-  | tmul a b => simp
-  | add t₁ t₂ h₁ h₂ => simp_all
+  | tmul => simp
+  | add => simp_all
 
 end Linearize
 
