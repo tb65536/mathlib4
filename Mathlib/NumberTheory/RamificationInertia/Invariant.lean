@@ -60,16 +60,12 @@ lemma isIdempotentElem_equalizerIdempotent (f g : B →ₐ[A] C) :
 
 lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
     equalizerIdempotent f g * f b = equalizerIdempotent f g * g b := by
-  have h := congrArg (Algebra.TensorProduct.productMap f g)
-    (one_tmul_mul_elem (R := A) b)
-  simpa only [equalizerIdempotent, map_mul, Algebra.TensorProduct.productMap_apply_tmul,
-    map_one, one_mul, mul_one, mul_comm] using h.symm
+  simpa [equalizerIdempotent, mul_comm] using
+    congrArg (Algebra.TensorProduct.productMap f g) (one_tmul_mul_elem (R := A) b).symm
 
 @[simp] lemma equalizerIdempotent_self (f : B →ₐ[A] C) : equalizerIdempotent f f = 1 := by
   have h : Algebra.TensorProduct.productMap f f = f.comp (Algebra.TensorProduct.lmul' A) := by
-    apply AlgHom.toLinearMap_injective
-    ext a b
-    simp
+    ext a <;> simp
   simp [equalizerIdempotent, h, lmul_elem]
 
 lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
@@ -77,9 +73,7 @@ lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
     k (equalizerIdempotent f g) = equalizerIdempotent (k.comp f) (k.comp g) := by
   have h : k.comp (Algebra.TensorProduct.productMap f g) =
       Algebra.TensorProduct.productMap (k.comp f) (k.comp g) := by
-    apply AlgHom.toLinearMap_injective
-    ext a b
-    simp
+    ext a <;> simp
   exact congrArg (fun F : B ⊗[A] B →ₐ[A] D ↦ F (elem A B)) h
 
 lemma mk_equalizerIdempotent_eq_one (f g : B →ₐ[A] C) (Q : Ideal C)
@@ -99,10 +93,9 @@ lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
   · apply mk_equalizerIdempotent_eq_one
     intro b
     exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mp (DFunLike.congr_fun h b)
-  · have hex : ∃ b, f b - g b ∉ Q := by
+  · obtain ⟨b, hb⟩ : ∃ b, f b - g b ∉ Q := by
       by_contra! h'
       exact h (AlgHom.ext fun b ↦ (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h' b))
-    obtain ⟨b, hb⟩ := hex
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
     exact ((inferInstance : Q.IsPrime).mem_or_mem (by
       rw [mul_sub, equalizerIdempotent_mul, sub_self]
@@ -163,12 +156,10 @@ lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     linearize (B := B) f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
   have h : linearize (B := B) f.toLinearMap 1 = equalizerIdempotent (AlgHom.id A B) f := by
     rw [linearize_apply]
-    have he : _root_.TensorProduct.lift ((Algebra.lsmul A A B).toLinearMap.compl₂
-        (f.toLinearMap.comp ((Algebra.lsmul A A B).toLinearMap.flip 1))) =
-        (Algebra.TensorProduct.productMap (AlgHom.id A B) f).toLinearMap := by
-      ext a b
-      simp
-    exact congrArg (fun F : B ⊗[A] B →ₗ[A] B ↦ F (elem A B)) he
+    change _ = (Algebra.TensorProduct.productMap (AlgHom.id A B) f).toLinearMap (elem A B)
+    congr 1
+    ext a b
+    simp
   simpa only [smul_eq_mul, h, mul_comm, mul_one] using
     (linearize (B := B) f.toLinearMap).map_smul x (1 : B)
 
@@ -265,8 +256,7 @@ theorem exists_mul_fixed_of_le_inertia (A : Type*) [CommRing A] [Algebra A B]
   have hd (h : H) : Quotient.mk Q (d h) = 1 := by
     apply mk_equalizerIdempotent_eq_one
     intro b
-    exact (Quotient.mk_eq_mk_iff_sub_mem _ _).mp
-      (Quotient.mk_smul_of_mem_inertia Q (hH h.property) b).symm
+    exact Q.toAddSubgroup.sub_mem_comm_iff.mpr (Q.mem_inertia.mp (hH h.property) b)
   have huu : u * u = u := by
     rw [show u = ∏ h, d h from rfl, ← Finset.prod_mul_distrib]
     exact Finset.prod_congr rfl fun h _ ↦
@@ -276,8 +266,7 @@ theorem exists_mul_fixed_of_le_inertia (A : Type*) [CommRing A] [Algebra A B]
     have he := equalizerIdempotent_mul
       (AlgHom.id A B) (MulSemiringAction.toAlgHom A B (h : G)) b
     change d h * b = d h * (h • b) at he
-    rw [hw]
-    linear_combination -w * he
+    rw [hw, mul_right_comm, ← he, mul_right_comm]
   have hfixed (h : H) : h • u = u := by
     have h₁ : u * (h • u) = u := (heq h u).trans huu
     have h₂ : (h • u) * u = h • u := by
@@ -298,8 +287,7 @@ theorem map_comap_eq_of_isInvariant_of_unramified
   classical
   let J := (I.comap (algebraMap A B)).map (algebraMap A B)
   apply le_antisymm Ideal.map_comap_le
-  suffices J.colon (I : Set B) = ⊤ by
-    exact (Submodule.colon_eq_top_iff_subset _).mp this
+  suffices J.colon (I : Set B) = ⊤ from (Submodule.colon_eq_top_iff_subset _).mp this
   by_contra hJ
   obtain ⟨m, hm, hKm⟩ := Ideal.exists_le_maximal (J.colon (I : Set B)) hJ
   let : m.IsMaximal := hm
@@ -328,13 +316,11 @@ theorem map_comap_eq_of_isInvariant_of_unramified
   -- Evaluate the linearized trace modulo `m`: only the inertia coset contributes.
   have hd (g : G) : Quotient.mk m (equalizerIdempotent
       (AlgHom.id A B) (MulSemiringAction.toAlgHom A B g)) = if g ∈ H then 1 else 0 := by
-    rw [mk_equalizerIdempotent]
-    congr 1
-    apply propext
-    rw [AlgHom.ext_iff, Ideal.mem_inertia]
-    simp only [AlgHom.comp_apply, AlgHom.id_apply, Quotient.mkₐ_eq_mk,
+    simp only [mk_equalizerIdempotent, H, Ideal.mem_inertia, AlgHom.ext_iff,
+      AlgHom.comp_apply, AlgHom.id_apply, Quotient.mkₐ_eq_mk,
       MulSemiringAction.toAlgHom_apply, Quotient.mk_eq_mk_iff_sub_mem]
-    exact forall_congr' fun x ↦ m.toAddSubgroup.sub_mem_comm_iff
+    congr 1
+    exact propext (forall_congr' fun x ↦ m.toAddSubgroup.sub_mem_comm_iff)
   have hc : c = ∑ q : G ⧸ H, equalizerIdempotent
       (AlgHom.id A B) (MulSemiringAction.toAlgHom A B q.out) * u := by
     change linearize (B := B) T 1 = _
@@ -347,9 +333,7 @@ theorem map_comap_eq_of_isInvariant_of_unramified
       LinearMap.mulLeft_apply, mul_one]
   have hc_one : Quotient.mk m c = 1 := by
     rw [hc]
-    simp only [map_sum, map_mul, hd, QuotientGroup.out_mem_iff]
-    simpa only [ite_mul, one_mul, zero_mul, Finset.sum_ite_eq', Finset.mem_univ, ite_true] using
-      (Quotient.mk_eq_one_iff_sub_mem u).mpr hu
+    simpa [hd, ite_mul] using (Quotient.mk_eq_one_iff_sub_mem u).mpr hu
   have : Quotient.mk m c = 0 := Quotient.eq_zero_iff_mem.mpr (hKm hc_mem)
   exact zero_ne_one (this.symm.trans hc_one)
 
