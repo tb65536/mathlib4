@@ -117,26 +117,22 @@ noncomputable def linearize : (M →ₗ[A] N) →ₗ[B] (M →ₗ[B] N) :=
 lemma linearize_apply (f : M →ₗ[A] N) : linearize B f = (f.liftBaseChange B).comp (sec A B M) :=
   rfl
 
-lemma linearize_apply_apply (f : M →ₗ[A] N) (x : M) : linearize B f x = f.liftBaseChange B
-    (_root_.TensorProduct.map LinearMap.id (LinearMap.id.smulRight x) (elem A B)) :=
-  rfl
-
 /-- Separability linearization preserves conditions of mapping one submodule into another. -/
 lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
     (hf : ∀ x ∈ P, f x ∈ Q) {x : M} (hx : x ∈ P) : linearize B f x ∈ Q := by
-  rw [linearize_apply_apply]
+  simp_rw [linearize_apply, sec, LinearMap.comp_apply, LinearMap.coe_mk]
   induction elem A B using TensorProduct.inductionOn with
   | tmul a b => exact Q.smul_mem a (hf _ (P.smul_mem b hx))
-  | add t₁ t₂ h₁ h₂ => simpa only [map_add] using Q.add_mem h₁ h₂
+  | add t₁ t₂ h₁ h₂ => simpa using Q.add_mem h₁ h₂
 
 lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
     [IsScalarTower A B L] (f : M →ₗ[A] N) (g : L →ₗ[B] M) :
     linearize B (f.comp (g.restrictScalars A)) = (linearize B f).comp g := by
   ext x
-  simp only [linearize_apply_apply, LinearMap.comp_apply]
+  simp_rw [linearize_apply, sec, LinearMap.comp_apply, LinearMap.coe_mk]
   induction elem A B using TensorProduct.inductionOn with
   | tmul a b => simp
-  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
+  | add t₁ t₂ h₁ h₂ => simp_all
 
 lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
@@ -155,10 +151,10 @@ lemma linearize_restrictScalars (f : M →ₗ[B] N) : linearize B (f.restrictSca
 lemma linearize_toLinearMap (f : B →ₐ[A] B) :
     linearize B f.toLinearMap = LinearMap.mulLeft B (equalizerIdempotent (AlgHom.id A B) f) := by
   apply LinearMap.ext_ring
-  rw [linearize_apply_apply, LinearMap.mulLeft_apply, mul_one, equalizerIdempotent]
+  simp_rw [linearize_apply, sec, LinearMap.comp_apply, LinearMap.coe_mk, equalizerIdempotent]
   induction elem A B using TensorProduct.inductionOn with
   | tmul a b => simp
-  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
+  | add t₁ t₂ h₁ h₂ => simp_all
 
 end Linearize
 
