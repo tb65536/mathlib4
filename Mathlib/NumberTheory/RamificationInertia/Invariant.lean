@@ -100,8 +100,9 @@ lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
     Ideal.Quotient.mk Q (equalizerIdempotent f g) =
       if (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g then 1 else 0 := by
   rw [← mk_equalizerIdempotent_eq_one_iff]
-  grind [IsIdempotentElem.iff_eq_zero_or_one,
-    (isIdempotentElem_equalizerIdempotent f g).map (Ideal.Quotient.mk Q)]
+  have := IsIdempotentElem.iff_eq_zero_or_one.mp
+    ((isIdempotentElem_equalizerIdempotent f g).map (Ideal.Quotient.mk Q))
+  grind
 
 section Linearize
 
