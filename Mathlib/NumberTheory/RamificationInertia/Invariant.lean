@@ -5,7 +5,9 @@ Authors: Thomas Browning
 -/
 module
 
-public import Mathlib.NumberTheory.RamificationInertia.Galois
+public import Mathlib.GroupTheory.GroupAction.Quotient
+public import Mathlib.RingTheory.Ideal.Pointwise
+public import Mathlib.RingTheory.IsGaloisGroup.Defs
 public import Mathlib.RingTheory.Unramified.Finite
 
 import Mathlib.Algebra.BigOperators.GroupWithZero.Action
@@ -18,12 +20,13 @@ An ideal stable under a finite group action on an unramified invariant algebra i
 from the base ring. The proof uses a separability tensor, a multiplier on which the inertia
 subgroup acts trivially, and a sum over left cosets of the inertia subgroup.
 
-We also prove that congruent maps out of an unramified algebra agree after multiplication
-by an element congruent to one, and that a sum of translates of a subgroup-fixed element
-over left cosets is fixed by the whole group.
+The reusable ingredients are `Algebra.FormallyUnramified.equalizerIdempotent`,
+`Algebra.FormallyUnramified.linearize`, `Subgroup.relativeTrace`, and
+`Ideal.exists_mul_fixed_of_le_inertia`. Relative trace is unnormalized and does not require
+normality of the subgroup; the multiplier only requires that subgroup to be finite.
 -/
 
-public section
+@[expose] public section
 
 open scoped Pointwise TensorProduct
 
@@ -32,101 +35,292 @@ namespace Algebra.FormallyUnramified
 variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
   [Algebra A B] [Algebra A C] [FormallyUnramified A B] [EssFiniteType A B]
 
-/-- Two maps out of an unramified algebra which agree modulo an ideal agree after
-multiplication by an element congruent to one modulo that ideal. -/
-theorem exists_mul_eq_of_sub_mem (f g : B →ₐ[A] C) (Q : Ideal C)
-    (h : ∀ b, f b - g b ∈ Q) :
-    ∃ u : C, u - 1 ∈ Q ∧ ∀ b, u * f b = u * g b := by
-  let μ := Algebra.TensorProduct.productMap f g
-  refine ⟨μ (elem A B), ?_, ?_⟩
-  · rw [← Ideal.Quotient.mk_eq_one_iff_sub_mem]
-    have he : ∀ t : B ⊗[A] B,
-        Ideal.Quotient.mk Q (μ t) =
-          Ideal.Quotient.mk Q (f (Algebra.TensorProduct.lmul' A t)) := by
-      intro t
-      induction t using TensorProduct.inductionOn with
-      | tmul a b =>
-        simp only [μ, Algebra.TensorProduct.productMap_apply_tmul,
-          Algebra.TensorProduct.lmul'_apply_tmul, map_mul]
-        rw [(Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h b)]
-      | add x y hx hy => simp only [map_add, hx, hy]
-    rw [he, lmul_elem, map_one, map_one]
-  · intro b
-    have he := congrArg μ (one_tmul_mul_elem (R := A) b)
-    simp only [map_mul, μ, Algebra.TensorProduct.productMap_apply_tmul, map_one,
-      one_mul, mul_one] at he
-    simpa only [mul_comm] using he.symm
+/-- The separability tensor evaluated at two algebra maps. Its support is their equalizer. -/
+noncomputable def equalizerIdempotent (f g : B →ₐ[A] C) : C :=
+  Algebra.TensorProduct.productMap f g (elem A B)
+
+lemma mul_elem (t : B ⊗[A] B) :
+    t * elem A B = (Algebra.TensorProduct.lmul' A t ⊗ₜ[A] (1 : B)) * elem A B := by
+  induction t using TensorProduct.inductionOn with
+  | tmul a b =>
+    rw [show a ⊗ₜ[A] b = (a ⊗ₜ[A] (1 : B)) * (1 ⊗ₜ[A] b) by simp,
+      mul_assoc, one_tmul_mul_elem, ← mul_assoc]
+    simp
+  | add t₁ t₂ h₁ h₂ => simp only [map_add, TensorProduct.add_tmul, add_mul, h₁, h₂]
+
+lemma isIdempotentElem_equalizerIdempotent (f g : B →ₐ[A] C) :
+    IsIdempotentElem (equalizerIdempotent f g) := by
+  have h : IsIdempotentElem (elem A B) := by
+    simpa [IsIdempotentElem, lmul_elem, ← Algebra.TensorProduct.one_def] using
+      mul_elem (elem A B)
+  exact h.map (Algebra.TensorProduct.productMap f g)
+
+lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
+    equalizerIdempotent f g * f b = equalizerIdempotent f g * g b := by
+  have h := congrArg (Algebra.TensorProduct.productMap f g)
+    (one_tmul_mul_elem (R := A) b)
+  simpa only [equalizerIdempotent, map_mul, Algebra.TensorProduct.productMap_apply_tmul,
+    map_one, one_mul, mul_one, mul_comm] using h.symm
+
+@[simp] lemma equalizerIdempotent_self (f : B →ₐ[A] C) : equalizerIdempotent f f = 1 := by
+  have h : Algebra.TensorProduct.productMap f f = f.comp (Algebra.TensorProduct.lmul' A) := by
+    apply AlgHom.toLinearMap_injective
+    ext a b
+    simp
+  simp [equalizerIdempotent, h, lmul_elem]
+
+lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
+    (f g : B →ₐ[A] C) (k : C →ₐ[A] D) :
+    k (equalizerIdempotent f g) = equalizerIdempotent (k.comp f) (k.comp g) := by
+  have h : k.comp (Algebra.TensorProduct.productMap f g) =
+      Algebra.TensorProduct.productMap (k.comp f) (k.comp g) := by
+    apply AlgHom.toLinearMap_injective
+    ext a b
+    simp
+  exact congrArg (fun F : B ⊗[A] B →ₐ[A] D ↦ F (elem A B)) h
+
+lemma mk_equalizerIdempotent_eq_one (f g : B →ₐ[A] C) (Q : Ideal C)
+    (h : ∀ b, f b - g b ∈ Q) : Ideal.Quotient.mk Q (equalizerIdempotent f g) = 1 := by
+  have hfg : (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g := by
+    ext b
+    exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h b)
+  rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, hfg,
+    equalizerIdempotent_self]
+
+open Classical in
+/-- Modulo a prime ideal, the equalizer idempotent is the indicator that the maps agree. -/
+lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
+    Ideal.Quotient.mk Q (equalizerIdempotent f g) =
+      if (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g then 1 else 0 := by
+  split_ifs with h
+  · apply mk_equalizerIdempotent_eq_one
+    intro b
+    exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mp (DFunLike.congr_fun h b)
+  · have hex : ∃ b, f b - g b ∉ Q := by
+      by_contra! h'
+      exact h (AlgHom.ext fun b ↦ (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h' b))
+    obtain ⟨b, hb⟩ := hex
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact ((inferInstance : Q.IsPrime).mem_or_mem (by
+      rw [mul_sub, equalizerIdempotent_mul, sub_self]
+      exact Q.zero_mem)).resolve_right hb
+
+section Linearize
+
+variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
+  [Module A M] [Module B M] [IsScalarTower A B M]
+  [Module A N] [Module B N] [IsScalarTower A B N]
+
+/-- Separability turns a base-linear map into an algebra-linear map. -/
+noncomputable def linearize (f : M →ₗ[A] N) : M →ₗ[B] N :=
+  (TensorProduct.AlgebraTensorModule.lift
+    (((Algebra.lsmul B B N).toLinearMap.flip.restrictScalars A).flip.compl₂ f)).comp
+    (sec A B M)
+
+lemma linearize_apply (f : M →ₗ[A] N) (x : M) :
+    linearize (B := B) f x = _root_.TensorProduct.lift ((Algebra.lsmul A A N).toLinearMap.compl₂
+      (f.comp ((Algebra.lsmul A A M).toLinearMap.flip x))) (elem A B) := by
+  simp only [linearize, sec, LinearMap.comp_apply, LinearMap.coe_mk, LinearMap.coe_toAddHom,
+    LinearMap.flip_apply, TensorProduct.AlgebraTensorModule.mapBilinear_apply]
+  induction elem A B using TensorProduct.inductionOn with
+  | tmul a b => simp [Algebra.lsmul_apply]
+  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
+
+/-- Separability linearization preserves conditions of mapping one submodule into another. -/
+lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
+    (hf : ∀ x ∈ P, f x ∈ Q) {x : M} (hx : x ∈ P) : linearize (B := B) f x ∈ Q := by
+  rw [linearize_apply]
+  induction elem A B using TensorProduct.inductionOn with
+  | tmul a b => exact Q.smul_mem a (hf _ (P.smul_mem b hx))
+  | add t₁ t₂ h₁ h₂ => simpa only [map_add] using Q.add_mem h₁ h₂
+
+lemma linearize_sum {ι : Type*} (s : Finset ι) (f : ι → M →ₗ[A] N) :
+    linearize (B := B) (∑ i ∈ s, f i) = ∑ i ∈ s, linearize (B := B) (f i) := by
+  ext x
+  simp only [linearize_apply, LinearMap.sum_apply]
+  induction elem A B using TensorProduct.inductionOn with
+  | tmul a b => simp
+  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂, Finset.sum_add_distrib]
+
+lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
+    [IsScalarTower A B L] (f : M →ₗ[A] N) (g : L →ₗ[B] M) :
+    linearize (B := B) (f.comp (g.restrictScalars A)) = (linearize (B := B) f).comp g := by
+  ext x
+  simp only [linearize_apply, LinearMap.comp_apply]
+  congr 1
+  ext a b
+  simp [g.map_smul]
+
+lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
+    [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
+    linearize (B := B) ((g.restrictScalars A).comp f) = g.comp (linearize (B := B) f) := by
+  unfold linearize
+  rw [← LinearMap.comp_assoc]
+  congr 1
+  ext a
+  simp
+
+@[simp] lemma linearize_algHom_apply (f : B →ₐ[A] B) (x : B) :
+    linearize (B := B) f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
+  have h : linearize (B := B) f.toLinearMap 1 = equalizerIdempotent (AlgHom.id A B) f := by
+    rw [linearize_apply]
+    have he : _root_.TensorProduct.lift ((Algebra.lsmul A A B).toLinearMap.compl₂
+        (f.toLinearMap.comp ((Algebra.lsmul A A B).toLinearMap.flip 1))) =
+        (Algebra.TensorProduct.productMap (AlgHom.id A B) f).toLinearMap := by
+      ext a b
+      simp
+    exact congrArg (fun F : B ⊗[A] B →ₗ[A] B ↦ F (elem A B)) he
+  simpa only [smul_eq_mul, h, mul_comm, mul_one] using
+    (linearize (B := B) f.toLinearMap).map_smul x (1 : B)
+
+end Linearize
 
 end Algebra.FormallyUnramified
 
 namespace Subgroup
 
-variable {G M : Type*} [Group G] [AddCommMonoid M] [DistribMulAction G M]
-  (H : Subgroup G) [Fintype (G ⧸ H)]
+variable {G M : Type*} [Group G] (H : Subgroup G)
 
-/-- Summing the translates of an `H`-fixed element over left cosets gives a `G`-fixed
-element. No normality assumption on `H` is needed. -/
-theorem smul_sum_smul_out (x : M) (hx : ∀ h : H, h • x = x) (g : G) :
-    g • (∑ q : G ⧸ H, q.out • x) = ∑ q : G ⧸ H, q.out • x := by
-  classical
-  have he (q : G ⧸ H) : (g • q).out • x = g • (q.out • x) := by
-    obtain ⟨h, hh⟩ := QuotientGroup.mk_out_eq_mul H (g * q.out)
-    rw [show (QuotientGroup.mk (g * q.out) : G ⧸ H) = g • q by
-      simpa only [smul_eq_mul] using MulAction.Quotient.mk_smul_out H g q] at hh
-    rw [hh, mul_smul, mul_smul, show (h : G) • x = x from hx h]
-  simp_rw [Finset.smul_sum, ← he]
-  exact Fintype.sum_equiv (MulAction.toPerm g) _ _ (fun _ ↦ rfl)
+section CosetAction
+
+variable [MulAction G M]
+
+/-- The orbit map of an `H`-fixed element, defined on left cosets of `H`. -/
+def cosetAction (x : M) (hx : ∀ h : H, h • x = x) : G ⧸ H →[G] M where
+  toFun q := Quotient.liftOn' q (· • x) fun a b hab ↦ by
+    have h : (a⁻¹ * b) • x = x := hx ⟨_, QuotientGroup.leftRel_apply.mp hab⟩
+    calc
+      a • x = a • ((a⁻¹ * b) • x) := congrArg (a • ·) h.symm
+      _ = b • x := by rw [← mul_smul, mul_inv_cancel_left]
+  map_smul' g q := Quotient.inductionOn' q fun a ↦ mul_smul g a x
+
+@[simp] lemma cosetAction_mk (x : M) (hx) (g : G) :
+    H.cosetAction x hx (QuotientGroup.mk g) = g • x := rfl
+
+lemma cosetAction_apply (x : M) (hx) (q : G ⧸ H) :
+    H.cosetAction x hx q = q.out • x := by
+  simpa only [q.out_eq'] using H.cosetAction_mk x hx q.out
+
+end CosetAction
+
+variable [AddCommMonoid M] [DistribMulAction G M] [Fintype (G ⧸ H)]
+
+/-- The unnormalized relative trace from subgroup-fixed points to group-fixed points. -/
+noncomputable def relativeTrace : FixedPoints.addSubmonoid H M →+ FixedPoints.addSubmonoid G M where
+  toFun x := ⟨∑ q, H.cosetAction (x : M) (fun h ↦ x.property h) q, fun g ↦ by
+    simp_rw [Finset.smul_sum, ← MulActionHom.map_smul]
+    exact Fintype.sum_equiv (MulAction.toPerm g) _ _ (fun _ ↦ rfl)⟩
+  map_zero' := Subtype.ext (by simp [cosetAction_apply])
+  map_add' x y := Subtype.ext (by
+    change (∑ q, H.cosetAction (↑(x + y) : M) _ q) =
+      (∑ q, H.cosetAction (x : M) _ q) + ∑ q, H.cosetAction (y : M) _ q
+    simp [cosetAction_apply, smul_add, Finset.sum_add_distrib])
+
+lemma relativeTrace_mem (P : AddSubmonoid M)
+    (hP : ∀ (g : G) (x : M), x ∈ P → g • x ∈ P)
+    (x : FixedPoints.addSubmonoid H M) (hx : (x : M) ∈ P) :
+    (H.relativeTrace x : M) ∈ P :=
+  P.sum_mem fun q _ ↦ by rw [cosetAction_apply]; exact hP _ _ hx
+
+/-- Relative trace is linear over scalars fixed by the ambient group. -/
+noncomputable def relativeTraceLinearMap {A B : Type*} [CommSemiring A] [Semiring B]
+    [Algebra A B] [MulSemiringAction G B] [SMulCommClass G A B] :
+    FixedPoints.subalgebra A B H →ₗ[A] FixedPoints.subalgebra A B G where
+  __ := H.relativeTrace (M := B)
+  map_smul' a x := Subtype.ext (by
+    change (∑ q, H.cosetAction (↑(a • x) : B) _ q) =
+      a • ∑ q, H.cosetAction (x : B) _ q
+    simp [cosetAction_apply, smul_comm, Finset.smul_sum])
+
+lemma relativeTraceLinearMap_comp {A B N : Type*} [CommSemiring A] [Semiring B]
+    [Algebra A B] [MulSemiringAction G B] [SMulCommClass G A B]
+    [AddCommMonoid N] [Module A N] (f : N →ₗ[A] FixedPoints.subalgebra A B H) :
+    (FixedPoints.subalgebra A B G).val.toLinearMap.comp (H.relativeTraceLinearMap.comp f) =
+      ∑ q : G ⧸ H, (MulSemiringAction.toAlgHom A B q.out).toLinearMap.comp
+        ((FixedPoints.subalgebra A B H).val.toLinearMap.comp f) := by
+  ext x
+  change (∑ q, H.cosetAction (↑(f x) : B) _ q) = _
+  simp [cosetAction_apply]
 
 end Subgroup
 
+namespace QuotientGroup
+
+@[simp] lemma out_mem_iff {G : Type*} [Group G] {H : Subgroup G} (q : G ⧸ H) :
+    q.out ∈ H ↔ q = (1 : G) := by
+  rw [← SetLike.mem_coe, ← preimage_mk_one H]
+  simp
+
+end QuotientGroup
+
 namespace Ideal
 
-variable {B G : Type*} [CommRing B] [Group G] [Finite G] [MulSemiringAction G B]
+variable {B G : Type*} [CommRing B] [Group G]
 
-/-- For a finite group acting trivially modulo `Q`, an unramified algebra has an element
-congruent to one modulo `Q` whose multiples are all fixed by the group. -/
-theorem exists_smul_mul_eq_of_inertia_eq_top (A : Type*) [CommRing A] [Algebra A B]
+@[simp] lemma Quotient.mk_smul_of_mem_inertia [MulAction G B] (Q : Ideal B) {g : G}
+    (hg : g ∈ Q.inertia G) (b : B) :
+    Quotient.mk Q (g • b) = Quotient.mk Q b :=
+  (Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (Q.mem_inertia.mp hg b)
+
+variable [MulSemiringAction G B]
+
+open Algebra.FormallyUnramified
+
+lemma smul_mem_of_smul_eq {I : Ideal B} {g : G} (hg : g • I = I) {x : B} (hx : x ∈ I) :
+    g • x ∈ I := hg ▸ Ideal.smul_mem_pointwise_smul g x I hx
+
+/-- A fixed element of an ideal lies in the extension of its contraction. -/
+lemma mem_map_comap_of_mem_of_fixed {A : Type*} [CommRing A] [Algebra A B]
+    [Algebra.IsInvariant A B G] (I : Ideal B) {x : B} (hx : x ∈ I)
+    (hfixed : ∀ g : G, g • x = x) : x ∈ (I.comap (algebraMap A B)).map (algebraMap A B) := by
+  obtain ⟨a, rfl⟩ := Algebra.IsInvariant.isInvariant (A := A) x hfixed
+  exact Ideal.mem_map_of_mem _ hx
+
+/-- A finite subgroup acting trivially modulo `Q` fixes every multiple of an element
+congruent to one modulo `Q`. Only the subgroup needs to be finite. -/
+theorem exists_mul_fixed_of_le_inertia (A : Type*) [CommRing A] [Algebra A B]
     [Algebra.FormallyUnramified A B] [Algebra.EssFiniteType A B] [SMulCommClass G A B]
-    (Q : Ideal B) (hQ : Q.inertia G = ⊤) :
-    ∃ u : B, u - 1 ∈ Q ∧ ∀ (g : G) (b : B), g • (u * b) = u * b := by
+    (Q : Ideal B) (H : Subgroup G) [Finite H] (hH : H ≤ Q.inertia G) :
+    ∃ u : B, u - 1 ∈ Q ∧ ∀ (h : H) (b : B), h • (u * b) = u * b := by
   classical
-  let := Fintype.ofFinite G
-  have hg (g : G) (b : B) : g • b - b ∈ Q :=
-    (Q.mem_inertia.mp (hQ ▸ Subgroup.mem_top g)) b
-  have hex (g : G) : ∃ v : B, v - 1 ∈ Q ∧ ∀ b, v * (g • b) = v * b :=
-    Algebra.FormallyUnramified.exists_mul_eq_of_sub_mem
-      (MulSemiringAction.toAlgHom A B g) (AlgHom.id A B) Q (hg g)
-  choose v hv hv' using hex
-  let s := ∏ g : G, v g
-  let u := ∏ g : G, g • s
-  have hs : Ideal.Quotient.mk Q s = 1 := by
-    simp only [s, map_prod, ← Ideal.Quotient.mk_eq_one_iff_sub_mem] at hv ⊢
-    simp only [hv, Finset.prod_const_one]
-  have hu : Ideal.Quotient.mk Q u = 1 := by
-    have hg' (g : G) : Ideal.Quotient.mk Q (g • s) = 1 :=
-      ((Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (hg g s)).trans hs
-    simp [u, map_prod, hg']
-  refine ⟨u, (Ideal.Quotient.mk_eq_one_iff_sub_mem _).mp hu, ?_⟩
-  intro g b
-  have hsu : s ∣ u := by
-    simpa only [one_smul] using
-      (Finset.dvd_prod_of_mem (fun g : G ↦ g • s) (Finset.mem_univ (1 : G)))
-  have hvs : v g ∣ s := Finset.dvd_prod_of_mem _ (Finset.mem_univ g)
-  obtain ⟨w, hw⟩ := hvs.trans hsu
-  rw [smul_mul', show g • u = u from Finset.smul_prod_perm s g]
-  rw [hw]
-  linear_combination w * hv' g b
+  let := Fintype.ofFinite H
+  let d (h : H) := equalizerIdempotent (AlgHom.id A B)
+    (MulSemiringAction.toAlgHom A B (h : G))
+  let u := ∏ h, d h
+  have hd (h : H) : Quotient.mk Q (d h) = 1 := by
+    apply mk_equalizerIdempotent_eq_one
+    intro b
+    exact (Quotient.mk_eq_mk_iff_sub_mem _ _).mp
+      (Quotient.mk_smul_of_mem_inertia Q (hH h.property) b).symm
+  have huu : u * u = u := by
+    rw [show u = ∏ h, d h from rfl, ← Finset.prod_mul_distrib]
+    exact Finset.prod_congr rfl fun h _ ↦
+      (isIdempotentElem_equalizerIdempotent _ _).eq
+  have heq (h : H) (b : B) : u * (h • b) = u * b := by
+    obtain ⟨w, hw⟩ : d h ∣ u := Finset.dvd_prod_of_mem _ (Finset.mem_univ h)
+    have he := equalizerIdempotent_mul
+      (AlgHom.id A B) (MulSemiringAction.toAlgHom A B (h : G)) b
+    change d h * b = d h * (h • b) at he
+    rw [hw]
+    linear_combination -w * he
+  have hfixed (h : H) : h • u = u := by
+    have h₁ : u * (h • u) = u := (heq h u).trans huu
+    have h₂ : (h • u) * u = h • u := by
+      simpa only [smul_mul', smul_smul, mul_inv_cancel, one_smul] using
+        congrArg (h • ·) ((heq h⁻¹ u).trans huu)
+    exact h₂.symm.trans ((mul_comm _ _).trans h₁)
+  refine ⟨u, ?_, fun h b ↦ ?_⟩
+  · rw [← Quotient.mk_eq_one_iff_sub_mem]
+    simp only [u, map_prod, hd, Finset.prod_const_one]
+  · rw [smul_mul', hfixed, heq]
 
 /-- In an invariant, formally unramified algebra essentially of finite type, every
 stable ideal is extended from the base ring. -/
-theorem map_comap_eq_of_isInvariant_of_formallyUnramified
-    {A : Type*} [CommRing A] [Algebra A B] [SMulCommClass G A B]
-    [Algebra.IsInvariant A B G] [Algebra.FormallyUnramified A B]
-    [Algebra.EssFiniteType A B] (I : Ideal B)
-    (hI : ∀ (g : G) (x : B), x ∈ I → g • x ∈ I) :
+theorem map_comap_eq_of_isInvariant_of_unramified
+    {A : Type*} [CommRing A] [Algebra A B] [SMulCommClass G A B] [Finite G]
+    [Algebra.IsInvariant A B G] [Algebra.Unramified A B] (I : Ideal B) (hI : ∀ g : G, g • I = I) :
     (I.comap (algebraMap A B)).map (algebraMap A B) = I := by
   classical
-  let := Fintype.ofFinite G
   let J := (I.comap (algebraMap A B)).map (algebraMap A B)
   apply le_antisymm Ideal.map_comap_le
   suffices J.colon (I : Set B) = ⊤ by
@@ -135,115 +329,53 @@ theorem map_comap_eq_of_isInvariant_of_formallyUnramified
   obtain ⟨m, hm, hKm⟩ := Ideal.exists_le_maximal (J.colon (I : Set B)) hJ
   let : m.IsMaximal := hm
   let H := m.inertia G
-  let := Fintype.ofFinite H
   let := Fintype.ofFinite (G ⧸ H)
-  -- A separability tensor distinguishes the inertia coset from the other cosets.
-  let μ (g : G) := Algebra.TensorProduct.productMap (AlgHom.id A B)
-    (MulSemiringAction.toAlgHom A B g)
-  let d (g : G) := μ g (Algebra.FormallyUnramified.elem A B)
-  have hd_mul (g : G) (x : B) : d g * (g • x) = d g * x := by
-    have he := congrArg (μ g)
-      (Algebra.FormallyUnramified.one_tmul_mul_elem (R := A) x)
-    simpa only [μ, map_mul, Algebra.TensorProduct.productMap_apply_tmul, AlgHom.id_apply,
-      MulSemiringAction.toAlgHom_apply, map_one, one_mul, mul_one, d, mul_comm] using he
-  have hd_one (g : G) (hg : g ∈ H) : Ideal.Quotient.mk m (d g) = 1 := by
-    have hg' (x : B) : Ideal.Quotient.mk m (g • x) = Ideal.Quotient.mk m x :=
-      (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (m.mem_inertia.mp hg x)
-    have he (t : B ⊗[A] B) : Ideal.Quotient.mk m (μ g t) =
-        Ideal.Quotient.mk m (Algebra.TensorProduct.lmul' A t) := by
-      induction t using TensorProduct.inductionOn with
-      | tmul a b =>
-        simp only [μ, Algebra.TensorProduct.productMap_apply_tmul, AlgHom.id_apply,
-          MulSemiringAction.toAlgHom_apply, Algebra.TensorProduct.lmul'_apply_tmul,
-          map_mul, hg']
-      | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
-    change Ideal.Quotient.mk m (μ g (Algebra.FormallyUnramified.elem A B)) = 1
-    rw [he, Algebra.FormallyUnramified.lmul_elem, map_one]
-  have hd_zero (g : G) (hg : g ∉ H) : Ideal.Quotient.mk m (d g) = 0 := by
-    have hg' : ¬ ∀ x : B, g • x - x ∈ m := fun h ↦ hg (m.mem_inertia.mpr h)
-    obtain ⟨x, hx⟩ := not_forall.mp hg'
-    apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact ((inferInstance : m.IsPrime).mem_or_mem (by
-      rw [mul_sub, hd_mul, sub_self]
-      exact m.zero_mem)).resolve_right hx
-  -- Kill the inertia action on a principal ideal without dividing by its order.
-  have hH : m.inertia H = ⊤ := by
-    ext h
-    simp only [Subgroup.mem_top, iff_true]
-    exact m.mem_inertia.mpr (m.mem_inertia.mp h.property)
-  obtain ⟨u, hu, hu_fixed⟩ := m.exists_smul_mul_eq_of_inertia_eq_top A hH
-  have hu_one : Ideal.Quotient.mk m u = 1 :=
-    (Ideal.Quotient.mk_eq_one_iff_sub_mem _).mpr hu
-  let c := ∑ q : G ⧸ H, d q.out * (q.out • u)
+  obtain ⟨u, hu, hu_fixed⟩ := m.exists_mul_fixed_of_le_inertia A H le_rfl
+  let U : B →ₗ[A] FixedPoints.subalgebra A B H :=
+    (LinearMap.mulLeft A u).codRestrict (FixedPoints.subalgebra A B H).toSubmodule
+      (fun b h ↦ hu_fixed h b)
+  let T : B →ₗ[A] B := (FixedPoints.subalgebra A B G).val.toLinearMap.comp
+    (H.relativeTraceLinearMap.comp U)
+  have hT (x : B) (hx : x ∈ I) : T x ∈ J := by
+    apply I.mem_map_comap_of_mem_of_fixed (G := G)
+    · exact H.relativeTrace_mem I.toAddSubmonoid
+        (fun g x hx ↦ Ideal.smul_mem_of_smul_eq (hI g) hx) (U x) (I.mul_mem_left u hx)
+    · exact (H.relativeTraceLinearMap (A := A) (B := B) (U x)).property
+  let F := linearize (B := B) T
+  let c := F 1
   have hc_mem : c ∈ J.colon (I : Set B) := by
     rw [Submodule.mem_colon]
     intro x hx
-    have htrace (b : B) : (∑ q : G ⧸ H, q.out • (u * b * x)) ∈ J := by
-      have hfixed (h : H) : h • (u * b * x) = u * b * x := by
-        simpa only [mul_assoc] using hu_fixed h (b * x)
-      obtain ⟨z, hz⟩ := Algebra.IsInvariant.isInvariant (A := A) (G := G)
-        (∑ q : G ⧸ H, q.out • (u * b * x))
-        (H.smul_sum_smul_out _ hfixed)
-      rw [← hz]
-      apply Ideal.mem_map_of_mem
-      rw [Ideal.mem_comap, hz]
-      exact I.sum_mem fun q _ ↦ hI q.out _ (I.mul_mem_left _ hx)
-    have he (t : B ⊗[A] B) :
-        (∑ q : G ⧸ H, μ q.out t * (q.out • u) * (q.out • x)) ∈ J := by
-      induction t using TensorProduct.inductionOn with
-      | tmul a b =>
-        have heq : (∑ q : G ⧸ H, μ q.out (a ⊗ₜ[A] b) *
-            (q.out • u) * (q.out • x)) = a * ∑ q : G ⧸ H, q.out • (u * b * x) := by
-          simp only [μ, Algebra.TensorProduct.productMap_apply_tmul, AlgHom.id_apply,
-            MulSemiringAction.toAlgHom_apply, smul_mul', Finset.mul_sum]
-          apply Finset.sum_congr rfl
-          intro q _
-          ring
-        rw [heq]
-        exact J.mul_mem_left _ (htrace b)
-      | add t₁ t₂ h₁ h₂ =>
-        simpa only [map_add, add_mul, Finset.sum_add_distrib] using J.add_mem h₁ h₂
-    have heq : c * x = ∑ q : G ⧸ H, d q.out * (q.out • u) * (q.out • x) := by
-      rw [show c = ∑ q : G ⧸ H, d q.out * (q.out • u) from rfl, Finset.sum_mul]
-      apply Finset.sum_congr rfl
-      intro q _
-      calc
-        d q.out * (q.out • u) * x = (q.out • u) * (d q.out * x) := by ring
-        _ = (q.out • u) * (d q.out * (q.out • x)) := by rw [hd_mul]
-        _ = d q.out * (q.out • u) * (q.out • x) := by ring
+    have heq : c * x = F x := by
+      simpa only [c, smul_eq_mul, mul_comm, mul_one] using (F.map_smul x (1 : B)).symm
     rw [smul_eq_mul, heq]
-    exact he (Algebra.FormallyUnramified.elem A B)
-  have hc_one : Ideal.Quotient.mk m c = 1 := by
-    let q₀ : G ⧸ H := (1 : G)
-    have hq₀ : q₀.out ∈ H := by
-      have he : (QuotientGroup.mk q₀.out : G ⧸ H) = (1 : G) := q₀.out_eq'
-      simpa only [QuotientGroup.eq, inv_one, one_mul] using he.symm
-    have hq (q : G ⧸ H) (hq : q ≠ q₀) : q.out ∉ H := by
-      intro h
-      apply hq
-      rw [← q.out_eq']
-      exact QuotientGroup.eq.mpr (by simpa using H.inv_mem h)
-    rw [show c = ∑ q : G ⧸ H, d q.out * (q.out • u) from rfl, map_sum]
-    rw [Finset.sum_eq_single q₀]
-    · rw [map_mul, hd_one _ hq₀, one_mul]
-      exact ((Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr
-        (m.mem_inertia.mp hq₀ u)).trans hu_one
-    · intro q _ hq'
-      rw [map_mul, hd_zero _ (hq q hq'), zero_mul]
-    · simp
-  have : Ideal.Quotient.mk m c = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr (hKm hc_mem)
+    exact linearize_mem T I J hT hx
+  -- Evaluate the linearized trace modulo `m`: only the inertia coset contributes.
+  have hd (g : G) : Quotient.mk m (equalizerIdempotent
+      (AlgHom.id A B) (MulSemiringAction.toAlgHom A B g)) = if g ∈ H then 1 else 0 := by
+    rw [mk_equalizerIdempotent]
+    congr 1
+    apply propext
+    rw [AlgHom.ext_iff, Ideal.mem_inertia]
+    simp only [AlgHom.comp_apply, AlgHom.id_apply, Quotient.mkₐ_eq_mk,
+      MulSemiringAction.toAlgHom_apply, Quotient.mk_eq_mk_iff_sub_mem]
+    exact forall_congr' fun x ↦ m.toAddSubgroup.sub_mem_comm_iff
+  have hc : c = ∑ q : G ⧸ H, equalizerIdempotent
+      (AlgHom.id A B) (MulSemiringAction.toAlgHom A B q.out) * u := by
+    change linearize (B := B) T 1 = _
+    dsimp only [T]
+    rw [H.relativeTraceLinearMap_comp U, linearize_sum]
+    have hU : (FixedPoints.subalgebra A B H).val.toLinearMap.comp U =
+        (LinearMap.mulLeft B u).restrictScalars A := by ext x; rfl
+    simp only [hU, linearize_comp, LinearMap.sum_apply,
+      LinearMap.comp_apply, linearize_algHom_apply,
+      LinearMap.mulLeft_apply, mul_one]
+  have hc_one : Quotient.mk m c = 1 := by
+    rw [hc]
+    simp only [map_sum, map_mul, hd, QuotientGroup.out_mem_iff]
+    simpa only [ite_mul, one_mul, zero_mul, Finset.sum_ite_eq', Finset.mem_univ, ite_true] using
+      (Quotient.mk_eq_one_iff_sub_mem u).mpr hu
+  have : Quotient.mk m c = 0 := Quotient.eq_zero_iff_mem.mpr (hKm hc_mem)
   exact zero_ne_one (this.symm.trans hc_one)
 
 end Ideal
-
-variable {A B G : Type*} [CommRing A] [CommRing B] [Algebra A B] [Algebra.Unramified A B]
-  [Group G] [Finite G] [MulSemiringAction G B] [IsGaloisGroup G A B]
-
-/-- If `B / A` is unramified with Galois group `G`, then any ideal `I` of `B` that is stable under
-`G` satisfies `(I ∩ A) B = I`. -/
-theorem map_comap_eq_of_unramified {I : Ideal B} (hI : ∀ σ : G, σ • I = I) :
-    (I.comap (algebraMap A B)).map (algebraMap A B) = I := by
-  apply Ideal.map_comap_eq_of_isInvariant_of_formallyUnramified (G := G)
-  intro g x hx
-  rw [← hI g]
-  exact Ideal.smul_mem_pointwise_smul g x I hx
