@@ -109,17 +109,18 @@ variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
   [Module A M] [Module B M] [IsScalarTower A B M]
   [Module A N] [Module B N] [IsScalarTower A B N]
 
+variable (B) in
 /-- Separability turns a base-linear map into an algebra-linear map. -/
 noncomputable def linearize : (M →ₗ[A] N) →ₗ[B] (M →ₗ[B] N) :=
   ((sec A B M).lcomp B N).comp (LinearMap.liftBaseChangeEquiv B).toLinearMap
 
 lemma linearize_apply (f : M →ₗ[A] N) (x : M) :
-    linearize (B := B) f x = f.liftBaseChange B
+    linearize B f x = f.liftBaseChange B
       (_root_.TensorProduct.map LinearMap.id (LinearMap.id.smulRight x) (elem A B)) := rfl
 
 /-- Separability linearization preserves conditions of mapping one submodule into another. -/
 lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
-    (hf : ∀ x ∈ P, f x ∈ Q) {x : M} (hx : x ∈ P) : linearize (B := B) f x ∈ Q := by
+    (hf : ∀ x ∈ P, f x ∈ Q) {x : M} (hx : x ∈ P) : linearize B f x ∈ Q := by
   rw [linearize_apply]
   induction elem A B using TensorProduct.inductionOn with
   | tmul a b => exact Q.smul_mem a (hf _ (P.smul_mem b hx))
@@ -127,7 +128,7 @@ lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
 
 lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
     [IsScalarTower A B L] (f : M →ₗ[A] N) (g : L →ₗ[B] M) :
-    linearize (B := B) (f.comp (g.restrictScalars A)) = (linearize (B := B) f).comp g := by
+    linearize B (f.comp (g.restrictScalars A)) = (linearize B f).comp g := by
   ext x
   simp only [linearize_apply, LinearMap.comp_apply]
   induction elem A B using TensorProduct.inductionOn with
@@ -136,27 +137,28 @@ lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
 
 lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
-    linearize (B := B) ((g.restrictScalars A).comp f) = g.comp (linearize (B := B) f) := by
+    linearize B ((g.restrictScalars A).comp f) = g.comp (linearize B f) := by
   change (((g.restrictScalars A).comp f).liftBaseChange B).comp (sec A B M) =
     g.comp ((f.liftBaseChange B).comp (sec A B M))
   rw [← LinearMap.liftBaseChange_comp, LinearMap.comp_assoc]
 
-@[simp] lemma linearize_restrictScalars (f : M →ₗ[B] N) :
-    linearize (f.restrictScalars A) = f := by
-  have h : linearize (B := B) (LinearMap.id (R := A) (M := M)) = LinearMap.id :=
+@[simp]
+lemma linearize_restrictScalars (f : M →ₗ[B] N) : linearize B (f.restrictScalars A) = f := by
+  have h : linearize B (LinearMap.id (R := A) (M := M)) = LinearMap.id :=
     comp_sec A B M
   simpa only [LinearMap.comp_id, h] using
     comp_linearize f (LinearMap.id (R := A) (M := M))
 
-@[simp] lemma linearize_algHom_apply (f : B →ₐ[A] B) (x : B) :
-    linearize (B := B) f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
-  have h : linearize (B := B) f.toLinearMap 1 = equalizerIdempotent (AlgHom.id A B) f := by
+@[simp]
+lemma linearize_algHom_apply (f : B →ₐ[A] B) (x : B) :
+    linearize B f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
+  have h : linearize B f.toLinearMap 1 = equalizerIdempotent (AlgHom.id A B) f := by
     rw [linearize_apply, equalizerIdempotent]
     induction elem A B using TensorProduct.inductionOn with
     | tmul a b => simp
     | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
   simpa only [smul_eq_mul, h, mul_comm, mul_one] using
-    (linearize (B := B) f.toLinearMap).map_smul x (1 : B)
+    (linearize B f.toLinearMap).map_smul x (1 : B)
 
 end Linearize
 
@@ -329,7 +331,7 @@ lemma descentMultiplier_mem_colon [Algebra.IsInvariant A B G]
     ext b
     change (∑ q : G ⧸ H, q.out • (u * b)) = _
     simp
-  have hF (x : B) : linearize (B := B) T x = H.descentMultiplier A * x := by
+  have hF (x : B) : linearize B T x = H.descentMultiplier A * x := by
     rw [hT_eq, map_sum]
     simp [Subgroup.descentMultiplier, linearize_comp, u, Finset.sum_mul, mul_assoc]
   rw [Submodule.mem_colon]
