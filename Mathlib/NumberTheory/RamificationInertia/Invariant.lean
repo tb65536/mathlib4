@@ -6,6 +6,7 @@ Authors: Thomas Browning
 module
 
 public import Mathlib.GroupTheory.GroupAction.Quotient
+public import Mathlib.LinearAlgebra.TensorProduct.Lift
 public import Mathlib.RingTheory.Ideal.Pointwise
 public import Mathlib.RingTheory.IsGaloisGroup.Defs
 public import Mathlib.RingTheory.Unramified.Finite
@@ -39,8 +40,13 @@ variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
 noncomputable def equalizerIdempotent (f g : B →ₐ[A] C) : C :=
   Algebra.TensorProduct.productMap f g (elem A B)
 
-lemma mul_elem (t : B ⊗[A] B) :
-    t * elem A B = (Algebra.TensorProduct.lmul' A t ⊗ₜ[A] (1 : B)) * elem A B := by
+variable (A B) in
+/-- The separability tensor is idempotent. -/
+lemma isIdempotentElem_elem : IsIdempotentElem (elem A B) := by
+  suffices ∀ t : B ⊗[A] B,
+      t * elem A B = (Algebra.TensorProduct.lmul' A t ⊗ₜ[A] (1 : B)) * elem A B by
+    simpa [IsIdempotentElem, lmul_elem, ← Algebra.TensorProduct.one_def] using this (elem A B)
+  intro t
   induction t using TensorProduct.inductionOn with
   | tmul a b =>
     rw [show a ⊗ₜ[A] b = (a ⊗ₜ[A] (1 : B)) * (1 ⊗ₜ[A] b) by simp,
@@ -49,11 +55,8 @@ lemma mul_elem (t : B ⊗[A] B) :
   | add t₁ t₂ h₁ h₂ => simp only [map_add, TensorProduct.add_tmul, add_mul, h₁, h₂]
 
 lemma isIdempotentElem_equalizerIdempotent (f g : B →ₐ[A] C) :
-    IsIdempotentElem (equalizerIdempotent f g) := by
-  have h : IsIdempotentElem (elem A B) := by
-    simpa [IsIdempotentElem, lmul_elem, ← Algebra.TensorProduct.one_def] using
-      mul_elem (elem A B)
-  exact h.map (Algebra.TensorProduct.productMap f g)
+    IsIdempotentElem (equalizerIdempotent f g) :=
+  (isIdempotentElem_elem A B).map (Algebra.TensorProduct.productMap f g)
 
 lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
     equalizerIdempotent f g * f b = equalizerIdempotent f g * g b := by
@@ -112,15 +115,14 @@ variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
   [Module A N] [Module B N] [IsScalarTower A B N]
 
 /-- Separability turns a base-linear map into an algebra-linear map. -/
-noncomputable def linearize (f : M →ₗ[A] N) : M →ₗ[B] N :=
-  (TensorProduct.AlgebraTensorModule.lift
-    (((Algebra.lsmul B B N).toLinearMap.flip.restrictScalars A).flip.compl₂ f)).comp
-    (sec A B M)
+noncomputable def linearize : (M →ₗ[A] N) →ₗ[B] (M →ₗ[B] N) :=
+  (LinearMap.lcomp B N (sec A B M)).comp (LinearMap.liftBaseChangeEquiv B).toLinearMap
 
 lemma linearize_apply (f : M →ₗ[A] N) (x : M) :
     linearize (B := B) f x = _root_.TensorProduct.lift ((Algebra.lsmul A A N).toLinearMap.compl₂
       (f.comp ((Algebra.lsmul A A M).toLinearMap.flip x))) (elem A B) := by
-  simp only [linearize, sec, LinearMap.comp_apply, LinearMap.coe_mk, LinearMap.coe_toAddHom,
+  change f.liftBaseChange B (sec A B M x) = _
+  simp only [sec, LinearMap.comp_apply, LinearMap.coe_mk, LinearMap.coe_toAddHom,
     LinearMap.flip_apply, TensorProduct.AlgebraTensorModule.mapBilinear_apply]
   induction elem A B using TensorProduct.inductionOn with
   | tmul a b => simp [Algebra.lsmul_apply]
@@ -134,14 +136,6 @@ lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
   | tmul a b => exact Q.smul_mem a (hf _ (P.smul_mem b hx))
   | add t₁ t₂ h₁ h₂ => simpa only [map_add] using Q.add_mem h₁ h₂
 
-lemma linearize_sum {ι : Type*} (s : Finset ι) (f : ι → M →ₗ[A] N) :
-    linearize (B := B) (∑ i ∈ s, f i) = ∑ i ∈ s, linearize (B := B) (f i) := by
-  ext x
-  simp only [linearize_apply, LinearMap.sum_apply]
-  induction elem A B using TensorProduct.inductionOn with
-  | tmul a b => simp
-  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂, Finset.sum_add_distrib]
-
 lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
     [IsScalarTower A B L] (f : M →ₗ[A] N) (g : L →ₗ[B] M) :
     linearize (B := B) (f.comp (g.restrictScalars A)) = (linearize (B := B) f).comp g := by
@@ -154,11 +148,16 @@ lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
 lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
     linearize (B := B) ((g.restrictScalars A).comp f) = g.comp (linearize (B := B) f) := by
-  unfold linearize
-  rw [← LinearMap.comp_assoc]
-  congr 1
-  ext a
-  simp
+  change (((g.restrictScalars A).comp f).liftBaseChange B).comp (sec A B M) =
+    g.comp ((f.liftBaseChange B).comp (sec A B M))
+  rw [← LinearMap.liftBaseChange_comp, LinearMap.comp_assoc]
+
+@[simp] lemma linearize_restrictScalars (f : M →ₗ[B] N) :
+    linearize (f.restrictScalars A) = f := by
+  have h : linearize (B := B) (LinearMap.id (R := A) (M := M)) = LinearMap.id :=
+    comp_sec A B M
+  simpa only [LinearMap.comp_id, h] using
+    comp_linearize f (LinearMap.id (R := A) (M := M))
 
 @[simp] lemma linearize_algHom_apply (f : B →ₐ[A] B) (x : B) :
     linearize (B := B) f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
@@ -179,58 +178,34 @@ end Algebra.FormallyUnramified
 
 namespace Subgroup
 
-variable {G M : Type*} [Group G] (H : Subgroup G)
-
-section CosetAction
-
-variable [MulAction G M]
-
-/-- The orbit map of an `H`-fixed element, defined on left cosets of `H`. -/
-def cosetAction (x : M) (hx : ∀ h : H, h • x = x) : G ⧸ H →[G] M where
-  toFun q := Quotient.liftOn' q (· • x) fun a b hab ↦ by
-    have h : (a⁻¹ * b) • x = x := hx ⟨_, QuotientGroup.leftRel_apply.mp hab⟩
-    calc
-      a • x = a • ((a⁻¹ * b) • x) := congrArg (a • ·) h.symm
-      _ = b • x := by rw [← mul_smul, mul_inv_cancel_left]
-  map_smul' g q := Quotient.inductionOn' q fun a ↦ mul_smul g a x
-
-@[simp] lemma cosetAction_mk (x : M) (hx) (g : G) :
-    H.cosetAction x hx (QuotientGroup.mk g) = g • x := rfl
-
-lemma cosetAction_apply (x : M) (hx) (q : G ⧸ H) :
-    H.cosetAction x hx q = q.out • x := by
-  simpa only [q.out_eq'] using H.cosetAction_mk x hx q.out
-
-end CosetAction
-
-variable [AddCommMonoid M] [DistribMulAction G M] [Fintype (G ⧸ H)]
+variable {G M : Type*} [Group G] [AddCommMonoid M] [DistribMulAction G M]
+  (H : Subgroup G) [Fintype (G ⧸ H)]
 
 /-- The unnormalized relative trace from subgroup-fixed points to group-fixed points. -/
 noncomputable def relativeTrace : FixedPoints.addSubmonoid H M →+ FixedPoints.addSubmonoid G M where
-  toFun x := ⟨∑ q, H.cosetAction (x : M) (fun h ↦ x.property h) q, fun g ↦ by
-    simp_rw [Finset.smul_sum, ← MulActionHom.map_smul]
-    exact Fintype.sum_equiv (MulAction.toPerm g) _ _ (fun _ ↦ rfl)⟩
-  map_zero' := Subtype.ext (by simp [cosetAction_apply])
-  map_add' x y := Subtype.ext (by
-    change (∑ q, H.cosetAction (↑(x + y) : M) _ q) =
-      (∑ q, H.cosetAction (x : M) _ q) + ∑ q, H.cosetAction (y : M) _ q
-    simp [cosetAction_apply, smul_add, Finset.sum_add_distrib])
+  toFun x := ⟨∑ q : G ⧸ H, q.out • (x : M), fun g ↦ by
+    rw [Finset.smul_sum]
+    refine Fintype.sum_equiv (MulAction.toPerm g) _ _ fun q ↦ ?_
+    obtain ⟨h, hh⟩ := QuotientGroup.mk_out_eq_mul H (g * q.out)
+    rw [← smul_eq_mul, MulAction.Quotient.mk_smul_out] at hh
+    change g • (q.out • (x : M)) = (g • q).out • (x : M)
+    simp only [hh, smul_eq_mul, mul_smul, show (h : G) • (x : M) = x from x.property h]⟩
+  map_zero' := Subtype.ext (by simp)
+  map_add' x y := Subtype.ext (by simp [smul_add, Finset.sum_add_distrib])
 
 lemma relativeTrace_mem (P : AddSubmonoid M)
     (hP : ∀ (g : G) (x : M), x ∈ P → g • x ∈ P)
     (x : FixedPoints.addSubmonoid H M) (hx : (x : M) ∈ P) :
     (H.relativeTrace x : M) ∈ P :=
-  P.sum_mem fun q _ ↦ by rw [cosetAction_apply]; exact hP _ _ hx
+  P.sum_mem fun q _ ↦ hP q.out _ hx
 
 /-- Relative trace is linear over scalars fixed by the ambient group. -/
 noncomputable def relativeTraceLinearMap {A B : Type*} [CommSemiring A] [Semiring B]
     [Algebra A B] [MulSemiringAction G B] [SMulCommClass G A B] :
     FixedPoints.subalgebra A B H →ₗ[A] FixedPoints.subalgebra A B G where
   __ := H.relativeTrace (M := B)
-  map_smul' a x := Subtype.ext (by
-    change (∑ q, H.cosetAction (↑(a • x) : B) _ q) =
-      a • ∑ q, H.cosetAction (x : B) _ q
-    simp [cosetAction_apply, smul_comm, Finset.smul_sum])
+  map_smul' a x := Subtype.ext <|
+    (Finset.sum_congr rfl fun q _ ↦ smul_comm q.out a (x : B)).trans Finset.smul_sum.symm
 
 lemma relativeTraceLinearMap_comp {A B N : Type*} [CommSemiring A] [Semiring B]
     [Algebra A B] [MulSemiringAction G B] [SMulCommClass G A B]
@@ -239,8 +214,8 @@ lemma relativeTraceLinearMap_comp {A B N : Type*} [CommSemiring A] [Semiring B]
       ∑ q : G ⧸ H, (MulSemiringAction.toAlgHom A B q.out).toLinearMap.comp
         ((FixedPoints.subalgebra A B H).val.toLinearMap.comp f) := by
   ext x
-  change (∑ q, H.cosetAction (↑(f x) : B) _ q) = _
-  simp [cosetAction_apply]
+  change (∑ q : G ⧸ H, q.out • (↑(f x) : B)) = _
+  simp
 
 end Subgroup
 
@@ -364,7 +339,7 @@ theorem map_comap_eq_of_isInvariant_of_unramified
       (AlgHom.id A B) (MulSemiringAction.toAlgHom A B q.out) * u := by
     change linearize (B := B) T 1 = _
     dsimp only [T]
-    rw [H.relativeTraceLinearMap_comp U, linearize_sum]
+    rw [H.relativeTraceLinearMap_comp U, map_sum]
     have hU : (FixedPoints.subalgebra A B H).val.toLinearMap.comp U =
         (LinearMap.mulLeft B u).restrictScalars A := by ext x; rfl
     simp only [hU, linearize_comp, LinearMap.sum_apply,
