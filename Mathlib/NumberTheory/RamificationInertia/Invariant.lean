@@ -94,16 +94,6 @@ lemma mk_equalizerIdempotent_eq_one_iff (f g : B →ₐ[A] C) (Q : Ideal C) :
       (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g := by
   rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, equalizerIdempotent_eq_one_iff]
 
-open Classical in
-/-- Modulo a prime ideal, the equalizer idempotent is the indicator that the maps agree. -/
-lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
-    Ideal.Quotient.mk Q (equalizerIdempotent f g) =
-      if (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g then 1 else 0 := by
-  rw [← mk_equalizerIdempotent_eq_one_iff]
-  have := IsIdempotentElem.iff_eq_zero_or_one.mp
-    ((isIdempotentElem_equalizerIdempotent f g).map (Ideal.Quotient.mk Q))
-  grind
-
 section Linearize
 
 variable {M N : Type*} [AddCommGroup M] [AddCommGroup N]
@@ -299,7 +289,11 @@ is the indicator of membership in the inertia subgroup. -/
 lemma Quotient.mk_equalizerIdempotent (Q : Ideal B) [Q.IsPrime] (g : G) :
     Quotient.mk Q (equalizerIdempotent (AlgHom.id A B)
       (MulSemiringAction.toAlgHom A B g)) = if g ∈ Q.inertia G then 1 else 0 := by
-  simp [Algebra.FormallyUnramified.mk_equalizerIdempotent, AlgHom.ext_iff,
+  have h {u : B ⧸ Q} (hu : IsIdempotentElem u) : u = if u = 1 then 1 else 0 := by
+    grind [IsIdempotentElem.iff_eq_zero_or_one]
+  rw [h ((isIdempotentElem_equalizerIdempotent (AlgHom.id A B)
+    (MulSemiringAction.toAlgHom A B g)).map (Quotient.mk Q))]
+  simp [mk_equalizerIdempotent_eq_one_iff, AlgHom.ext_iff,
     Quotient.mk_eq_mk_iff_sub_mem, Q.toAddSubgroup.sub_mem_comm_iff]
 
 /-- The descent multiplier sends a stable ideal into the extension of its contraction. -/
