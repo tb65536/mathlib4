@@ -4957,6 +4957,7 @@ public import Mathlib.GroupTheory.GroupAction.Period
 public import Mathlib.GroupTheory.GroupAction.Pointwise
 public import Mathlib.GroupTheory.GroupAction.Primitive
 public import Mathlib.GroupTheory.GroupAction.Quotient
+public import Mathlib.GroupTheory.GroupAction.RelativeTrace
 public import Mathlib.GroupTheory.GroupAction.Ring
 public import Mathlib.GroupTheory.GroupAction.SubMulAction
 public import Mathlib.GroupTheory.GroupAction.SubMulAction.Closure
@@ -6949,7 +6950,9 @@ public import Mathlib.RingTheory.IntegralDomain
 public import Mathlib.RingTheory.Invariant.Basic
 public import Mathlib.RingTheory.Invariant.Defs
 public import Mathlib.RingTheory.Invariant.Galois
+public import Mathlib.RingTheory.Invariant.Unramified
 public import Mathlib.RingTheory.Invariant.Profinite
+public import Mathlib.RingTheory.Invariant.RelativeTrace
 public import Mathlib.RingTheory.IsAdjoinRoot
 public import Mathlib.RingTheory.IsGaloisGroup.Basic
 public import Mathlib.RingTheory.IsGaloisGroup.Defs
@@ -7332,6 +7335,7 @@ public import Mathlib.RingTheory.Unramified.Basic
 public import Mathlib.RingTheory.Unramified.Dedekind
 public import Mathlib.RingTheory.Unramified.Field
 public import Mathlib.RingTheory.Unramified.Finite
+public import Mathlib.RingTheory.Unramified.GroupAction
 public import Mathlib.RingTheory.Unramified.LocalRing
 public import Mathlib.RingTheory.Unramified.LocalStructure
 public import Mathlib.RingTheory.Unramified.Locus

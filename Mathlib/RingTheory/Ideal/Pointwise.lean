@@ -5,6 +5,7 @@ Authors: Eric Wieser
 -/
 module
 
+public import Mathlib.Algebra.BigOperators.GroupWithZero.Action
 public import Mathlib.Algebra.Ring.Action.End
 public import Mathlib.RingTheory.Ideal.Maps
 
@@ -243,3 +244,36 @@ theorem inertiaEquiv_symm_apply_smul {R : Type*} [Ring R] [MulSemiringAction M R
 end Group
 
 end Ideal
+
+open scoped Pointwise in
+/-- For a finite group preserving a prime ideal, local triviality of the action can be witnessed
+by a single invariant denominator. Multiplication by this denominator takes values in the fixed
+ring. -/
+lemma Ideal.exists_notMem_smul_mul_eq
+    {R G : Type*} [CommSemiring R] [Group G] [Finite G] [MulSemiringAction G R]
+    (P : Ideal R) [P.IsPrime] (hP : ∀ g : G, g • P = P)
+    (h : ∀ g : G, ∃ c ∉ P, ∀ b : R, c * (g • b) = c * b) :
+    ∃ a ∉ P, ∀ (g : G) (b : R), g • (a * b) = a * b := by
+  classical
+  let := Fintype.ofFinite G
+  choose e he heq using h
+  let c := ∏ g : G, e g
+  have hc : c ∉ P := by simpa [c, Ideal.IsPrime.prod_mem_iff] using he
+  have hcq (g : G) (b : R) : c * (g • b) = c * b := by
+    obtain ⟨d, hd⟩ := Finset.dvd_prod_of_mem e (Finset.mem_univ g)
+    change c = e g * d at hd
+    rw [hd, mul_right_comm, heq, mul_right_comm]
+  let a := ∏ g : G, g • c
+  have ha : a ∉ P := by
+    simp only [a, Ideal.IsPrime.prod_mem_iff, Finset.mem_univ, true_and, not_exists]
+    intro g hg
+    apply hc
+    exact (Ideal.smul_mem_pointwise_smul_iff (a := g) (S := P) (x := c)).mp
+      (by simpa only [hP g] using hg)
+  have hca : c ∣ a := by
+    simpa only [one_smul] using
+      (Finset.dvd_prod_of_mem (fun g : G ↦ g • c) (Finset.mem_univ (1 : G)))
+  obtain ⟨d, hd⟩ := hca
+  refine ⟨a, ha, fun g b ↦ ?_⟩
+  rw [smul_mul', show g • a = a from Finset.smul_prod_perm c g]
+  rw [hd, mul_right_comm, hcq, mul_right_comm]

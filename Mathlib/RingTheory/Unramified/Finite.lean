@@ -5,6 +5,7 @@ Authors: Andrew Yang
 -/
 module
 
+public import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 public import Mathlib.RingTheory.Ideal.IdempotentFG
 public import Mathlib.RingTheory.Unramified.Basic
 public import Mathlib.RingTheory.Flat.Stability
@@ -23,6 +24,8 @@ of formally unramified algebras which are essentially of finite type.
   1. `t` annihilates every `1 ⊗ s - s ⊗ 1`.
   2. the image of `t` is `1` under the map `S ⊗[R] S → S`.
 - `Algebra.FormallyUnramified.finite_of_free`: An unramified free algebra is finitely generated.
+- `Algebra.FormallyUnramified.average`: Separability averaging retracts `R`-linear maps
+  between `S`-modules onto `S`-linear maps, preserving submodule containments.
 - `Algebra.FormallyUnramified.flat_of_restrictScalars`:
   If `S` is an unramified `R`-algebra, then `R`-flat implies `S`-flat.
 
@@ -151,6 +154,65 @@ lemma lmul_elem :
     TensorProduct.lmul' R (elem R S) = 1 :=
   (iff_exists_tensorProduct.mp inferInstance).choose_spec.2
 
+section Agreement
+
+variable {C : Type*} [CommRing C] [Algebra R C]
+
+/-- The image of the separability element intertwines any two algebra homomorphisms. -/
+lemma productMap_elem_mul (f g : S →ₐ[R] C) (b : S) :
+    TensorProduct.productMap f g (elem R S) * g b =
+      TensorProduct.productMap f g (elem R S) * f b := by
+  have h := congrArg (TensorProduct.productMap f g)
+    (one_tmul_mul_elem (R := R) (S := S) b)
+  simpa [mul_comm] using h
+
+/-- Two algebra homomorphisms agree exactly when their product map takes the separability
+element to one. -/
+lemma productMap_elem_eq_one_iff (f g : S →ₐ[R] C) :
+    TensorProduct.productMap f g (elem R S) = 1 ↔ f = g := by
+  constructor
+  · intro h
+    ext b
+    have hb := productMap_elem_mul f g b
+    simpa only [h, one_mul] using hb.symm
+  · rintro rfl
+    have hmap : TensorProduct.productMap f f = f.comp (TensorProduct.lmul' R) := by
+      apply TensorProduct.ext'
+      intro x y
+      simp
+    rw [hmap, AlgHom.comp_apply, lmul_elem, map_one]
+
+/-- The image of the separability element in a quotient detects agreement modulo its ideal. -/
+lemma quotient_productMap_elem_eq_one_iff (P : Ideal C) (f g : S →ₐ[R] C) :
+    Ideal.Quotient.mk P (TensorProduct.productMap f g (elem R S)) = 1 ↔
+      ∀ b : S, f b - g b ∈ P := by
+  have hmap : (Ideal.Quotient.mkₐ R P).comp (TensorProduct.productMap f g) =
+      TensorProduct.productMap ((Ideal.Quotient.mkₐ R P).comp f)
+        ((Ideal.Quotient.mkₐ R P).comp g) := by
+    apply TensorProduct.ext'
+    intro x y
+    simp
+  change ((Ideal.Quotient.mkₐ R P).comp (TensorProduct.productMap f g)) (elem R S) = 1 ↔ _
+  rw [hmap, productMap_elem_eq_one_iff, AlgHom.ext_iff]
+  simp only [AlgHom.comp_apply]
+  change (∀ b, Ideal.Quotient.mk P (f b) = Ideal.Quotient.mk P (g b)) ↔ _
+  simp only [Ideal.Quotient.eq]
+
+/-- The image of the separability element is outside a prime precisely where the two
+homomorphisms agree modulo that prime. -/
+lemma productMap_elem_notMem_iff (P : Ideal C) [P.IsPrime] (f g : S →ₐ[R] C) :
+    TensorProduct.productMap f g (elem R S) ∉ P ↔ ∀ b : S, f b - g b ∈ P := by
+  constructor
+  · intro he b
+    apply ((inferInstance : P.IsPrime).mem_or_mem ?_).resolve_left he
+    rw [mul_sub, productMap_elem_mul, sub_self]
+    exact P.zero_mem
+  · intro h he
+    have hq := (quotient_productMap_elem_eq_one_iff P f g).mpr h
+    rw [Ideal.Quotient.eq_zero_iff_mem.mpr he] at hq
+    exact zero_ne_one hq
+
+end Agreement
 
 variable (R S)
 
@@ -266,6 +328,69 @@ lemma comp_sec :
     | tmul r s => simp [mul_smul, smul_comm r s]
     | add y z hy hz => simp [hy, hz, add_smul]
   · rw [lmul_elem, one_smul]
+
+section Averaging
+
+variable {M} {N : Type*} [AddCommGroup N] [Module R N] [Module S N] [IsScalarTower R S N]
+
+/-- Separability averaging upgrades an `R`-linear map between `S`-modules to an `S`-linear map.
+It is obtained by composing the separability section with `s ⊗ m ↦ s • f m`, and is `S`-linear
+in the input map for the scalar action on its codomain. -/
+noncomputable def average : (M →ₗ[R] N) →ₗ[S] (M →ₗ[S] N) where
+  toFun f := (TensorProduct.AlgebraTensorModule.lift
+    ((LinearMap.lsmul S (M →ₗ[R] N)).flip f)).comp (sec R S M)
+  map_add' f g := by
+    classical
+    obtain ⟨s, hs⟩ := _root_.TensorProduct.exists_finset (elem R S)
+    ext m
+    simp [sec, hs, LinearMap.flip_apply, TensorProduct.AlgebraTensorModule.mapBilinear_apply,
+      Finset.sum_add_distrib]
+  map_smul' a f := by
+    classical
+    obtain ⟨s, hs⟩ := _root_.TensorProduct.exists_finset (elem R S)
+    ext m
+    simp [sec, hs, LinearMap.flip_apply, TensorProduct.AlgebraTensorModule.mapBilinear_apply,
+      Finset.smul_sum]
+
+/-- Compute separability averaging using any finite tensor expansion of the separability element. -/
+lemma average_apply_of_eq_sum (f : M →ₗ[R] N) (m : M) (s : Finset (S × S))
+    (hs : elem R S = ∑ i ∈ s, i.1 ⊗ₜ[R] i.2) :
+    average R S f m = ∑ i ∈ s, i.1 • f (i.2 • m) := by
+  simp [average, sec, hs, LinearMap.flip_apply,
+    TensorProduct.AlgebraTensorModule.mapBilinear_apply]
+
+/-- Averaging preserves any containment between `S`-submodules respected by the original map. -/
+lemma average_mem (f : M →ₗ[R] N) (P : Submodule S M) (Q : Submodule S N)
+    (hf : ∀ m ∈ P, f m ∈ Q) {m : M} (hm : m ∈ P) : average R S f m ∈ Q := by
+  obtain ⟨s, hs⟩ := _root_.TensorProduct.exists_finset (elem R S)
+  rw [average_apply_of_eq_sum R S f m s hs]
+  exact Q.sum_mem (fun i _ ↦ Q.smul_mem i.1 (hf _ (P.smul_mem i.2 hm)))
+
+/-- Averaging an `S`-linear map leaves it unchanged. -/
+@[simp] lemma average_restrictScalars (f : M →ₗ[S] N) :
+    average R S (f.restrictScalars R) = f := by
+  obtain ⟨s, hs⟩ := _root_.TensorProduct.exists_finset (elem R S)
+  have hunit : (∑ i ∈ s, i.1 * i.2) = 1 := by
+    have h := lmul_elem (R := R) (S := S)
+    rw [hs] at h
+    simpa only [map_sum, TensorProduct.lmul'_apply_tmul] using h
+  ext m
+  rw [average_apply_of_eq_sum R S _ m s hs]
+  simp only [LinearMap.restrictScalars_apply, map_smul, smul_smul, ← Finset.sum_smul,
+    hunit, one_smul]
+
+/-- Averaging an algebra endomorphism gives multiplication by the image of the separability
+element under its product map with the identity. -/
+lemma average_toLinearMap (f : S →ₐ[R] S) :
+    average R S f.toLinearMap =
+      LinearMap.mulLeft S (TensorProduct.productMap (AlgHom.id R S) f (elem R S)) := by
+  classical
+  obtain ⟨s, hs⟩ := _root_.TensorProduct.exists_finset (elem R S)
+  ext
+  rw [average_apply_of_eq_sum R S _ 1 s hs]
+  simp [hs, smul_eq_mul]
+
+end Averaging
 
 /-- If `S` is an unramified `R`-algebra, then `R`-flat implies `S`-flat. Iversen I.2.7 -/
 lemma flat_of_restrictScalars [Module.Flat R M] : Module.Flat S M :=
