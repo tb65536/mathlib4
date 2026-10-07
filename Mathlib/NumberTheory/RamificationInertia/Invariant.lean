@@ -68,6 +68,16 @@ lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
     ext a <;> simp
   simp [equalizerIdempotent, h, lmul_elem]
 
+/-- The equalizer idempotent is one exactly when the two algebra maps agree. -/
+@[simp] lemma equalizerIdempotent_eq_one_iff (f g : B →ₐ[A] C) :
+    equalizerIdempotent f g = 1 ↔ f = g := by
+  constructor
+  · intro h
+    ext b
+    simpa only [h, one_mul] using equalizerIdempotent_mul f g b
+  · rintro rfl
+    exact equalizerIdempotent_self f
+
 lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
     (f g : B →ₐ[A] C) (k : C →ₐ[A] D) :
     k (equalizerIdempotent f g) = equalizerIdempotent (k.comp f) (k.comp g) := by
@@ -78,28 +88,21 @@ lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
 
 lemma mk_equalizerIdempotent_eq_one (f g : B →ₐ[A] C) (Q : Ideal C)
     (h : ∀ b, f b - g b ∈ Q) : Ideal.Quotient.mk Q (equalizerIdempotent f g) = 1 := by
-  have hfg : (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g := by
-    ext b
-    exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h b)
-  rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, hfg,
-    equalizerIdempotent_self]
+  rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, equalizerIdempotent_eq_one_iff]
+  ext b
+  exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h b)
 
 open Classical in
 /-- Modulo a prime ideal, the equalizer idempotent is the indicator that the maps agree. -/
 lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
     Ideal.Quotient.mk Q (equalizerIdempotent f g) =
       if (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g then 1 else 0 := by
+  rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent]
   split_ifs with h
-  · apply mk_equalizerIdempotent_eq_one
-    intro b
-    exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mp (DFunLike.congr_fun h b)
-  · obtain ⟨b, hb⟩ : ∃ b, f b - g b ∉ Q := by
-      by_contra! h'
-      exact h (AlgHom.ext fun b ↦ (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h' b))
-    apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact ((inferInstance : Q.IsPrime).mem_or_mem (by
-      rw [mul_sub, equalizerIdempotent_mul, sub_self]
-      exact Q.zero_mem)).resolve_right hb
+  · exact (equalizerIdempotent_eq_one_iff _ _).mpr h
+  · exact (IsIdempotentElem.iff_eq_zero_or_one.mp
+      (isIdempotentElem_equalizerIdempotent _ _)).resolve_right
+        (mt (equalizerIdempotent_eq_one_iff _ _).mp h)
 
 section Linearize
 
