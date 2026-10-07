@@ -114,14 +114,8 @@ noncomputable def linearize : (M →ₗ[A] N) →ₗ[B] (M →ₗ[B] N) :=
   ((sec A B M).lcomp B N).comp (LinearMap.liftBaseChangeEquiv B).toLinearMap
 
 lemma linearize_apply (f : M →ₗ[A] N) (x : M) :
-    linearize (B := B) f x = _root_.TensorProduct.lift ((Algebra.lsmul A A N).toLinearMap.compl₂
-      (f.comp ((Algebra.lsmul A A M).toLinearMap.flip x))) (elem A B) := by
-  change f.liftBaseChange B (sec A B M x) = _
-  simp only [sec, LinearMap.comp_apply, LinearMap.coe_mk, LinearMap.coe_toAddHom,
-    LinearMap.flip_apply, TensorProduct.AlgebraTensorModule.mapBilinear_apply]
-  induction elem A B using TensorProduct.inductionOn with
-  | tmul a b => simp [Algebra.lsmul_apply]
-  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
+    linearize (B := B) f x = f.liftBaseChange B
+      (_root_.TensorProduct.map LinearMap.id (LinearMap.id.smulRight x) (elem A B)) := rfl
 
 /-- Separability linearization preserves conditions of mapping one submodule into another. -/
 lemma linearize_mem (f : M →ₗ[A] N) (P : Submodule B M) (Q : Submodule B N)
@@ -136,9 +130,9 @@ lemma linearize_comp {L : Type*} [AddCommGroup L] [Module A L] [Module B L]
     linearize (B := B) (f.comp (g.restrictScalars A)) = (linearize (B := B) f).comp g := by
   ext x
   simp only [linearize_apply, LinearMap.comp_apply]
-  congr 1
-  ext a b
-  simp [g.map_smul]
+  induction elem A B using TensorProduct.inductionOn with
+  | tmul a b => simp
+  | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
 
 lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
     [IsScalarTower A B P] (g : N →ₗ[B] P) (f : M →ₗ[A] N) :
@@ -157,11 +151,10 @@ lemma comp_linearize {P : Type*} [AddCommGroup P] [Module A P] [Module B P]
 @[simp] lemma linearize_algHom_apply (f : B →ₐ[A] B) (x : B) :
     linearize (B := B) f.toLinearMap x = equalizerIdempotent (AlgHom.id A B) f * x := by
   have h : linearize (B := B) f.toLinearMap 1 = equalizerIdempotent (AlgHom.id A B) f := by
-    rw [linearize_apply]
-    change _ = (Algebra.TensorProduct.productMap (AlgHom.id A B) f).toLinearMap (elem A B)
-    congr 1
-    ext a b
-    simp
+    rw [linearize_apply, equalizerIdempotent]
+    induction elem A B using TensorProduct.inductionOn with
+    | tmul a b => simp
+    | add t₁ t₂ h₁ h₂ => simp only [map_add, h₁, h₂]
   simpa only [smul_eq_mul, h, mul_comm, mul_one] using
     (linearize (B := B) f.toLinearMap).map_smul x (1 : B)
 
