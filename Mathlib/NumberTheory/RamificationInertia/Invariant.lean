@@ -50,20 +50,22 @@ end Algebra.FormallyUnramified
 
 namespace Algebra.FormallyUnramified
 
+open Algebra.TensorProduct
+
 variable {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
   [Algebra A B] [Algebra A C] [FormallyUnramified A B] [EssFiniteType A B]
 
 /-- The separability tensor evaluated at two algebra maps. Its support is their equalizer. -/
 noncomputable def equalizerIdempotent (f g : B →ₐ[A] C) : C :=
-  Algebra.TensorProduct.productMap f g (elem A B)
+  productMap f g (elem A B)
 
 lemma isIdempotentElem_equalizerIdempotent (f g : B →ₐ[A] C) :
     IsIdempotentElem (equalizerIdempotent f g) :=
-  (isIdempotentElem_elem A B).map (TensorProduct.productMap f g)
+  (isIdempotentElem_elem A B).map (productMap f g)
 
 lemma mul_equalizerIdempotent (f g : B →ₐ[A] C) (b : B) :
     g b * equalizerIdempotent f g = f b * equalizerIdempotent f g := by
-  simpa [equalizerIdempotent] using congr(TensorProduct.productMap f g $(one_tmul_mul_elem b))
+  simpa [equalizerIdempotent] using congr(productMap f g $(one_tmul_mul_elem b))
 
 lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
     equalizerIdempotent f g * f b = equalizerIdempotent f g * g b := by
@@ -71,7 +73,7 @@ lemma equalizerIdempotent_mul (f g : B →ₐ[A] C) (b : B) :
 
 @[simp]
 lemma equalizerIdempotent_self (f : B →ₐ[A] C) : equalizerIdempotent f f = 1 := by
-  have h : TensorProduct.productMap f f = f.comp (TensorProduct.lmul' A) := by ext <;> simp
+  have h : productMap f f = f.comp (lmul' A) := by ext <;> simp
   simp [equalizerIdempotent, h, lmul_elem]
 
 @[simp]
@@ -84,32 +86,22 @@ lemma equalizerIdempotent_eq_one_iff (f g : B →ₐ[A] C) :
 lemma map_equalizerIdempotent {D : Type*} [CommRing D] [Algebra A D]
     (f g : B →ₐ[A] C) (k : C →ₐ[A] D) :
     k (equalizerIdempotent f g) = equalizerIdempotent (k.comp f) (k.comp g) := by
-  have h : k.comp (Algebra.TensorProduct.productMap f g) =
-      Algebra.TensorProduct.productMap (k.comp f) (k.comp g) := by
-    ext a <;> simp
-  exact congrArg (fun F : B ⊗[A] B →ₐ[A] D ↦ F (elem A B)) h
+  have h : k.comp (productMap f g) = productMap (k.comp f) (k.comp g) := by ext <;> simp
+  exact congr($h (elem A B))
 
 lemma mk_equalizerIdempotent_eq_one_iff (f g : B →ₐ[A] C) (Q : Ideal C) :
     Ideal.Quotient.mk Q (equalizerIdempotent f g) = 1 ↔
       (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g := by
   rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, equalizerIdempotent_eq_one_iff]
 
-lemma mk_equalizerIdempotent_eq_one (f g : B →ₐ[A] C) (Q : Ideal C)
-    (h : ∀ b, f b - g b ∈ Q) : Ideal.Quotient.mk Q (equalizerIdempotent f g) = 1 := by
-  rw [mk_equalizerIdempotent_eq_one_iff]
-  ext b
-  exact (Ideal.Quotient.mk_eq_mk_iff_sub_mem _ _).mpr (h b)
-
 open Classical in
 /-- Modulo a prime ideal, the equalizer idempotent is the indicator that the maps agree. -/
 lemma mk_equalizerIdempotent (f g : B →ₐ[A] C) (Q : Ideal C) [Q.IsPrime] :
     Ideal.Quotient.mk Q (equalizerIdempotent f g) =
       if (Ideal.Quotient.mkₐ A Q).comp f = (Ideal.Quotient.mkₐ A Q).comp g then 1 else 0 := by
-  rw [← Ideal.Quotient.mkₐ_eq_mk A Q, map_equalizerIdempotent, ← equalizerIdempotent_eq_one_iff]
-  split_ifs with h
-  · exact h
-  · exact (IsIdempotentElem.iff_eq_zero_or_one.mp
-      (isIdempotentElem_equalizerIdempotent _ _)).resolve_right h
+  rw [← mk_equalizerIdempotent_eq_one_iff]
+  grind [IsIdempotentElem.iff_eq_zero_or_one,
+    (isIdempotentElem_equalizerIdempotent f g).map (Ideal.Quotient.mk Q)]
 
 section Linearize
 
@@ -277,9 +269,9 @@ lemma inertiaIdempotent_sub_one_mem_iff {Q : Ideal B} :
   · rw [inertiaIdempotent, map_prod]
     apply Finset.prod_eq_one
     intro h hh
-    apply mk_equalizerIdempotent_eq_one
-    intro b
-    exact Q.toAddSubgroup.sub_mem_comm_iff.mpr (Q.mem_inertia.mp (hH h.property) b)
+    rw [mk_equalizerIdempotent_eq_one_iff, eq_comm]
+    ext b
+    simpa [Ideal.Quotient.mk_eq_mk_iff_sub_mem] using Q.mem_inertia.mp (hH h.prop) b
 
 lemma _root_.Ideal.mk_inertiaIdempotent_inertia_eq_one (Q : Ideal B) [Finite (Q.inertia G)] :
     Ideal.Quotient.mk Q ((Q.inertia G).inertiaIdempotent A) = 1 :=
