@@ -34,7 +34,55 @@ public import Mathlib.Topology.Algebra.Module.FiniteDimension
 # Extensions of absolute values
 -/
 
-@[expose] public noncomputable section
+@[expose] public section
+
+-- PRed
+namespace AbsoluteValue
+
+instance {F1 F2 F3 : Type*} [Field F1] [Field F2] [Field F3]
+    [Algebra F1 F2] [Algebra F1 F3] [Algebra F2 F3] [IsScalarTower F1 F2 F3]
+    (v1 : AbsoluteValue F1 ℝ) (v2 : AbsoluteValue F2 ℝ) (v3 : AbsoluteValue F3 ℝ)
+    [v2.LiesOver v1] [v3.LiesOver v1] [v3.LiesOver v2]
+    [Algebra v1.Completion v2.Completion] [IsScalarTower F1 v1.Completion v2.Completion]
+    [Algebra v1.Completion v3.Completion] [IsScalarTower F1 v1.Completion v3.Completion]
+    [Algebra v2.Completion v3.Completion] [IsScalarTower F2 v2.Completion v3.Completion]
+    [ContinuousSMul v1.Completion v2.Completion]
+    [ContinuousSMul v1.Completion v3.Completion]
+    [ContinuousSMul v2.Completion v3.Completion] :
+    IsScalarTower v1.Completion v2.Completion v3.Completion := by
+  apply IsScalarTower.of_algebraMap_eq'
+  simp_rw [AbsoluteValue.Completion.algebraMap_eq, UniformSpace.Completion.mapRingHom_comp,
+    ← WithAbs.map_comp, ← IsScalarTower.algebraMap_eq]
+
+section localDegree
+
+variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K ℝ)
+  (w : AbsoluteValue L ℝ) [w.LiesOver v] [Algebra v.Completion w.Completion]
+  [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
+
+noncomputable def localDegree (K : Type*) [Field K] [Algebra K L] : ℕ :=
+  letI v := w.under K
+  letI := Completion.algebraOfLiesOver v w
+  Module.finrank v.Completion w.Completion
+
+theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
+  have := LiesOver.under_eq w v
+  rw [localDegree, Completion.algebra_eq v w]
+  subst this
+  rfl
+
+theorem localDegree_mul_localDegree (F : Type*) [Field F] [Algebra F K] [Algebra F L]
+    [IsScalarTower F K L] : v.localDegree F * w.localDegree K = w.localDegree F := by
+  let v₀ := v.under F
+  let : Algebra v₀.Completion v.Completion := Completion.algebraOfLiesOver v₀ v
+  have : w.LiesOver v₀ := LiesOver.trans v₀ v w -- maybe this could be an instance
+  let : Algebra v₀.Completion w.Completion := Completion.algebraOfLiesOver v₀ w
+  rw [localDegree_eq v₀ v, localDegree_eq v w, localDegree_eq v₀ w]
+  rw [Module.finrank_mul_finrank]
+
+end localDegree
+
+end AbsoluteValue
 
 -- todo: PR
 instance (K : Type*) [NormedField K] [CompleteSpace K] :
@@ -114,35 +162,6 @@ instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
 
 end algebra
 
-section localDegree
-
-variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K ℝ)
-  (w : AbsoluteValue L ℝ) [w.LiesOver v] [Algebra v.Completion w.Completion]
-  [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
-
-def localDegree (K : Type*) [Field K] [Algebra K L] : ℕ :=
-  letI v := w.under K
-  letI := Completion.algebraOfLiesOver v w
-  Module.finrank v.Completion w.Completion
-
-theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
-  have := LiesOver.under_eq w v
-  rw [localDegree, Completion.algebra_eq v w]
-  subst this
-  rfl
-
-theorem localDegree_mul_localDegree (F : Type*) [Field F] [Algebra F K] [Algebra F L]
-    [IsScalarTower F K L] : v.localDegree F * w.localDegree K = w.localDegree F := by
-  let v₀ := v.under F
-  let : Algebra v₀.Completion v.Completion := Completion.algebraOfLiesOver v₀ v
-  have : w.LiesOver v₀ := LiesOver.trans v₀ v w -- maybe this could be an instance
-  let : Algebra v₀.Completion w.Completion := Completion.algebraOfLiesOver v₀ w
-  rw [localDegree_eq v₀ v, localDegree_eq v w, localDegree_eq v₀ w]
-  have : IsScalarTower v₀.Completion v.Completion w.Completion := sorry
-  rw [Module.finrank_mul_finrank]
-
-end localDegree
-
 section absoluteValuesOver
 
 variable {K S : Type*} [Field K] [PartialOrder S] [Semiring S] (v : AbsoluteValue K S)
@@ -167,7 +186,8 @@ section completion
 variable {K : Type*} [Field K] (v : AbsoluteValue K ℝ)
 
 /-- The extended absolute value on `v.Completion`. -/
-def completion : AbsoluteValue v.Completion ℝ := NormedField.toAbsoluteValue v.Completion
+noncomputable def completion : AbsoluteValue v.Completion ℝ :=
+  NormedField.toAbsoluteValue v.Completion
 
 theorem uniformContinuous_completion : UniformContinuous v.completion := uniformContinuous_norm
 
@@ -222,7 +242,7 @@ instance : IsArtinianRing (v.Completion ⊗[K] L) := .of_finite v.Completion (v.
 instance : Finite (PrimeSpectrum (v.Completion ⊗[K] L)) := inferInstance
 
 attribute [local instance] Algebra.TensorProduct.rightAlgebra in
-def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) where
+noncomputable def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Completion ⊗[K] L) where
   toFun w :=
     letI K_v := v.Completion
     letI L_w := w.val.Completion
