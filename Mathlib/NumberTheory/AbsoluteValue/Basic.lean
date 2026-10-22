@@ -113,52 +113,66 @@ section algebra
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
   (v : AbsoluteValue K ℝ) (w : AbsoluteValue L ℝ) [w.LiesOver v]
 
--- depends on `AlgebraNorm.eq_one_of_trivial`
-theorem foo1 [Algebra.IsAlgebraic K L] (hv : w.IsNontrivial) : v.IsNontrivial := by
-  contrapose! hv
-  let := v.toNormedField
-  let f : MulAlgebraNorm K L :=
-  { __ := MulRingNorm.ofAbsoluteValue w
-    smul' x y := by
-      simp [Algebra.smul_def, ← under_apply, LiesOver.under_eq w v, show v x = ‖x‖ from rfl] }
-  refine w.not_isNontrivial_iff.mpr (AlgebraNorm.eq_one_of_trivial ?_ f.toAlgebraNorm f.isPowMul)
-  intro x
-  by_cases hx : x = 0
-  · simp [hx]
-  · exact (AbsoluteValue.not_isNontrivial_apply hv hx).le
-
-theorem foo2 (hv : ¬ v.IsNontrivial) : Module.Finite K v.Completion := by
-  suffices Module.finrank K v.Completion = 1 by
-    exact Module.finite_of_finrank_eq_succ this
-  suffices Function.Bijective (algebraMap K v.Completion) by
-    exact Module.finrank_of_bijective_algebraMap this
-  sorry
-
 variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
 
+theorem closed_span_singleton_normedField
+    {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] (x : E) :
+    IsClosed (Submodule.span 𝕜 {x} : Set E) := by
+  by_cases hx : x = 0
+  · simp [hx]
+  rw [Submodule.span_singleton_eq_range]
+  have ha : AntilipschitzWith ‖x‖₊⁻¹ (fun c : 𝕜 => c • x) := by
+    apply AntilipschitzWith.of_le_mul_dist
+    intro a b
+    simp only [dist_eq_norm, ← sub_smul, norm_smul,
+      NNReal.coe_inv, coe_nnnorm]
+    rw [mul_left_comm, inv_mul_cancel₀ (norm_ne_zero_iff.mpr hx),
+      mul_one]
+  exact ha.isClosed_range
+    (ContinuousLinearMap.toSpanSingleton 𝕜 x).uniformContinuous
+
+theorem closed_fg_normedField
+    {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+    (S : Submodule 𝕜 E) (hS : S.FG) :
+    IsClosed (S : Set E) := by
+  induction S, hS using Submodule.fg_sup_span_induction with
+  | bot => simp
+  | sup S x hS ih =>
+    let : IsClosed (S : Set E) := ih
+    rw [← Submodule.comap_map_mkQ,
+      Submodule.map_span, Set.image_singleton]
+    exact (closed_span_singleton_normedField (S.mkQ x)).preimage
+      S.continuous_mkQ
+
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
-  classical
-  by_cases hw : w.IsNontrivial
-  · let : NontriviallyNormedField v.Completion :=
-    { non_trivial := by
-        obtain ⟨x, hx⟩ := (foo1 v w hw).exists_abv_gt_one
-        use x
-        rwa [UniformSpace.Completion.norm_coe, WithAbs.norm_toAbs_eq] }
-    let f : WithAbs w →ₗ[K] w.Completion := IsScalarTower.toAlgHom K (WithAbs w) w.Completion
-    have hf : DenseRange f := UniformSpace.Completion.denseRange_coe
-    obtain ⟨s, hs⟩ := (inferInstance : Module.Finite K (WithAbs w)).fg_top
-    use s.image f
-    let V : Submodule v.Completion w.Completion := Submodule.span v.Completion (s.image f)
-    have hV : f.range ≤ V.restrictScalars K := by
-      rw [← Submodule.map_top f, ← hs, Submodule.map_span, ← Finset.coe_image]
-      apply Submodule.span_le_restrictScalars
-    rwa [← SetLike.coe_subset_coe, V.coe_restrictScalars K,
-      ← V.complete_of_finiteDimensional.isClosed.closure_subset_iff,
-      f.coe_range, hf.closure_eq, Set.univ_subset_iff, V.coe_eq_univ] at hV
-  · have : Module.Finite L w.Completion := foo2 w hw
-    suffices Module.Finite K w.Completion from .of_restrictScalars_finite K v.Completion w.Completion
-    exact .trans L w.Completion
+  have hi : Isometry (algebraMap v.Completion w.Completion) := by
+    rw [AbsoluteValue.Completion.algebraMap_eq v w]
+    exact UniformSpace.Completion.isometry_mapRingHom
+      (WithAbs.isometry_map v w)
+  let : NormedAlgebra v.Completion w.Completion :=
+    { (inferInstance : Algebra v.Completion w.Completion) with
+      norm_smul_le := fun a b => by
+        rw [Algebra.smul_def, norm_mul,
+          (AddMonoidHomClass.isometry_iff_norm _).mp hi a] }
+  let f : L →ₗ[K] w.Completion :=
+    (IsScalarTower.toAlgHom K L w.Completion).toLinearMap
+  let S : Submodule v.Completion w.Completion :=
+    Submodule.span v.Completion (f.range : Set w.Completion)
+  have hS : S.FG :=
+    (Submodule.FG.of_finite (N := f.range)).span
+  have hclosed : IsClosed (S : Set w.Completion) :=
+    closed_fg_normedField S hS
+  have htop : S = ⊤ := by
+    apply Submodule.eq_top_iff'.mpr
+    intro x
+    refine UniformSpace.Completion.induction_on x hclosed ?_
+    intro a
+    exact Submodule.subset_span ⟨a.ofAbs, rfl⟩
+  rw [Module.finite_def]
+  exact htop ▸ hS
 
 end algebra
 
