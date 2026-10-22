@@ -47,59 +47,6 @@ open TensorProduct
 
 namespace AbsoluteValue
 
-section liesOver_iff
-
-variable {K L S : Type*} [CommRing K] [IsSimpleRing K] [CommRing L] [Algebra K L] [PartialOrder S]
-  [Nontrivial L] [Semiring S]
-
--- #43841
-/-- An absolute value `w` of `L / K` lies over the absolute value `v` of `K` if `v` is the
-restriction of `w` to `K`. -/
-theorem liesOver_iff {w : AbsoluteValue L S} {v : AbsoluteValue K S} :
-    w.LiesOver v ↔ w.under K = v :=
-  ⟨fun h ↦ h.under_eq, fun h ↦ ⟨h⟩⟩
-
-end liesOver_iff
-
-section under_under
-
-variable {R S : Type*} [Semiring R] [Semiring S] [PartialOrder S]
-    (v : AbsoluteValue R S) (T : Type*) [CommSemiring T] [Algebra T R] [FaithfulSMul T R]
-    (U : Type*) [CommSemiring U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    [FaithfulSMul U T] [FaithfulSMul U R]
-
--- #43841
-variable {T} in
-theorem under_apply (x : T) : v.under T x = v (algebraMap T R x) := rfl
-
--- #43841
-theorem under_under : (v.under T).under U = v.under U := by
-  ext x
-  simp [under_apply, ← IsScalarTower.algebraMap_apply]
-
--- #43841
-@[simp]
-theorem under_liesOver_iff
-    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
-    [Field T] [Algebra T R]
-    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    {vU : AbsoluteValue U S} {vR : AbsoluteValue R S} :
-    (vR.under T).LiesOver vU ↔ vR.LiesOver vU := by
-  rw [liesOver_iff, liesOver_iff, under_under]
-
--- #43841
-theorem LiesOver.trans
-    {R S T U : Type*} [Field R] [Semiring S] [PartialOrder S]
-    [Field T] [Algebra T R]
-    [Field U] [Algebra U R] [Algebra U T] [IsScalarTower U T R]
-    (vU : AbsoluteValue U S) (vT : AbsoluteValue T S) (vR : AbsoluteValue R S)
-    [vR.LiesOver vT] [vT.LiesOver vU] : vR.LiesOver vU := by
-  rw [liesOver_iff] at *
-  rw [← vR.under_under T]
-  grind
-
-end under_under
-
 section PRed
 
 variable {K L : Type*} [SeminormedCommRing K] [DivisionRing L] [Algebra K L]
@@ -166,8 +113,6 @@ instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
     exact .trans L w.Completion
 
 end algebra
-
-#exit
 
 section localDegree
 
@@ -290,7 +235,7 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     letI L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
     letI : Field L_w := Ideal.Quotient.field p.asIdeal
     letI w : AbsoluteValue L_w ℝ := v.completion.extension L_w
-    ⟨w.under L, under_liesOver_iff.mpr (.trans v v.completion w)⟩
+    ⟨w.under L, (under_liesOver_iff _).mpr (.trans v v.completion w)⟩
   left_inv w := by
     let K_v := v.Completion
     let L_w := w.val.Completion
@@ -316,14 +261,14 @@ def absoluteValuesOverEquiv : v.absoluteValuesOver L ≃ PrimeSpectrum (v.Comple
     let L_w := (K_v ⊗[K] L) ⧸ p.asIdeal
     let : Field L_w := Ideal.Quotient.field p.asIdeal
     let w : AbsoluteValue L_w ℝ := v.completion.extension L_w
-    have : w.LiesOver v := under_liesOver_iff.mpr (.trans v v.completion w)
+    have : w.LiesOver v := (under_liesOver_iff _).mpr (.trans v v.completion w)
     let L_w' := w.Completion
     let : Algebra K_v L_w' := Completion.algebraOfLiesOver v w
     let φ : K_v ⊗[K] L →ₐ[K_v] L_w' :=
       Algebra.TensorProduct.productLeftAlgHom (Algebra.ofId K_v L_w') (Algebra.algHom K L L_w')
     ext1
     simp
-    change RingHom.ker φ = p.asIdeal
+    -- change RingHom.ker φ = p.asIdeal
     have key : RingHom.ker φ = p.asIdeal := sorry
     convert key
     congr
