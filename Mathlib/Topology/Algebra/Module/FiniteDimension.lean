@@ -17,6 +17,7 @@ public import Mathlib.Topology.Algebra.Module.Complement
 public import Mathlib.Topology.Algebra.Module.Determinant
 public import Mathlib.Topology.Algebra.Module.ModuleTopology
 public import Mathlib.Topology.Algebra.Module.Simple
+public import Mathlib.Topology.Algebra.OpenSubgroup
 public import Mathlib.Topology.Algebra.SeparationQuotient.FiniteDimensional
 public import Mathlib.Topology.Maps.Strict.Basic
 
@@ -501,15 +502,94 @@ end NormedField
 
 section IsUniformAddGroup
 
+instance isModuleTopology_of_isNormableSpace
+    (𝕜 E : Type*)
+    [NormedField 𝕜] [CompleteSpace 𝕜]
+    [AddCommGroup E] [Module 𝕜 E] [TopologicalSpace E]
+    [T2Space E] [IsNormableSpace 𝕜 E]
+    [FiniteDimensional 𝕜 E] :
+    IsModuleTopology 𝕜 E := by
+  classical
+  let : SeminormedAddCommGroup E := IsNormableSpace.toSeminormedAddCommGroup 𝕜 E
+  let : NormedSpace 𝕜 E := IsNormableSpace.toNormedSpace 𝕜 E
+  rcases NormedField.discreteTopology_or_nontriviallyNormedField 𝕜 with h | ⟨_, rfl⟩
+  · let : DiscreteTopology 𝕜 := h
+    -- In the trivial-norm case, prove that E is discrete.
+    have gap : ∀ (S : Submodule 𝕜 E), S.FG →
+        ∃ r : ℝ, 0 < r ∧ ∀ y ∈ S, y ≠ 0 → r ≤ ‖y‖ := by
+      intro S hS
+      induction S, hS using Submodule.fg_sup_span_induction with
+      | bot =>
+          exact ⟨1, zero_lt_one, by simp⟩
+      | sup S x hS ih =>
+          obtain ⟨r, hr, hgap⟩ := ih
+          by_cases hx : x ∈ S
+          · have heq : S ⊔ 𝕜 ∙ x = S :=
+              sup_eq_left.mpr ((Submodule.span_singleton_le_iff_mem _ _).mpr hx)
+            exact ⟨r, hr, by simpa only [heq] using hgap⟩
+          · let : DiscreteTopology S := DiscreteTopology.of_forall_le_norm hr
+              (fun y hy ↦ hgap y y.property (by simpa using hy))
+            have hclosed : IsClosed (S : Set E) :=
+              AddSubgroup.isClosed_of_discreteTopology (U := S.toAddSubgroup)
+            obtain ⟨ε, hε, hball⟩ := Metric.isOpen_iff.mp hclosed.isOpen_compl x hx
+            refine ⟨min r ε, lt_min hr hε, ?_⟩
+            intro y hy hy0
+            obtain ⟨s, hs, z, hz, rfl⟩ := Submodule.mem_sup.mp hy
+            obtain ⟨a, rfl⟩ := Submodule.mem_span_singleton.mp hz
+            rcases eq_or_ne a 0 with rfl | ha
+            · simpa only [zero_smul, add_zero] using
+                (min_le_left r ε).trans (hgap s hs (by simpa using hy0))
+            · apply (min_le_right r ε).trans
+              by_contra! hlt
+              have heq : -(a⁻¹ • s) - x = -(a⁻¹ • (s + a • x)) := by
+                simp [smul_add, smul_smul, inv_mul_cancel₀ ha,
+                  sub_eq_add_neg, add_comm]
+              have hdist : dist (-(a⁻¹ • s)) x = ‖s + a • x‖ := by
+                rw [dist_eq_norm, heq, norm_neg, norm_smul,
+                  NormedDivisionRing.norm_eq_one_iff_ne_zero_of_discrete.mpr
+                    (inv_ne_zero ha),
+                  one_mul]
+              exact hball (by simpa only [Metric.mem_ball, hdist] using hlt)
+                (S.neg_mem (S.smul_mem (a⁻¹) hs))
+    obtain ⟨r, hr, hgap⟩ := gap ⊤ (Module.Finite.fg_top (R := 𝕜) (M := E))
+    let : DiscreteTopology E :=
+      DiscreteTopology.of_forall_le_norm hr (fun y hy ↦ hgap y trivial hy)
+    exact IsModuleTopology.of_continuous_id
+      (@continuous_of_discreteTopology E _ inferInstance E (moduleTopology 𝕜 E) id)
+  · exact isModuleTopologyOfFiniteDimensional
+
+theorem FiniteDimensional.complete_of_isModuleTopology
+    (𝕜 E : Type*) [Field 𝕜] [UniformSpace 𝕜]
+    [IsUniformAddGroup 𝕜] [IsTopologicalRing 𝕜]
+    [CompleteSpace 𝕜]
+    [AddCommGroup E] [UniformSpace E] [IsUniformAddGroup E]
+    [Module 𝕜 E] [IsModuleTopology 𝕜 E]
+    [FiniteDimensional 𝕜 E] :
+    CompleteSpace E := by
+  let e := (Module.finBasis 𝕜 E).equivFun
+  have h₁ : Continuous e :=
+    IsModuleTopology.continuous_of_linearMap e.toLinearMap
+  have h₂ : Continuous e.symm :=
+    IsModuleTopology.continuous_of_linearMap e.symm.toLinearMap
+  have he : IsUniformEmbedding e.toEquiv :=
+    e.isUniformEmbedding h₁ h₂
+  exact (completeSpace_congr he).2 inferInstance
+
 variable (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
   [CompleteSpace 𝕜] [AddCommGroup E] [UniformSpace E] [T2Space E] [IsUniformAddGroup E]
   [Module 𝕜 E] [ContinuousSMul 𝕜 E]
 
 include 𝕜 in
 theorem FiniteDimensional.complete [FiniteDimensional 𝕜 E] : CompleteSpace E := by
-  set e := ContinuousLinearEquiv.ofFinrankEq (@finrank_fin_fun 𝕜 _ _ (finrank 𝕜 E)).symm
-  have : IsUniformEmbedding e.toEquiv.symm := e.symm.isUniformEmbedding
-  exact (completeSpace_congr this).1 inferInstance
+  have : IsModuleTopology 𝕜 E := isModuleTopologyOfFiniteDimensional
+  exact FiniteDimensional.complete_of_isModuleTopology 𝕜 E
+
+/-- A variant of `FiniteDimensional.complete` allowing the field to be trivially
+normed by requiring the vector space to be normed. -/
+theorem FiniteDimensional.complete' (𝕜 E : Type*) [NormedField 𝕜]
+    [CompleteSpace 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+    [FiniteDimensional 𝕜 E] : CompleteSpace E :=
+  FiniteDimensional.complete_of_isModuleTopology 𝕜 E
 
 variable {𝕜 E}
 
@@ -519,6 +599,13 @@ theorem Submodule.complete_of_finiteDimensional (s : Submodule 𝕜 E) [FiniteDi
   haveI : IsUniformAddGroup s := s.toAddSubgroup.isUniformAddGroup
   completeSpace_coe_iff_isComplete.1 (FiniteDimensional.complete 𝕜 s)
 
+/-- A variant of `Submodule.complete_of_finiteDimensional` allowing the field to be trivially
+normed by requiring the vector space to be normed. -/
+theorem Submodule.complete_of_finiteDimensional' {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] (s : Submodule 𝕜 E) [FiniteDimensional 𝕜 s] :
+    IsComplete (s : Set E) :=
+  completeSpace_coe_iff_isComplete.1 (FiniteDimensional.complete' 𝕜 s)
+
 end IsUniformAddGroup
 
 variable {𝕜 E F : Type*} [NontriviallyNormedField 𝕜] [CompleteSpace 𝕜]
@@ -526,6 +613,13 @@ variable {𝕜 E F : Type*} [NontriviallyNormedField 𝕜] [CompleteSpace 𝕜]
   [ContinuousSMul 𝕜 E]
   [AddCommGroup F] [TopologicalSpace F] [IsTopologicalAddGroup F] [Module 𝕜 F]
   [ContinuousSMul 𝕜 F]
+
+/-- A variant of `Submodule.closed_of_finiteDimensional` allowing the field to be trivially
+normed by requiring the vector space to be normed. -/
+theorem Submodule.closed_of_finiteDimensional' {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] (s : Submodule 𝕜 E) [FiniteDimensional 𝕜 s] :
+    IsClosed (s : Set E) :=
+  s.complete_of_finiteDimensional'.isClosed
 
 /-- A finite-dimensional subspace is closed. -/
 theorem Submodule.closed_of_finiteDimensional
