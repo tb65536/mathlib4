@@ -51,8 +51,8 @@ instance {F1 F2 F3 : Type*} [Field F1] [Field F2] [Field F3]
     [ContinuousSMul v2.Completion v3.Completion] :
     IsScalarTower v1.Completion v2.Completion v3.Completion := by
   apply IsScalarTower.of_algebraMap_eq'
-  simp_rw [AbsoluteValue.Completion.algebraMap_eq, UniformSpace.Completion.mapRingHom_comp,
-    ← WithAbs.map_comp, ← IsScalarTower.algebraMap_eq]
+  simp_rw [AbsoluteValue.Completion.algebraMap_eq_of_liesOver]
+  sorry
 
 section localDegree
 
@@ -67,7 +67,7 @@ noncomputable def localDegree (K : Type*) [Field K] [Algebra K L] : ℕ :=
 
 theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
   have := LiesOver.under_eq w v
-  rw [localDegree, Completion.algebra_eq v w]
+  rw [localDegree, Completion.algebra_eq_of_liesOver v w]
   subst this
   rfl
 
@@ -108,6 +108,66 @@ theorem AlgebraNorm.eq_one_of_trivial
 
 end PRed
 
+section modtop
+
+instance isModuleTopology_of_isNormableSpace
+    (𝕜 E : Type*)
+    [NormedField 𝕜] [CompleteSpace 𝕜]
+    [AddCommGroup E] [Module 𝕜 E] [TopologicalSpace E]
+    [T2Space E] [IsNormableSpace 𝕜 E]
+    [FiniteDimensional 𝕜 E] :
+    IsModuleTopology 𝕜 E := by
+  classical
+  let : SeminormedAddCommGroup E := IsNormableSpace.toSeminormedAddCommGroup 𝕜 E
+  let : NormedSpace 𝕜 E := IsNormableSpace.toNormedSpace 𝕜 E
+  rcases NormedField.discreteTopology_or_nontriviallyNormedField 𝕜 with h | ⟨_, rfl⟩
+  · let : DiscreteTopology 𝕜 := h
+    -- In the trivial-norm case, prove that E is discrete.
+    have gap : ∀ (S : Submodule 𝕜 E), S.FG →
+        ∃ r : ℝ, 0 < r ∧ ∀ y ∈ S, y ≠ 0 → r ≤ ‖y‖ := by
+      intro S hS
+      induction S, hS using Submodule.fg_sup_span_induction with
+      | bot =>
+          exact ⟨1, zero_lt_one, by simp⟩
+      | sup S x hS ih =>
+          obtain ⟨r, hr, hgap⟩ := ih
+          by_cases hx : x ∈ S
+          · have heq : S ⊔ 𝕜 ∙ x = S :=
+              sup_eq_left.mpr ((Submodule.span_singleton_le_iff_mem _ _).mpr hx)
+            exact ⟨r, hr, by simpa only [heq] using hgap⟩
+          · let : DiscreteTopology S := DiscreteTopology.of_forall_le_norm hr
+              (fun y hy ↦ hgap y y.property (by simpa using hy))
+            have hclosed : IsClosed (S : Set E) :=
+              AddSubgroup.isClosed_of_discreteTopology (U := S.toAddSubgroup)
+            obtain ⟨ε, hε, hball⟩ := Metric.isOpen_iff.mp hclosed.isOpen_compl x hx
+            refine ⟨min r ε, lt_min hr hε, ?_⟩
+            intro y hy hy0
+            obtain ⟨s, hs, z, hz, rfl⟩ := Submodule.mem_sup.mp hy
+            obtain ⟨a, rfl⟩ := Submodule.mem_span_singleton.mp hz
+            rcases eq_or_ne a 0 with rfl | ha
+            · simpa only [zero_smul, add_zero] using
+                (min_le_left r ε).trans (hgap s hs (by simpa using hy0))
+            · apply (min_le_right r ε).trans
+              by_contra! hlt
+              have heq : -(a⁻¹ • s) - x = -(a⁻¹ • (s + a • x)) := by
+                simp [smul_add, smul_smul, inv_mul_cancel₀ ha,
+                  sub_eq_add_neg, add_comm]
+              have hdist : dist (-(a⁻¹ • s)) x = ‖s + a • x‖ := by
+                rw [dist_eq_norm, heq, norm_neg, norm_smul,
+                  NormedDivisionRing.norm_eq_one_iff_ne_zero_of_discrete.mpr
+                    (inv_ne_zero ha),
+                  one_mul]
+              exact hball (by simpa only [Metric.mem_ball, hdist] using hlt)
+                (S.neg_mem (S.smul_mem (a⁻¹) hs))
+    obtain ⟨r, hr, hgap⟩ := gap ⊤ (Module.Finite.fg_top (R := 𝕜) (M := E))
+    let : DiscreteTopology E :=
+      DiscreteTopology.of_forall_le_norm hr (fun y hy ↦ hgap y trivial hy)
+    exact IsModuleTopology.of_continuous_id
+      (@continuous_of_discreteTopology E _ inferInstance E (moduleTopology 𝕜 E) id)
+  · exact isModuleTopologyOfFiniteDimensional
+
+end modtop
+
 section algebra
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
@@ -116,47 +176,24 @@ variable {K L : Type*} [Field K] [Field L] [Algebra K L]
 variable [Algebra v.Completion w.Completion] [ContinuousSMul v.Completion w.Completion]
   [IsScalarTower K v.Completion w.Completion]
 
-theorem closed_span_singleton_normedField
-    {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
-    [NormedAddCommGroup E] [NormedSpace 𝕜 E] (x : E) :
-    IsClosed (Submodule.span 𝕜 {x} : Set E) := by
-  by_cases hx : x = 0
-  · simp [hx]
-  rw [Submodule.span_singleton_eq_range]
-  have ha : AntilipschitzWith ‖x‖₊⁻¹ (fun c : 𝕜 => c • x) := by
-    apply AntilipschitzWith.of_le_mul_dist
-    intro a b
-    simp only [dist_eq_norm, ← sub_smul, norm_smul,
-      NNReal.coe_inv, coe_nnnorm]
-    rw [mul_left_comm, inv_mul_cancel₀ (norm_ne_zero_iff.mpr hx),
-      mul_one]
-  exact ha.isClosed_range
-    (ContinuousLinearMap.toSpanSingleton 𝕜 x).uniformContinuous
-
 theorem closed_fg_normedField
     {𝕜 E : Type*} [NormedField 𝕜] [CompleteSpace 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E]
     (S : Submodule 𝕜 E) (hS : S.FG) :
     IsClosed (S : Set E) := by
-  induction S, hS using Submodule.fg_sup_span_induction with
-  | bot => simp
-  | sup S x hS ih =>
-    let : IsClosed (S : Set E) := ih
-    rw [← Submodule.comap_map_mkQ,
-      Submodule.map_span, Set.image_singleton]
-    exact (closed_span_singleton_normedField (S.mkQ x)).preimage
-      S.continuous_mkQ
+  have : Module.Finite 𝕜 S := Module.Finite.iff_fg.mpr hS
+  apply Submodule.isClosed_of_finite_of_isModuleTopology
 
 instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
   have hi : Isometry (algebraMap v.Completion w.Completion) := by
-    rw [AbsoluteValue.Completion.algebraMap_eq v w]
-    exact UniformSpace.Completion.isometry_mapRingHom
-      (WithAbs.isometry_map v w)
+    rw [AbsoluteValue.Completion.algebraMap_eq_of_liesOver v w]
+    exact Completion.isometry_map v w
   let : NormedAlgebra v.Completion w.Completion :=
     { (inferInstance : Algebra v.Completion w.Completion) with
       norm_smul_le := fun a b => by
         rw [Algebra.smul_def, norm_mul,
           (AddMonoidHomClass.isometry_iff_norm _).mp hi a] }
+  -- some typeclass errors below, hopefully fixed by #45508
   let f : L →ₗ[K] w.Completion :=
     (IsScalarTower.toAlgHom K L w.Completion).toLinearMap
   let S : Submodule v.Completion w.Completion :=
@@ -168,9 +205,11 @@ instance [Module.Finite K L] : Module.Finite v.Completion w.Completion := by
   have htop : S = ⊤ := by
     apply Submodule.eq_top_iff'.mpr
     intro x
-    refine UniformSpace.Completion.induction_on x hclosed ?_
+    refine Completion.induction_on x hclosed ?_
     intro a
-    exact Submodule.subset_span ⟨a.ofAbs, rfl⟩
+    refine Submodule.subset_span ⟨a.ofAbs, ?_⟩
+    -- rfl?
+    sorry
   rw [Module.finite_def]
   exact htop ▸ hS
 
@@ -212,8 +251,14 @@ theorem completion_apply (x : v.Completion) : v.completion x = ‖x‖ :=
 
 instance : v.completion.LiesOver v where
   under_eq := by
+    -- bad proof:
     ext x
-    exact UniformSpace.Completion.norm_coe (WithAbs.toAbs v x)
+    have := Completion.norm_coe (WithAbs.toAbs v x)
+    simp at this
+    rw [under_apply, completion_apply]
+    convert Completion.norm_coe (WithAbs.toAbs v x)
+    rw [Completion.algebraMap_def]
+    rfl
 
 instance : CompleteSpace (WithAbs v.completion) :=
   inferInstanceAs (CompleteSpace (WithAbs (NormedField.toAbsoluteValue v.Completion)))
