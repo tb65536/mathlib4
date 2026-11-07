@@ -7,6 +7,8 @@ module
 
 public import Mathlib.Analysis.Matrix.GelfandRadius
 public import Mathlib.Analysis.Normed.Unbundled.AlgebraNorm
+public import Mathlib.FieldTheory.Minpoly.Finite
+public import Mathlib.FieldTheory.Normal.Defs
 
 /-!
 # The Gelfand radius as an algebra norm
@@ -91,3 +93,59 @@ theorem gelfandRadiusNorm_map {F : Type*} [FunLike F L M] [AlgHomClass F K L M] 
     gelfandRadiusNorm K M (f x) = gelfandRadiusNorm K L x :=
   let := (AlgHom.ofClass f).toAlgebra
   gelfandRadiusNorm_algebraMap K M x
+
+theorem IsPowMul.le_gelfandRadiusNorm
+    {K L : Type*} [NormedField K] [Field L] [Algebra K L] [FiniteDimensional K L]
+    {f : AlgebraNorm K L} (hf : IsPowMul f) (x : L) :
+    f x ≤ gelfandRadiusNorm K L x := by
+  let b := Module.finBasis K L
+  obtain ⟨C, hC⟩ : ∃ C, ∀ x, f x ≤ C * ‖Algebra.leftMulMatrix b x‖ := by
+    use ‖⇑(b.repr 1)‖ * ∑ i, f (b i)
+    intro x
+    conv_lhs => rw [← b.linearCombination_repr x]
+    rw [Finsupp.linearCombination_apply, Finsupp.sum_fintype _ _ (by simp)]
+    grw [Finset.map_sum_le_sum]
+    simp_rw [map_smul_eq_mul]
+    have h : b.repr x = (Algebra.leftMulMatrix b x).mulVec (b.repr 1) := by
+      rw [Algebra.leftMulMatrix_mulVec_repr, mul_one]
+    grw [norm_le_pi_norm, ← Finset.mul_sum, h, Matrix.linfty_opNorm_mulVec, mul_assoc, mul_comm]
+  apply le_gelfandRadius_of_bound _ (C := max C 1)
+  intro n
+  by_cases! hn : n = 0
+  · simp [hn]
+  · grw [← hf x hn.pos, hC, map_pow, le_max_left C 1]
+
+def AlgebraNorm.comp {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [Algebra R A]
+    [Algebra R B] (f : AlgebraNorm R B) (σ : A ≃ₐ[R] B) : AlgebraNorm R A where
+  __ := f.toSeminorm.comp σ.toLinearMap
+  toFun x := f (σ x)
+  mul_le' x y := by grw [map_mul, map_mul_le_mul]
+  eq_zero_of_map_eq_zero' x hx := by simpa using eq_zero_of_map_eq_zero f hx
+
+theorem IsPowMul.comp_algEquiv {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [Algebra R A]
+    [Algebra R B] {f : AlgebraNorm R B} (hf : IsPowMul f) (σ : A ≃ₐ[R] B) : IsPowMul (f.comp σ) :=
+  fun x n hn ↦ (congr(f $(σ.map_pow x n))).trans (hf (σ x) hn)
+
+-- todo: do we really need hf_ext?
+theorem gelfandRadiusNorm_eq_iSup_of_finiteDimensional_normal
+    {K L : Type*} [NormedField K] [Field L] [Algebra K L] [FiniteDimensional K L] [Normal K L]
+    {f : AlgebraNorm K L} (hf_pm : IsPowMul f) (hf_ext : ∀ x, f (algebraMap K L x) = ‖x‖) (x : L) :
+    gelfandRadiusNorm K L x = ⨆ σ : Gal(L/K), f (σ x) := by
+  let F x := ⨆ σ : Gal(L/K), f (σ x)
+  change gelfandRadiusNorm K L x = F x
+  have hf x n : f (x ^ n) = f x ^ n := by
+    by_cases hn : n = 0
+    · simpa [hn] using hf_ext 1
+    · exact hf_pm x (Nat.one_le_iff_ne_zero.mpr hn)
+  have hF x n : F (x ^ n) = F x ^ n := by
+    simp_rw [F, map_pow, hf, Real.iSup_pow fun σ : Gal(L/K) ↦ apply_nonneg f (σ x)]
+  refine le_antisymm ?_ (ciSup_le fun σ ↦ (hf_pm.comp_algEquiv σ).le_gelfandRadiusNorm x)
+  let P n := minpoly K (x ^ n)
+  have hPs n : ((P n).map (algebraMap K L)).Splits := Normal.splits' (x ^ n)
+  have hPd n : (P n).natDegree ≤ Module.finrank K L := minpoly.natDegree_le (x ^ n)
+  -- roots of `P n` are `σ (x ^ n) = σ x ^ n` for `σ : Gal(L/K)`
+  -- thus, if `y` is a root of `P n`, then `f y ≤ r ^ n`
+  -- this gives a bound on the coefficients of `P n`
+  -- now that `P n (x ^ n) = 0` and apply `gelfandRadiusNorm`
+  -- moving the lower order terms over, we get `gelfandRadiusNorm x ^ (n * d) ≤ ...`
+  sorry
