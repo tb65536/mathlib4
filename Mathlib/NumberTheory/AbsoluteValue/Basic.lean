@@ -39,48 +39,10 @@ public import Mathlib.Topology.Algebra.Module.FiniteDimension
 -- PRed
 namespace AbsoluteValue
 
-instance {F1 F2 F3 : Type*} [Field F1] [Field F2] [Field F3]
-    [Algebra F1 F2] [Algebra F1 F3] [Algebra F2 F3] [IsScalarTower F1 F2 F3]
-    (v1 : AbsoluteValue F1 ℝ) (v2 : AbsoluteValue F2 ℝ) (v3 : AbsoluteValue F3 ℝ)
-    [v2.LiesOver v1] [v3.LiesOver v1] [v3.LiesOver v2]
-    [Algebra v1.Completion v2.Completion] [IsScalarTower F1 v1.Completion v2.Completion]
-    [Algebra v1.Completion v3.Completion] [IsScalarTower F1 v1.Completion v3.Completion]
-    [Algebra v2.Completion v3.Completion] [IsScalarTower F2 v2.Completion v3.Completion]
-    [ContinuousSMul v1.Completion v2.Completion]
-    [ContinuousSMul v1.Completion v3.Completion]
-    [ContinuousSMul v2.Completion v3.Completion] :
-    IsScalarTower v1.Completion v2.Completion v3.Completion := by
-  apply IsScalarTower.of_algebraMap_eq'
-  simp_rw [AbsoluteValue.Completion.algebraMap_eq_of_liesOver]
+instance {K L M : Type*} [Field K] [Field L] [Field M] [Algebra K L] [Algebra K M]
+    [Algebra L M] [IsScalarTower K L M] (v : AbsoluteValue M ℝ) :
+    IsScalarTower K L v.Completion := by
   sorry
-
-section localDegree
-
-variable {K L : Type*} [Field K] [Field L] [Algebra K L] (v : AbsoluteValue K ℝ)
-  (w : AbsoluteValue L ℝ) [w.LiesOver v] [Algebra v.Completion w.Completion]
-  [ContinuousSMul v.Completion w.Completion] [IsScalarTower K v.Completion w.Completion]
-
-noncomputable def localDegree (K : Type*) [Field K] [Algebra K L] : ℕ :=
-  letI v := w.under K
-  letI := Completion.algebraOfLiesOver v w
-  Module.finrank v.Completion w.Completion
-
-theorem localDegree_eq : w.localDegree K = Module.finrank v.Completion w.Completion := by
-  have := LiesOver.under_eq w v
-  rw [localDegree, Completion.algebra_eq_of_liesOver v w]
-  subst this
-  rfl
-
-theorem localDegree_mul_localDegree (F : Type*) [Field F] [Algebra F K] [Algebra F L]
-    [IsScalarTower F K L] : v.localDegree F * w.localDegree K = w.localDegree F := by
-  let v₀ := v.under F
-  let : Algebra v₀.Completion v.Completion := Completion.algebraOfLiesOver v₀ v
-  have : w.LiesOver v₀ := LiesOver.trans v₀ v w -- maybe this could be an instance
-  let : Algebra v₀.Completion w.Completion := Completion.algebraOfLiesOver v₀ w
-  rw [localDegree_eq v₀ v, localDegree_eq v w, localDegree_eq v₀ w]
-  rw [Module.finrank_mul_finrank]
-
-end localDegree
 
 end AbsoluteValue
 
@@ -364,15 +326,15 @@ instance : Finite (v.absoluteValuesOver L) := Finite.of_equiv _ (v.absoluteValue
 instance : Nonempty (v.absoluteValuesOver L) := (v.absoluteValuesOverEquiv L).nonempty
 
 /-- The fundamental inequality. -/
-theorem sum_localDegree_le [Fintype (v.absoluteValuesOver L)]
+theorem sum_degree_le [Fintype (v.absoluteValuesOver L)]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], Algebra v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], ContinuousSMul v.Completion w.Completion]
     [∀ (w : AbsoluteValue L ℝ) [w.LiesOver v], IsScalarTower K v.Completion w.Completion] :
-    ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤ Module.finrank K L := by
+    ∑ w : v.absoluteValuesOver L, w.val.degree L ≤ Module.finrank K L := by
   let A := v.Completion ⊗[K] L
   have : Fintype (PrimeSpectrum A) := Fintype.ofEquiv _ (v.absoluteValuesOverEquiv L)
   rw [← Module.finrank_baseChange (R := v.Completion), IsArtinianRing.finrank_eq_sum_primeSpectrum]
-  change ∑ w : v.absoluteValuesOver L, w.val.localDegree L ≤
+  change ∑ w : v.absoluteValuesOver L, w.val.degree L ≤
     ∑ p : PrimeSpectrum A, Module.finrank v.Completion (Localization.AtPrime p.asIdeal)
   transitivity ∑ p : PrimeSpectrum A, Module.finrank v.Completion (A ⧸ p.asIdeal)
   · sorry
