@@ -115,7 +115,7 @@ theorem IsPowMul.le_gelfandRadiusNorm
   · simp [hn]
   · grw [← hf x hn.pos, hC, map_pow, le_max_left C 1]
 
-def AlgebraNorm.comp {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [Algebra R A]
+def AlgebraNorm.compAlgEquiv {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [Algebra R A]
     [Algebra R B] (f : AlgebraNorm R B) (σ : A ≃ₐ[R] B) : AlgebraNorm R A where
   __ := f.toSeminorm.comp σ.toLinearMap
   toFun x := f (σ x)
@@ -123,8 +123,13 @@ def AlgebraNorm.comp {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [A
   eq_zero_of_map_eq_zero' x hx := by simpa using eq_zero_of_map_eq_zero f hx
 
 theorem IsPowMul.comp_algEquiv {R A B : Type*} [SeminormedCommRing R] [Ring A] [Ring B] [Algebra R A]
-    [Algebra R B] {f : AlgebraNorm R B} (hf : IsPowMul f) (σ : A ≃ₐ[R] B) : IsPowMul (f.comp σ) :=
+    [Algebra R B] {f : AlgebraNorm R B} (hf : IsPowMul f) (σ : A ≃ₐ[R] B) :
+    IsPowMul (f.compAlgEquiv σ) :=
   fun x n hn ↦ (congr(f $(σ.map_pow x n))).trans (hf (σ x) hn)
+
+theorem IsPowMul.comp {A B F : Type*} [Monoid A] [Monoid B] {f : B → ℝ} (hf : IsPowMul f) (σ : F)
+    [FunLike F A B] [MonoidHomClass F A B] : IsPowMul (f ∘ σ) :=
+  fun x n hn ↦ (congr(f $(map_pow σ x n))).trans (hf (σ x) hn)
 
 -- todo: do we really need hf_ext?
 theorem gelfandRadiusNorm_eq_iSup_of_finiteDimensional_normal
@@ -139,13 +144,16 @@ theorem gelfandRadiusNorm_eq_iSup_of_finiteDimensional_normal
     · exact hf_pm x (Nat.one_le_iff_ne_zero.mpr hn)
   have hF x n : F (x ^ n) = F x ^ n := by
     simp_rw [F, map_pow, hf, Real.iSup_pow fun σ : Gal(L/K) ↦ apply_nonneg f (σ x)]
-  refine le_antisymm ?_ (ciSup_le fun σ ↦ (hf_pm.comp_algEquiv σ).le_gelfandRadiusNorm x)
-  let P n := minpoly K (x ^ n)
-  have hPs n : ((P n).map (algebraMap K L)).Splits := Normal.splits' (x ^ n)
-  have hPd n : (P n).natDegree ≤ Module.finrank K L := minpoly.natDegree_le (x ^ n)
+  refine le_antisymm ?_ (ciSup_le fun σ ↦ ?_)
+  · let P n := minpoly K (x ^ n)
+    have hPs n : ((P n).map (algebraMap K L)).Splits := Normal.splits' (x ^ n)
+    have hPd n : (P n).natDegree ≤ Module.finrank K L := minpoly.natDegree_le (x ^ n)
+    sorry
+  · let fσ := f.compAlgEquiv σ
+    have hfσ : IsPowMul fσ := hf_pm.comp σ
+    exact hfσ.le_gelfandRadiusNorm x
   -- roots of `P n` are `σ (x ^ n) = σ x ^ n` for `σ : Gal(L/K)`
   -- thus, if `y` is a root of `P n`, then `f y ≤ r ^ n`
   -- this gives a bound on the coefficients of `P n`
   -- now that `P n (x ^ n) = 0` and apply `gelfandRadiusNorm`
   -- moving the lower order terms over, we get `gelfandRadiusNorm x ^ (n * d) ≤ ...`
-  sorry
