@@ -702,7 +702,7 @@ theorem adicAbv_def (hv : 1 < (v.asIdeal.absNorm : ℝ≥0)) {x : K} :
     adicAbv K v x = v.adicAbv' hv x := by
   simp [adicAbv, adicAbvBase, (mod_cast hv : 1 < v.asIdeal.absNorm)]
 
-/-- The `v`-adic absolute value is nonarchimedean -/
+/-- The `v`-adic absolute value is nonarchimedean. -/
 theorem isNonarchimedean_adicAbv : IsNonarchimedean (adicAbv K v) :=
   v.isNonarchimedean_adicAbv' v.one_lt_adicAbvBase
 

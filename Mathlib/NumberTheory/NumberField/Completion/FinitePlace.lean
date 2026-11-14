@@ -430,8 +430,6 @@ end LiesOver
 
 end NumberField
 
-/-- The `v`-adic absolute value on `K` defined as the norm of `v` raised to negative `v`-adic
-valuation -/
 @[deprecated (since := "2026-11-10")]
 alias NumberField.HeightOneSpectrum.adicAbv := adicAbv
 
