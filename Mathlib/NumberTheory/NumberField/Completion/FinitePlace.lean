@@ -129,7 +129,7 @@ lemma absNorm_ne_zero : (absNorm v.asIdeal : ℝ≥0) ≠ 0 :=
 variable (K)
 
 theorem adicAbv_def {x : K} : adicAbv K v x = toNNReal (absNorm_ne_zero v) (v.valuation K x) :=
-  v.adicAbv_def K (one_lt_absNorm v)
+  v.adicAbv_def K (mod_cast one_lt_absNorm v)
 
 open Valuation.IsRankOneDiscrete
 
