@@ -188,19 +188,19 @@ open FinitePlace
 /-- The `v`-adic norm of an integer is at most 1. -/
 theorem FinitePlace.norm_le_one (x : R) : ‖embedding v (algebraMap _ K x)‖ ≤ 1 := by
   rw [norm_embedding]
-  exact v.adicAbv'_coe_le_one _ x
+  exact v.adicAbv_coe_le_one _ x
 
 /-- The `v`-adic norm of an integer is 1 if and only if it is not in the ideal. -/
 theorem FinitePlace.norm_eq_one_iff_notMem (x : R) :
     ‖embedding v (algebraMap _ K x)‖ = 1 ↔ x ∉ v.asIdeal := by
   rw [norm_embedding]
-  exact v.adicAbv'_coe_eq_one_iff _ x
+  exact v.adicAbv_coe_eq_one_iff _ x
 
 /-- The `v`-adic norm of an integer is less than 1 if and only if it is in the ideal. -/
 theorem FinitePlace.norm_lt_one_iff_mem (x : R) :
     ‖embedding v (algebraMap _ K x)‖ < 1 ↔ x ∈ v.asIdeal := by
   rw [norm_embedding]
-  exact v.adicAbv'_coe_lt_one_iff _ x
+  exact v.adicAbv_coe_lt_one_iff _ x
 
 variable {v} in
 lemma FinitePlace.two_le_norm_of_one_lt_norm (x : v.adicCompletion K) (h : 1 < ‖x‖) : 2 ≤ ‖x‖ := by

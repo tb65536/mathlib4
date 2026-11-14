@@ -668,19 +668,13 @@ theorem adicAbv'_coe_le_one : v.adicAbv' hb (algebraMap R K r) ≤ 1 := by
   rw [adicAbv'_of_algebraMap]
   exact intAdicAbv_le_one v hb r
 
-@[deprecated (since := "2026-11-10")] alias adicAbv_coe_le_one := adicAbv'_coe_le_one
-
 theorem adicAbv'_coe_lt_one_iff : v.adicAbv' hb (algebraMap R K r) < 1 ↔ r ∈ v.asIdeal := by
   rw [adicAbv'_of_algebraMap]
   exact intAdicAbv_lt_one_iff v hb r
 
-@[deprecated (since := "2026-11-10")] alias adicAbv_coe_lt_one_iff := adicAbv'_coe_lt_one_iff
-
 theorem adicAbv'_coe_eq_one_iff : v.adicAbv' hb (algebraMap R K r) = 1 ↔ r ∉ v.asIdeal := by
   rw [adicAbv'_of_algebraMap]
   exact intAdicAbv_eq_one_iff v hb r
-
-@[deprecated (since := "2026-11-10")] alias adicAbv_coe_eq_one_iff := adicAbv'_coe_eq_one_iff
 
 variable (K)
 
@@ -701,6 +695,15 @@ def adicAbv : AbsoluteValue K ℝ :=
 theorem adicAbv_def (hv : 1 < (v.asIdeal.absNorm : ℝ≥0)) {x : K} :
     adicAbv K v x = v.adicAbv' hv x := by
   simp [adicAbv, adicAbvBase, (mod_cast hv : 1 < v.asIdeal.absNorm)]
+
+theorem adicAbv_coe_le_one (x : R) : adicAbv K v (algebraMap R K x) ≤ 1 :=
+  v.adicAbv'_coe_le_one v.one_lt_adicAbvBase x
+
+theorem adicAbv_coe_lt_one_iff (x : R) : adicAbv K v (algebraMap R K x) < 1 ↔ x ∈ v.asIdeal :=
+  v.adicAbv'_coe_lt_one_iff v.one_lt_adicAbvBase x
+
+theorem adicAbv_coe_eq_one_iff (x : R) : adicAbv K v (algebraMap R K x) = 1 ↔ x ∉ v.asIdeal :=
+  v.adicAbv'_coe_eq_one_iff v.one_lt_adicAbvBase x
 
 /-- The `v`-adic absolute value is nonarchimedean. -/
 theorem isNonarchimedean_adicAbv : IsNonarchimedean (adicAbv K v) :=
