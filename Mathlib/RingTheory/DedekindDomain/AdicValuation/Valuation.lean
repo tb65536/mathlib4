@@ -689,22 +689,22 @@ then `37` is arbitrarily picked as the base instead. -/
 def adicAbvBase : ℝ≥0 :=
   if 1 < v.asIdeal.absNorm then v.asIdeal.absNorm else 37
 
-theorem adicAbvBase_spec : 1 < v.adicAbvBase := by
+theorem one_lt_adicAbvBase : 1 < v.adicAbvBase := by
   rw [adicAbvBase]
   split_ifs with h <;> simp [h]
 
 /-- The `v`-adic absolute value on `K` defined as the index of `v` raised to negative `v`-adic
 valuation. If `v` has infinite index, then `37` is arbitrarily picked as the base instead. -/
 def adicAbv : AbsoluteValue K ℝ :=
-  v.adicAbv' v.adicAbvBase_spec
+  v.adicAbv' v.one_lt_adicAbvBase
 
-theorem adicAbv_def (hv : 1 < v.asIdeal.absNorm) {x : K} :
-    adicAbv K v x = v.adicAbv' (mod_cast hv : (1 : ℝ≥0) < v.asIdeal.absNorm) x := by
-  simp [adicAbv, adicAbvBase, hv]
+theorem adicAbv_def (hv : 1 < (v.asIdeal.absNorm : ℝ≥0)) {x : K} :
+    adicAbv K v x = v.adicAbv' hv x := by
+  simp [adicAbv, adicAbvBase, (mod_cast hv : 1 < v.asIdeal.absNorm)]
 
 /-- The `v`-adic absolute value is nonarchimedean -/
 theorem isNonarchimedean_adicAbv : IsNonarchimedean (adicAbv K v) :=
-  v.isNonarchimedean_adicAbv' v.adicAbvBase_spec
+  v.isNonarchimedean_adicAbv' v.one_lt_adicAbvBase
 
 /-- The `v`-adic absolute value satisfies the ultrametric inequality. -/
 theorem adicAbv_add_le_max (x y : K) :
